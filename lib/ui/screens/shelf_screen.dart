@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_text.dart';
+import '../../data/models/feed_item.dart';
+import '../../services/ads/ad_provider.dart';
+import '../../state/library_controller.dart';
+import '../../state/playback_controller.dart';
+import '../../state/progress_controller.dart';
+import '../../state/shell_controller.dart';
+import '../feed/ad_slide.dart';
+import '../feed/book_slide.dart';
+
+/// The feed. One card per screen, vertical, snapping.
+///
+/// `PageView` gives real snap physics and platform-correct fling behaviour for
+/// free, and only keeps the neighbouring card alive — which is what keeps the
+/// feed light no matter how long the catalogue gets.
+class ShelfScreen extends StatefulWidget {
+  const ShelfScreen({super.key});
+
+  @override
+  State<ShelfScreen> createState() => _ShelfScreenState();
+}
+
+class _ShelfScreenState extends State<ShelfScreen> {
+  late final PageController _controller;
+  int _activeIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final resumeAt = context.read<ProgressController>().lastFeedIndex;
+    _activeIndex = resumeAt;
+    _controller = PageController(initialPage: resumeAt);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => _activeIndex = index);
+
+    // Audio belongs to the card you are on. Swiping away ends it rather than
+    // letting a voice follow you down the feed.
+    context.read<PlaybackController>().stop();
+    context.read<ProgressController>().setLastFeedIndex(index);
+  }
+
+  /// A stored position can outlive the feed that produced it — the catalogue
+  /// shrinks, or the ad cadence changes. Land on the last card instead of an
+  /// empty viewport.
+  void _clampToFeed(int length) {
+    if (length == 0 || _activeIndex < length || !_controller.hasClients) return;
+    _controller.jumpToPage(length - 1);
+  }
+
+  /// Handles a "open this book" request coming from Search or Saved.
+  void _handlePendingBook(List<FeedItem> items) {
+    final shell = context.read<ShellController>();
+    final bookId = shell.pendingBookId;
+    if (bookId == null) return;
+
+    final target = items.indexWhere(
+      (item) => item is BookFeedItem && item.book.id == bookId,
+    );
+    shell.consumePendingBook();
+    if (target < 0 || !_controller.hasClients) return;
+
+    if ((target - _activeIndex).abs() > 2) {
+      _controller.jumpToPage(target);
+    } else {
+      _controller.animateToPage(
+        target,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final library = context.watch<LibraryController>();
+
+    switch (library.status) {
+      case LibraryStatus.loading:
+        return const _FeedMessage(text: 'OPENING THE SHELF');
+      case LibraryStatus.failed:
+        return const _FeedMessage(text: 'THE SHELF IS EMPTY');
+      case LibraryStatus.ready:
+        break;
+    }
+
+    final items = library.feedItems;
+    if (items.isEmpty) return const _FeedMessage(text: 'THE SHELF IS EMPTY');
+
+    // Watching the shell here means a request from another tab is picked up on
+    // the frame the shelf comes back into view.
+    context.watch<ShellController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _clampToFeed(items.length);
+      _handlePendingBook(items);
+    });
+
+    return PageView.builder(
+      controller: _controller,
+      scrollDirection: Axis.vertical,
+      onPageChanged: _onPageChanged,
+      physics: const PageScrollPhysics(parent: ClampingScrollPhysics()),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final isActive = index == _activeIndex;
+
+        return RepaintBoundary(
+          child: KeyedSubtree(
+            key: ValueKey(item.key),
+            child: switch (item) {
+              BookFeedItem(:final book) =>
+                BookSlide(book: book, isActive: isActive),
+              AdFeedItem() => AdSlide(
+                item: item,
+                provider: context.read<AdProvider>(),
+                isActive: isActive,
+              ),
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FeedMessage extends StatelessWidget {
+  const _FeedMessage({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        text,
+        style: SpineText.label.copyWith(color: SpineColors.parchmentDim),
+      ),
+    );
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "updated": "2026-08-12",
+  "books": [
+    {
+      "id": "atomic-habits",
+      "title": "Atomic Habits",
+      "author": "James Clear",
+      "genre": "Self-Improvement",
+      "durationLabel": "14 MIN",
+      "spine": "brass",
+      "watch": { "available": false },
+      "ideas": [
+        {
+          "id": "atomic-habits-1",
+          "title": "Identity Over Outcome",
+          "body": "Lasting change starts with who you decide to become, not the result you're chasing. Every small habit is a vote for a certain kind of person.",
+          "seconds": 11,
+          "audio": "asset:assets/audio/atomic-habits/01.wav"
+        },
+        {
+          "id": "atomic-habits-2",
+          "title": "The Four Laws",
+          "body": "Make cues obvious, cravings attractive, actions easy, and rewards satisfying. Reverse each law to break a habit instead of building one.",
+          "seconds": 12,
+          "audio": "asset:assets/audio/atomic-habits/02.wav"
+        },
+        {
+          "id": "atomic-habits-3",
+          "title": "1% Better",
+          "body": "Tiny, consistent improvements compound over months into results that feel sudden but were actually earned daily.",
+          "seconds": 10,
+          "audio": "asset:assets/audio/atomic-habits/03.wav"
+        },
+        {
+          "id": "atomic-habits-4",
+          "title": "Environment Design",
+          "body": "Willpower is overrated. Shape your surroundings so the good choice becomes the easy, obvious one.",
+          "seconds": 10,
+          "audio": "asset:assets/audio/atomic-habits/04.wav"
+        },
+        {
+          "id": "atomic-habits-5",
+          "title": "Never Miss Twice",
+          "body": "One slip is an accident. Two in a row is the start of a new habit — get back on track immediately.",
+          "seconds": 9,
+          "audio": "asset:assets/audio/atomic-habits/05.wav"
+        }
+      ]
+    },
+    {
+      "id": "sapiens",
+      "title": "Sapiens",
+      "author": "Yuval Noah Harari",
+      "genre": "History",
+      "durationLabel": "15 MIN",
+      "spine": "indigo",
+      "watch": { "available": false },
+      "ideas": [
+        {
+          "id": "sapiens-1",
+          "title": "Shared Fictions",
+          "body": "Humans lead the planet because we believe in things that exist only in imagination — money, nations, laws — and cooperate at scale because of it.",
+          "seconds": 12
+        },
+        {
+          "id": "sapiens-2",
+          "title": "The Cognitive Revolution",
+          "body": "A rewiring of the human mind gave us flexible language, letting rumors, myths, and plans spread across entire tribes.",
+          "seconds": 11
+        },
+        {
+          "id": "sapiens-3",
+          "title": "The Agricultural Trap",
+          "body": "Farming didn't liberate humanity — it tied people to land and often meant harder lives for the many, surplus for the few.",
+          "seconds": 11
+        },
+        {
+          "id": "sapiens-4",
+          "title": "Money as Trust",
+          "body": "Currency is the most universal story ever told — a system of mutual trust that lets total strangers cooperate.",
+          "seconds": 10
+        },
+        {
+          "id": "sapiens-5",
+          "title": "The Unhappiness Question",
+          "body": "Progress in power hasn't guaranteed progress in wellbeing. History's biggest gains didn't always make individual lives better.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "deep-work",
+      "title": "Deep Work",
+      "author": "Cal Newport",
+      "genre": "Productivity",
+      "durationLabel": "12 MIN",
+      "spine": "teal",
+      "watch": { "available": false },
+      "ideas": [
+        {
+          "id": "deep-work-1",
+          "title": "The Deep Work Hypothesis",
+          "body": "The ability to focus without distraction is becoming rare and valuable — those who cultivate it will thrive.",
+          "seconds": 10
+        },
+        {
+          "id": "deep-work-2",
+          "title": "Attention Residue",
+          "body": "Switching tasks leaves mental residue that drags down performance on whatever comes next. Batching beats multitasking.",
+          "seconds": 10
+        },
+        {
+          "id": "deep-work-3",
+          "title": "Rituals Over Willpower",
+          "body": "Fixed routines around when and where you do deep work remove decision fatigue and make focus automatic.",
+          "seconds": 9
+        },
+        {
+          "id": "deep-work-4",
+          "title": "Embrace Boredom",
+          "body": "Constant stimulation trains your brain to crave distraction. Practicing stillness rebuilds your capacity to concentrate.",
+          "seconds": 10
+        },
+        {
+          "id": "deep-work-5",
+          "title": "Judge Your Tools",
+          "body": "Evaluate apps and platforms by whether they serve your core goals, not by the fear of missing out.",
+          "seconds": 9
+        }
+      ]
+    },
+    {
+      "id": "thinking-fast-slow",
+      "title": "Thinking, Fast and Slow",
+      "author": "Daniel Kahneman",
+      "genre": "Psychology",
+      "durationLabel": "15 MIN",
+      "spine": "brick",
+      "watch": { "available": false },
+      "ideas": [
+        {
+          "id": "thinking-fast-slow-1",
+          "title": "Two Systems",
+          "body": "System 1 is fast, intuitive, emotional. System 2 is slow and deliberate. Most of daily life runs on System 1 — for better and worse.",
+          "seconds": 12
+        },
+        {
+          "id": "thinking-fast-slow-2",
+          "title": "Anchoring",
+          "body": "An early number, even an irrelevant one, quietly shapes every estimate that follows it.",
+          "seconds": 9
+        },
+        {
+          "id": "thinking-fast-slow-3",
+          "title": "Loss Aversion",
+          "body": "Losses hurt roughly twice as much as equivalent gains feel good, which explains why people avoid reasonable risks.",
+          "seconds": 10
+        },
+        {
+          "id": "thinking-fast-slow-4",
+          "title": "The Availability Heuristic",
+          "body": "We judge how common something is by how easily examples come to mind, not by actual frequency.",
+          "seconds": 10
+        },
+        {
+          "id": "thinking-fast-slow-5",
+          "title": "Planning Fallacy",
+          "body": "We reliably underestimate how long tasks will take, even when we know the pattern from experience.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "naval-almanack",
+      "title": "The Almanack of Naval Ravikant",
+      "author": "Eric Jorgenson",
+      "genre": "Wealth & Wisdom",
+      "durationLabel": "13 MIN",
+      "spine": "olive",
+      "watch": { "available": false },
+      "ideas": [
+        {
+          "id": "naval-almanack-1",
+          "title": "Seek Wealth, Not Money",
+          "body": "Wealth is owning assets that earn while you sleep. Money is just a social IOU for time and value.",
+          "seconds": 10
+        },
+        {
+          "id": "naval-almanack-2",
+          "title": "Specific Knowledge",
+          "body": "Skills built through genuine curiosity can't be trained by anyone else — no one can outsource or automate them.",
+          "seconds": 10
+        },
+        {
+          "id": "naval-almanack-3",
+          "title": "Play Long-Term Games",
+          "body": "Compounding, in relationships, knowledge, and money, rewards the people who simply stay in the game longest.",
+          "seconds": 9
+        },
+        {
+          "id": "naval-almanack-4",
+          "title": "Judgment Over Effort",
+          "body": "In an age of leverage, good judgment matters more than hours worked. Think clearly before acting quickly.",
+          "seconds": 10
+        },
+        {
+          "id": "naval-almanack-5",
+          "title": "Happiness Is a Skill",
+          "body": "Peace comes from wanting what you already have — practiced deliberately, like any other skill.",
+          "seconds": 9
+        }
+      ]
+    }
+  ]
+}
