@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 /// The Spine palette. These are the exact values from the React prototype —
 /// they are the visual identity and should not drift.
 abstract final class SpineColors {
-  /// Page background — near-black warm ink.
-  static const ink = Color(0xFF16140F);
+  /// Page background — near-black, faintly warm. Deep enough that a coloured
+  /// bloom on top of it reads as light rather than paint.
+  static const ink = Color(0xFF0D0C09);
 
   /// Slightly lifted ink used for raised surfaces.
-  static const inkCard = Color(0xFF1D1911);
+  static const inkCard = Color(0xFF171510);
+
+  /// Filled control surfaces, in place of outlines. Spine draws almost no
+  /// borders: a control is a plane at a different height, not a rectangle with
+  /// a line around it.
+  static const surface = Color(0x0FF1E9D6);
+  static const surfaceRaised = Color(0x1AF1E9D6);
+  static const surfacePressed = Color(0x24F1E9D6);
 
   /// Primary reading colour — warm off-white, like aged paper.
   static const parchment = Color(0xFFF1E9D6);
@@ -52,10 +60,22 @@ abstract final class SpineColors {
 
   /// The ambient background wash behind the feed.
   static const feedBackground = RadialGradient(
-    center: Alignment(0, -0.6),
-    radius: 1.1,
-    colors: [Color(0xFF242016), ink],
+    center: Alignment(0, -0.75),
+    radius: 1.2,
+    colors: [Color(0xFF17150F), ink],
   );
+
+  /// The out-of-focus light field behind a book — the book's colour arriving as
+  /// atmosphere rather than as a panel. Stops are deliberately soft and never
+  /// reach full saturation.
+  static List<Color> bloomFor(Color spine) => [
+    spine.withValues(alpha: 0.55),
+    spine.withValues(alpha: 0.22),
+    spine.withValues(alpha: 0.06),
+    Colors.transparent,
+  ];
+
+  static const bloomStops = [0.0, 0.38, 0.68, 1.0];
 
   /// Ink at a given opacity — used for text on top of a spine-coloured panel.
   static Color onSpine(double opacity) => ink.withValues(alpha: opacity);

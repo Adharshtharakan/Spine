@@ -29,21 +29,21 @@ class SavedScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.bookmark_border,
-                size: 28,
-                color: SpineColors.parchmentDim,
+              Icon(
+                Icons.bookmark_border_rounded,
+                size: 30,
+                color: SpineColors.onInk(0.32),
               ),
               const SizedBox(height: 12),
               const Text(
                 'Nothing saved yet',
-                style: SpineText.sectionTitle,
+                style: SpineText.ideaHeading,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
                 'Tap the bookmark on any book to keep it here.',
-                style: SpineText.secondary,
+                style: SpineText.ideaBody,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -55,8 +55,7 @@ class SavedScreen extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       itemCount: saved.length,
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: SpineColors.line),
+      separatorBuilder: (_, __) => const SizedBox(height: 2),
       itemBuilder: (context, index) {
         final book = saved[index];
         return BookRow(
@@ -65,10 +64,10 @@ class SavedScreen extends StatelessWidget {
             semanticLabel: 'Remove ${book.title} from saved',
             onTap: () => context.read<ProgressController>().toggleSaved(book.id),
             child: const Padding(
-              padding: EdgeInsets.all(6),
+              padding: EdgeInsets.all(8),
               child: Icon(
-                Icons.bookmark,
-                size: 18,
+                Icons.bookmark_rounded,
+                size: 19,
                 color: SpineColors.brass,
               ),
             ),

@@ -4,8 +4,7 @@ import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/idea.dart';
 
-/// The idea itself: counter, heading, body, and whatever controls the current
-/// mode adds underneath.
+/// The idea itself: counter, heading, body.
 ///
 /// Changing idea cross-fades and lifts slightly — the prototype's `ideaFade`.
 class IdeaView extends StatelessWidget {
@@ -14,51 +13,41 @@ class IdeaView extends StatelessWidget {
     required this.idea,
     required this.index,
     required this.total,
-    required this.footer,
     this.compact = false,
   });
 
   final Idea idea;
   final int index;
   final int total;
-  final Widget footer;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 350),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween(
-                  begin: const Offset(0, 0.02),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            ),
-            layoutBuilder: (current, previous) => Stack(
-              alignment: Alignment.topLeft,
-              children: [...previous, if (current != null) current],
-            ),
-            child: _IdeaText(
-              key: ValueKey(idea.id),
-              idea: idea,
-              index: index,
-              total: total,
-              compact: compact,
-            ),
-          ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 340),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
         ),
-        footer,
-      ],
+      ),
+      layoutBuilder: (current, previous) => Stack(
+        alignment: Alignment.topLeft,
+        children: [...previous, if (current != null) current],
+      ),
+      child: _IdeaText(
+        key: ValueKey(idea.id),
+        idea: idea,
+        index: index,
+        total: total,
+        compact: compact,
+      ),
     );
   }
 }
@@ -88,17 +77,17 @@ class _IdeaText extends StatelessWidget {
         children: [
           Text(
             'IDEA ${index + 1} OF $total',
-            style: SpineText.label.copyWith(color: SpineColors.parchmentDim),
+            style: SpineText.label.copyWith(color: SpineColors.onInk(0.4)),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: compact ? 10 : 14),
           Text(
             idea.title,
-            style: SpineText.ideaHeading.copyWith(fontSize: compact ? 18 : 19),
+            style: SpineText.ideaHeading.copyWith(fontSize: compact ? 22 : 25),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: compact ? 12 : 16),
           Text(
             idea.body,
-            style: SpineText.ideaBody.copyWith(fontSize: compact ? 13.5 : 14),
+            style: SpineText.ideaBody.copyWith(fontSize: compact ? 14.5 : 15.5),
           ),
         ],
       ),

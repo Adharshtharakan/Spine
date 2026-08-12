@@ -57,30 +57,47 @@ class _RootShellState extends State<RootShell> with WidgetsBindingObserver {
       backgroundColor: SpineColors.ink,
       body: DecoratedBox(
         decoration: const BoxDecoration(gradient: SpineColors.feedBackground),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              SpineTopBar(
-                streak: streak,
-                onSearchTap: shell.tabIndex == ShellController.searchTab
-                    ? null
-                    : () => shell.selectTab(ShellController.searchTab),
-              ),
-              Expanded(
-                child: IndexedStack(
-                  index: shell.tabIndex,
-                  sizing: StackFit.expand,
-                  children: const [
-                    ShelfScreen(),
+        // The masthead floats over the feed rather than sitting on a bar above
+        // it, so a book's light can run all the way to the top of the screen.
+        // Tabs that scroll a list inset themselves to clear it instead.
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IndexedStack(
+                index: shell.tabIndex,
+                sizing: StackFit.expand,
+                children: [
+                  const ShelfScreen(),
+                  for (final screen in const [
                     SearchScreen(),
                     SavedScreen(),
                     ProfileScreen(),
-                  ],
+                  ])
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.paddingOf(context).top +
+                            SpineTopBar.height,
+                      ),
+                      child: screen,
+                    ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: SpineTopBar(
+                  streak: streak,
+                  onSearchTap: shell.tabIndex == ShellController.searchTab
+                      ? null
+                      : () => shell.selectTab(ShellController.searchTab),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: SpineBottomNav(

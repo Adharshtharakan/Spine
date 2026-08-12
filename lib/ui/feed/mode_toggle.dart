@@ -5,7 +5,11 @@ import '../../core/theme/spine_text.dart';
 import '../../data/models/reading_mode.dart';
 import '../widgets/tap_scale.dart';
 
-/// READ · LISTEN · WATCH 🔒
+/// READ · LISTEN · WATCH, as one segmented track.
+///
+/// A single recessed surface with a lit segment sliding across it, rather than
+/// three outlined buttons — the control reads as one object with a state, which
+/// is what it is.
 class ModeToggle extends StatelessWidget {
   const ModeToggle({
     super.key,
@@ -22,82 +26,93 @@ class ModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-      child: Row(
-        children: [
-          for (final value in ReadingMode.values) ...[
-            if (value != ReadingMode.values.first) const SizedBox(width: 6),
-            Expanded(
-              child: _ModeButton(
-                mode: value,
-                selected: value == mode,
-                accent: accent,
-                locked: value == ReadingMode.watch && watchLocked,
-                onTap: () => onSelect(value),
+    const modes = ReadingMode.values;
+    final index = modes.indexOf(mode);
+
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: SpineColors.surface,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final segment = constraints.maxWidth / modes.length;
+
+          return Stack(
+            children: [
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                left: segment * index,
+                top: 0,
+                bottom: 0,
+                width: segment,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
               ),
-            ),
-          ],
-        ],
+              Row(
+                children: [
+                  for (final value in modes)
+                    Expanded(
+                      child: _Segment(
+                        mode: value,
+                        selected: value == mode,
+                        locked: value == ReadingMode.watch && watchLocked,
+                        onTap: () => onSelect(value),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _ModeButton extends StatelessWidget {
-  const _ModeButton({
+class _Segment extends StatelessWidget {
+  const _Segment({
     required this.mode,
     required this.selected,
-    required this.accent,
     required this.locked,
     required this.onTap,
   });
 
   final ReadingMode mode;
   final bool selected;
-  final Color accent;
   final bool locked;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final color = selected ? SpineColors.parchment : SpineColors.onInk(0.45);
+
     return TapScale(
       onTap: onTap,
+      scale: 0.94,
       semanticLabel: '${mode.label} mode',
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.13) : Colors.transparent,
-          border: Border.all(color: selected ? accent : SpineColors.line),
-          borderRadius: BorderRadius.circular(20),
-        ),
+      child: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(
               child: Text(
                 mode.label,
                 maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: SpineText.label.copyWith(
-                  letterSpacing: 0.8,
-                  color: selected
-                      ? SpineColors.parchment
-                      : SpineColors.parchmentDim,
-                ),
+                style: SpineText.label.copyWith(color: color),
               ),
             ),
             if (locked) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.lock_outline,
-                size: 10,
-                color: selected
-                    ? SpineColors.parchment
-                    : SpineColors.parchmentDim,
-              ),
+              const SizedBox(width: 5),
+              Icon(Icons.lock_outline_rounded, size: 12, color: color),
             ],
           ],
         ),

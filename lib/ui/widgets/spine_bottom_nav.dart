@@ -12,14 +12,17 @@ class SpineTab {
   final IconData activeIcon;
 
   static const values = <SpineTab>[
-    SpineTab('Shelf', Icons.menu_book_outlined, Icons.menu_book),
-    SpineTab('Search', Icons.search, Icons.search),
-    SpineTab('Saved', Icons.bookmark_border, Icons.bookmark),
-    SpineTab('You', Icons.person_outline, Icons.person),
+    SpineTab('Shelf', Icons.auto_stories_outlined, Icons.auto_stories_rounded),
+    SpineTab('Search', Icons.search_rounded, Icons.search_rounded),
+    SpineTab('Saved', Icons.bookmark_border_rounded, Icons.bookmark_rounded),
+    SpineTab('You', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 }
 
 /// Shelf / Search / Saved / You.
+///
+/// No bar, no border, no fill — the icons float over the feed and only the
+/// selected tab is named. Chrome that announces itself competes with the book.
 class SpineBottomNav extends StatelessWidget {
   const SpineBottomNav({
     super.key,
@@ -32,27 +35,21 @@ class SpineBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: SpineColors.ink,
-        border: Border(top: BorderSide(color: SpineColors.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 10, bottom: 6),
-          child: Row(
-            children: [
-              for (var i = 0; i < SpineTab.values.length; i++)
-                Expanded(
-                  child: _NavItem(
-                    tab: SpineTab.values[i],
-                    active: i == currentIndex,
-                    onTap: () => onSelect(i),
-                  ),
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: 58,
+        child: Row(
+          children: [
+            for (var i = 0; i < SpineTab.values.length; i++)
+              Expanded(
+                child: _NavItem(
+                  tab: SpineTab.values[i],
+                  active: i == currentIndex,
+                  onTap: () => onSelect(i),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -68,27 +65,30 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? SpineColors.brass : SpineColors.parchmentDim;
+    final color = active ? SpineColors.parchment : SpineColors.onInk(0.34);
 
     return TapScale(
       onTap: onTap,
       semanticLabel: tab.label,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        // The caps label is decoration; the tab's name comes from TapScale's
-        // semantics, so a screen reader says "Saved", not "S-A-V-E-D".
-        child: ExcludeSemantics(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(active ? tab.activeIcon : tab.icon, size: 20, color: color),
-              const SizedBox(height: 3),
-              Text(
+      child: ExcludeSemantics(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(active ? tab.activeIcon : tab.icon, size: 21, color: color),
+            const SizedBox(height: 6),
+            // The label belongs to the selected tab only; the others are just
+            // their glyph until you land on them.
+            AnimatedOpacity(
+              opacity: active ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Text(
                 tab.label.toUpperCase(),
-                style: SpineText.labelSmall.copyWith(color: color),
+                style: SpineText.labelSmall.copyWith(
+                  color: SpineColors.onInk(0.55),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -8,8 +8,10 @@ import '../../state/progress_controller.dart';
 import '../../state/shell_controller.dart';
 import 'tap_scale.dart';
 
-/// A book as it appears in a list (Search, Saved): a slice of its spine, the
-/// title, and how far in you are.
+/// A book as it appears in a list (Search, Saved).
+///
+/// A tall slice of the book's spine stands in for a cover, filling from the
+/// bottom with how far in you are — the ribbon from the card, at list scale.
 class BookRow extends StatelessWidget {
   const BookRow({super.key, required this.book, this.trailing});
 
@@ -23,57 +25,39 @@ class BookRow extends StatelessWidget {
     );
 
     return TapScale(
-      scale: 0.98,
+      scale: 0.985,
       semanticLabel: '${book.title} by ${book.author}',
       onTap: () => context.read<ShellController>().openBook(book.id),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 6,
-              height: 54,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: ColoredBox(
-                  color: book.spineColor.withValues(alpha: 0.35),
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: FractionallySizedBox(
-                      heightFactor: progress.clamp(0.0, 1.0),
-                      widthFactor: 1,
-                      child: ColoredBox(color: book.spineColor),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
+            _SpineSlice(color: book.spineColor, fill: progress),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    book.title,
-                    style: SpineText.sectionTitle.copyWith(fontSize: 16),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    book.author,
-                    style: SpineText.secondary.copyWith(fontSize: 12.5),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    '${book.genre.toUpperCase()} · ${book.durationLabel}',
+                    book.genre.toUpperCase(),
                     style: SpineText.labelSmall.copyWith(
-                      color: SpineColors.parchmentDim,
+                      color: SpineColors.onInk(0.34),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    book.title,
+                    style: SpineText.ideaHeading.copyWith(fontSize: 18),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${book.author}   ·   ${book.durationLabel}',
+                    style: SpineText.author.copyWith(fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -82,6 +66,55 @@ class BookRow extends StatelessWidget {
             ),
             if (trailing != null) ...[const SizedBox(width: 10), trailing!],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpineSlice extends StatelessWidget {
+  const _SpineSlice({required this.color, required this.fill});
+
+  final Color color;
+  final double fill;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 62,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.5),
+            color.withValues(alpha: 0.16),
+          ],
+        ),
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: SizedBox(
+            width: 3,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: ColoredBox(
+                color: SpineColors.onInk(0.14),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: fill.clamp(0.0, 1.0),
+                    widthFactor: 1,
+                    child: ColoredBox(color: color),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

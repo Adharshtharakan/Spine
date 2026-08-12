@@ -121,8 +121,12 @@ class _ShelfScreenState extends State<ShelfScreen> {
           child: KeyedSubtree(
             key: ValueKey(item.key),
             child: switch (item) {
-              BookFeedItem(:final book) =>
-                BookSlide(book: book, isActive: isActive),
+              BookFeedItem(:final book) => BookSlide(
+                book: book,
+                isActive: isActive,
+                pageController: _controller,
+                pageIndex: index,
+              ),
               AdFeedItem() => AdSlide(
                 item: item,
                 provider: context.read<AdProvider>(),

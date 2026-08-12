@@ -6,7 +6,9 @@ import '../../data/models/feed_item.dart';
 import '../../services/ads/ad_creative.dart';
 import '../../services/ads/ad_provider.dart';
 import '../widgets/spine_pill.dart';
+import '../widgets/spine_top_bar.dart';
 import '../widgets/tap_scale.dart';
+import 'ambient_backdrop.dart';
 
 /// A sponsored card between books.
 ///
@@ -61,76 +63,97 @@ class _AdSlideState extends State<AdSlide> {
     final creative = _creative;
     if (creative == null) return const _EmptyAdCard();
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(30, 24, 20, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Ads get the house neutral rather than a book's colour, so the feed
+        // reads the interruption before the copy does.
+        const AmbientBackdrop(color: SpineColors.brassDim, intensity: 0.55),
+        Padding(
+          // Clears the floating masthead, exactly as a book card does.
+          padding: EdgeInsets.fromLTRB(
+            24,
+            MediaQuery.paddingOf(context).top + SpineTopBar.height + 16,
+            24,
+            20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SpinePill(
-                label: creative.isTest ? 'Test ad' : 'Sponsored',
-                foreground: SpineColors.brassDim,
-                borderColor: SpineColors.line,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  creative.sponsor.toUpperCase(),
-                  style: SpineText.labelSmall.copyWith(
-                    color: SpineColors.parchmentDim,
+              Row(
+                children: [
+                  SpinePill(
+                    label: creative.isTest ? 'Test ad' : 'Sponsored',
+                    foreground: SpineColors.brass,
+                    background: SpineColors.brass.withValues(alpha: 0.14),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      creative.sponsor.toUpperCase(),
+                      style: SpineText.labelSmall.copyWith(
+                        color: SpineColors.onInk(0.4),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            creative.headline,
-            style: SpineText.ideaHeading.copyWith(fontSize: 22),
-          ),
-          const SizedBox(height: 12),
-          Text(creative.body, style: SpineText.ideaBody),
-          const SizedBox(height: 20),
-          TapScale(
-            onTap: () => widget.provider.recordClick(creative),
-            semanticLabel: creative.ctaLabel,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border.all(color: SpineColors.brassDim),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                creative.ctaLabel.toUpperCase(),
-                style: SpineText.labelMedium.copyWith(
-                  color: SpineColors.brass,
-                ),
-              ),
-            ),
-          ),
-          const Spacer(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.keyboard_arrow_up,
-                size: 16,
-                color: SpineColors.parchmentDim,
-              ),
-              const SizedBox(width: 6),
+              const Spacer(),
               Text(
-                'SWIPE FOR THE NEXT BOOK',
-                style: SpineText.labelSmall.copyWith(
-                  color: SpineColors.parchmentDim,
+                creative.headline,
+                style: SpineText.bookTitle.copyWith(fontSize: 30),
+              ),
+              const SizedBox(height: 16),
+              Text(creative.body, style: SpineText.ideaBody),
+              const SizedBox(height: 26),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TapScale(
+                  onTap: () => widget.provider.recordClick(creative),
+                  semanticLabel: creative.ctaLabel,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: SpineColors.surfaceRaised,
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: Text(
+                      creative.ctaLabel.toUpperCase(),
+                      style: SpineText.labelMedium.copyWith(
+                        color: SpineColors.parchment,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.keyboard_arrow_up_rounded,
+                      size: 18,
+                      color: SpineColors.onInk(0.3),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'SWIPE FOR THE NEXT BOOK',
+                      style: SpineText.labelSmall.copyWith(
+                        color: SpineColors.onInk(0.3),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -144,7 +167,10 @@ class _EmptyAdCard extends StatelessWidget {
     return Center(
       child: Text(
         'SPINE',
-        style: SpineText.label.copyWith(color: SpineColors.brassDim),
+        style: SpineText.wordmark.copyWith(
+          fontSize: 15,
+          color: SpineColors.onInk(0.25),
+        ),
       ),
     );
   }

@@ -7,27 +7,43 @@ import '../../data/models/reading_mode.dart';
 import '../../services/audio/playback_snapshot.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
-import 'cover_panel.dart';
+import 'ambient_backdrop.dart';
+import 'book_header.dart';
 import 'idea_view.dart';
 import 'listen_controls.dart';
 import 'mode_toggle.dart';
 import 'read_controls.dart';
 import 'spine_ribbon.dart';
 import 'watch_panel.dart';
+import '../widgets/spine_top_bar.dart';
+
+/// Width of the ribbon rail on the left of every card. Text on the card lines
+/// up to the right of it, so the card has a single left edge.
+const double _railWidth = 28;
 
 /// One book, one full screen.
 ///
 /// Rebuild scope is deliberate: the card as a whole reacts to that book's
-/// progress, while the ribbon and transport — the only things that move at
-/// playback rate — subscribe to the playhead on their own.
+/// progress, while the backdrop, the ribbon and the transport — the only things
+/// that move at scroll or playback rate — subscribe on their own.
 class BookSlide extends StatelessWidget {
-  const BookSlide({super.key, required this.book, required this.isActive});
+  const BookSlide({
+    super.key,
+    required this.book,
+    required this.isActive,
+    this.pageController,
+    this.pageIndex = 0,
+  });
 
   final Book book;
 
-  /// Whether this is the card the reader is currently on. Off-screen cards
-  /// stay built (the feed keeps a neighbour ready) but never drive audio.
+  /// Whether this is the card the reader is currently on. Off-screen cards stay
+  /// built (the feed keeps a neighbour ready) but never drive audio.
   final bool isActive;
+
+  /// Supplied by the feed so the light can drift against the scroll.
+  final PageController? pageController;
+  final int pageIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -36,48 +52,63 @@ class BookSlide extends StatelessWidget {
     );
     final ideaIndex = progress.ideaIndex.clamp(0, book.ideaCount - 1);
 
-    // Short devices (and large system text) get a tighter cover so the idea
+    // Short devices (and large system text) get a tighter card so the idea
     // itself never loses its room.
-    final compact = MediaQuery.sizeOf(context).height < 700;
+    final compact = MediaQuery.sizeOf(context).height < 760;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        _Ribbon(
-          book: book,
-          progress: progress,
-          ideaIndex: ideaIndex,
-          isActive: isActive,
-          onSelect: (index) => _selectIdea(context, progress, index),
+        _Backdrop(
+          color: book.spineColor,
+          controller: pageController,
+          index: pageIndex,
         ),
-        Expanded(
+        Padding(
+          // Clears the floating masthead at the top; the light behind it does
+          // not stop there.
+          padding: EdgeInsets.fromLTRB(
+            24,
+            MediaQuery.paddingOf(context).top +
+                SpineTopBar.height +
+                (compact ? 4 : 16),
+            24,
+            compact ? 8 : 14,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CoverPanel(
-                book: book,
-                saved: progress.saved,
-                compact: compact,
-                onToggleSaved: () =>
-                    context.read<ProgressController>().toggleSaved(book.id),
+              Padding(
+                // Aligned with the idea text, which sits to the right of the
+                // ribbon rail — one left edge down the whole card.
+                padding: const EdgeInsets.only(left: _railWidth),
+                child: BookHeader(
+                  book: book,
+                  saved: progress.saved,
+                  compact: compact,
+                  onToggleSaved: () =>
+                      context.read<ProgressController>().toggleSaved(book.id),
+                ),
               ),
-              ModeToggle(
-                mode: progress.mode,
-                accent: book.spineColor,
-                watchLocked: !book.watch.isAvailable,
-                onSelect: (mode) => _selectMode(context, progress, mode),
+              SizedBox(height: compact ? 18 : 28),
+              Padding(
+                padding: const EdgeInsets.only(left: _railWidth),
+                child: ModeToggle(
+                  mode: progress.mode,
+                  accent: book.spineColor,
+                  watchLocked: !book.watch.isAvailable,
+                  onSelect: (mode) => _selectMode(context, progress, mode),
+                ),
               ),
+              SizedBox(height: compact ? 20 : 30),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-                  child: _Body(
-                    book: book,
-                    progress: progress,
-                    ideaIndex: ideaIndex,
-                    compact: compact,
-                    onSelectIdea: (index) =>
-                        _selectIdea(context, progress, index),
-                  ),
+                child: _Body(
+                  book: book,
+                  progress: progress,
+                  ideaIndex: ideaIndex,
+                  isActive: isActive,
+                  compact: compact,
+                  onSelectIdea: (index) => _selectIdea(context, progress, index),
                 ),
               ),
             ],
@@ -122,44 +153,40 @@ class BookSlide extends StatelessWidget {
   }
 }
 
-/// The ribbon fills from the playhead in Listen mode, so it subscribes to
-/// playback rather than making the whole card do so.
-class _Ribbon extends StatelessWidget {
-  const _Ribbon({
-    required this.book,
-    required this.progress,
-    required this.ideaIndex,
-    required this.isActive,
-    required this.onSelect,
+/// The light drifts at a fraction of the scroll, and dims as the card leaves.
+class _Backdrop extends StatelessWidget {
+  const _Backdrop({
+    required this.color,
+    required this.controller,
+    required this.index,
   });
 
-  final Book book;
-  final BookProgress progress;
-  final int ideaIndex;
-  final bool isActive;
-  final ValueChanged<int> onSelect;
+  final Color color;
+  final PageController? controller;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
-    final listening = isActive && progress.mode == ReadingMode.listen;
-
-    final fill = listening
-        ? context.select<PlaybackController, double>((controller) {
-            final snapshot = controller.snapshot;
-            final isThisIdea =
-                snapshot.bookId == book.id && snapshot.ideaIndex == ideaIndex;
-            return isThisIdea ? snapshot.fraction : 0.35;
-          })
-        : 0.35;
+    final controller = this.controller;
+    if (controller == null) {
+      return RepaintBoundary(child: AmbientBackdrop(color: color));
+    }
 
     return RepaintBoundary(
-      child: SpineRibbon(
-        count: book.ideaCount,
-        currentIndex: ideaIndex,
-        currentFill: fill,
-        completed: progress.completedIdeas,
-        color: book.spineColor,
-        onSelect: onSelect,
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final page = controller.hasClients && controller.position.haveDimensions
+              ? (controller.page ?? controller.initialPage.toDouble())
+              : controller.initialPage.toDouble();
+          final delta = (page - index).clamp(-1.0, 1.0);
+
+          return AmbientBackdrop(
+            color: color,
+            parallax: delta,
+            intensity: 1 - delta.abs() * 0.55,
+          );
+        },
       ),
     );
   }
@@ -170,6 +197,7 @@ class _Body extends StatelessWidget {
     required this.book,
     required this.progress,
     required this.ideaIndex,
+    required this.isActive,
     required this.compact,
     required this.onSelectIdea,
   });
@@ -177,6 +205,7 @@ class _Body extends StatelessWidget {
   final Book book;
   final BookProgress progress;
   final int ideaIndex;
+  final bool isActive;
   final bool compact;
   final ValueChanged<int> onSelectIdea;
 
@@ -192,29 +221,115 @@ class _Body extends StatelessWidget {
     }
 
     final idea = book.ideaAt(ideaIndex);
+    final listening = progress.mode == ReadingMode.listen;
 
-    return GestureDetector(
-      // Sideways flicks move between ideas — the gesture a phone invites, with
-      // Prev/Next still there for anyone who prefers a target.
-      onHorizontalDragEnd: (details) {
-        final velocity = details.primaryVelocity ?? 0;
-        if (velocity < -180) onSelectIdea(ideaIndex + 1);
-        if (velocity > 180) onSelectIdea(ideaIndex - 1);
-      },
-      child: IdeaView(
-        idea: idea,
-        index: ideaIndex,
-        total: book.ideaCount,
-        compact: compact,
-        footer: progress.mode == ReadingMode.listen
-            ? _ListenFooter(book: book, ideaIndex: ideaIndex)
-            : ReadControls(
-                accent: book.spineColor,
-                canGoBack: ideaIndex > 0,
-                canGoForward: ideaIndex < book.ideaCount - 1,
-                onPrev: () => onSelectIdea(ideaIndex - 1),
-                onNext: () => onSelectIdea(ideaIndex + 1),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: GestureDetector(
+            // Sideways flicks move between ideas — the gesture a phone invites,
+            // with Prev/Next still there for anyone who prefers a target.
+            onHorizontalDragEnd: (details) {
+              final velocity = details.primaryVelocity ?? 0;
+              if (velocity < -180) onSelectIdea(ideaIndex + 1);
+              if (velocity > 180) onSelectIdea(ideaIndex - 1);
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Ribbon(
+                  book: book,
+                  progress: progress,
+                  ideaIndex: ideaIndex,
+                  isActive: isActive,
+                  compact: compact,
+                  onSelect: onSelectIdea,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: IdeaView(
+                      idea: idea,
+                      index: ideaIndex,
+                      total: book.ideaCount,
+                      compact: compact,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: compact ? 14 : 20),
+        Padding(
+          padding: const EdgeInsets.only(left: _railWidth),
+          child: listening
+              ? _ListenFooter(book: book, ideaIndex: ideaIndex)
+              : ReadControls(
+                  accent: book.spineColor,
+                  canGoBack: ideaIndex > 0,
+                  canGoForward: ideaIndex < book.ideaCount - 1,
+                  onPrev: () => onSelectIdea(ideaIndex - 1),
+                  onNext: () => onSelectIdea(ideaIndex + 1),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The ribbon fills from the playhead in Listen mode, so it subscribes to
+/// playback rather than making the whole card do so.
+class _Ribbon extends StatelessWidget {
+  const _Ribbon({
+    required this.book,
+    required this.progress,
+    required this.ideaIndex,
+    required this.isActive,
+    required this.compact,
+    required this.onSelect,
+  });
+
+  final Book book;
+  final BookProgress progress;
+  final int ideaIndex;
+  final bool isActive;
+  final bool compact;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final listening = isActive && progress.mode == ReadingMode.listen;
+
+    final fill = listening
+        ? context.select<PlaybackController, double>((controller) {
+            final snapshot = controller.snapshot;
+            final isThisIdea =
+                snapshot.bookId == book.id && snapshot.ideaIndex == ideaIndex;
+            return isThisIdea ? snapshot.fraction : 0;
+          })
+        : 0.0;
+
+    // Held to the top of the body at a fixed height: run full-height and it
+    // stops reading as a bookmark and starts reading as a rule.
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        height: compact ? 168 : 196,
+        child: RepaintBoundary(
+          child: SpineRibbon(
+            count: book.ideaCount,
+            currentIndex: ideaIndex,
+            currentFill: fill,
+            showPlayhead: listening,
+            completed: progress.completedIdeas,
+            color: book.spineColor,
+            onSelect: onSelect,
+          ),
+        ),
       ),
     );
   }
@@ -234,10 +349,9 @@ class _ListenFooter extends StatelessWidget {
       controller,
     ) {
       final current = controller.snapshot;
-      final isThisIdea = current.trackId == idea.id;
       // Before this idea is cued, show its declared length rather than zero —
       // the transport should never flash an empty duration.
-      return isThisIdea
+      return current.trackId == idea.id
           ? current
           : PlaybackSnapshot(
               trackId: idea.id,

@@ -24,34 +24,36 @@ class ProfileScreen extends StatelessWidget {
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
       children: [
         Row(
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: SpineColors.brass.withValues(alpha: 0.15),
+                color: SpineColors.brass.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
-                border: Border.all(color: SpineColors.brassDim),
               ),
               alignment: Alignment.center,
               child: Text(
                 'S',
-                style: SpineText.sectionTitle.copyWith(
-                  fontSize: 22,
+                style: SpineText.bookTitle.copyWith(
+                  fontSize: 24,
                   color: SpineColors.brass,
                 ),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Reader', style: SpineText.sectionTitle),
-                  const SizedBox(height: 4),
+                  Text(
+                    'Reader',
+                    style: SpineText.ideaHeading.copyWith(fontSize: 22),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
                     '${progress.streak} DAY STREAK',
                     style: SpineText.label.copyWith(color: SpineColors.brass),
@@ -61,39 +63,25 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 26),
+        const SizedBox(height: 28),
         Row(
           children: [
-            _Stat(value: '${progress.ideasCompleted}', label: 'Ideas finished'),
-            _Stat(value: '${progress.booksStarted}', label: 'Books started'),
-            _Stat(
-              value: '${progress.savedBookIds.length}',
-              label: 'Saved',
-            ),
+            _Stat(value: '${progress.ideasCompleted}', label: 'Ideas'),
+            const SizedBox(width: 10),
+            _Stat(value: '${progress.booksStarted}', label: 'Started'),
+            const SizedBox(width: 10),
+            _Stat(value: '${progress.savedBookIds.length}', label: 'Saved'),
           ],
         ),
-        const SizedBox(height: 26),
-        const Divider(height: 1, color: SpineColors.line),
-        const SizedBox(height: 18),
-        Text(
-          'Your library',
-          style: SpineText.label.copyWith(color: SpineColors.parchmentDim),
+        const SizedBox(height: 28),
+        _Block(
+          label: 'Your library',
+          value: '${library.books.length} books · $totalIdeas ideas',
         ),
         const SizedBox(height: 10),
-        Text(
-          '${library.books.length} books · $totalIdeas ideas',
-          style: SpineText.secondary,
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'About',
-          style: SpineText.label.copyWith(color: SpineColors.parchmentDim),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'Spine ${config.environment == 'prod' ? '' : '· ${config.environment}'}'
-              .trim(),
-          style: SpineText.secondary,
+        _Block(
+          label: 'About',
+          value: config.isProd ? 'Spine' : 'Spine · ${config.environment}',
         ),
       ],
     );
@@ -109,23 +97,56 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+        decoration: BoxDecoration(
+          color: SpineColors.surface,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: SpineText.bookTitle.copyWith(fontSize: 30)),
+            const SizedBox(height: 8),
+            Text(
+              label.toUpperCase(),
+              style: SpineText.labelSmall.copyWith(
+                color: SpineColors.onInk(0.42),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Block extends StatelessWidget {
+  const _Block({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      decoration: BoxDecoration(
+        color: SpineColors.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            value,
-            style: SpineText.bookTitle.copyWith(
-              fontSize: 26,
-              color: SpineColors.parchment,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
             label.toUpperCase(),
             style: SpineText.labelSmall.copyWith(
-              color: SpineColors.parchmentDim,
+              color: SpineColors.onInk(0.42),
             ),
           ),
+          const SizedBox(height: 8),
+          Text(value, style: SpineText.ideaBody.copyWith(fontSize: 15)),
         ],
       ),
     );

@@ -6,7 +6,11 @@ import '../../core/theme/spine_text.dart';
 import '../../services/audio/playback_snapshot.dart';
 import '../widgets/tap_scale.dart';
 
-/// Transport for Listen mode: scrubber, elapsed time, play/pause, share.
+/// Transport for Listen mode.
+///
+/// The play control is the centre of gravity: a large thin ring, the way a
+/// player looks when it isn't pretending to be a toolbar. Time sits under the
+/// scrubber, share stays at the edge.
 class ListenControls extends StatelessWidget {
   const ListenControls({
     super.key,
@@ -25,72 +29,77 @@ class ListenControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Scrubber(
-            fraction: snapshot.fraction,
-            accent: accent,
-            onSeek: onSeekFraction,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              // Scales down rather than wrapping or clipping: on a narrow
-              // phone with large system type this line must still read.
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    children: [
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _Scrubber(
+          fraction: snapshot.fraction,
+          accent: accent,
+          onSeek: onSeekFraction,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    Text(
+                      _clock(snapshot.position),
+                      style: SpineText.label.copyWith(
+                        color: SpineColors.onInk(0.62),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (snapshot.isSimulated)
                       Text(
-                        '${_clock(snapshot.position)} / ${_clock(snapshot.duration)}',
-                        style: SpineText.label.copyWith(
-                          color: SpineColors.parchmentDim,
+                        'PREVIEW',
+                        style: SpineText.labelSmall.copyWith(
+                          color: SpineColors.brassDim,
                         ),
                       ),
-                      if (snapshot.isSimulated) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          'PREVIEW',
-                          style: SpineText.labelSmall.copyWith(
-                            color: SpineColors.brassDim,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  ],
                 ),
               ),
-              _PlayButton(
-                accent: accent,
-                snapshot: snapshot,
-                onTap: onTogglePlay,
-              ),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: TapScale(
-                    semanticLabel: 'Share this idea',
-                    onTap: () => _share(context),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.ios_share,
-                        size: 17,
-                        color: SpineColors.parchmentDim,
-                      ),
+            ),
+            Text(
+              _clock(snapshot.duration),
+              style: SpineText.label.copyWith(color: SpineColors.onInk(0.34)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            const Expanded(child: SizedBox.shrink()),
+            _PlayButton(accent: accent, snapshot: snapshot, onTap: onTogglePlay),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TapScale(
+                  semanticLabel: 'Share this idea',
+                  onTap: () => _share(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: SpineColors.surface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.ios_share_rounded,
+                      size: 17,
+                      color: SpineColors.onInk(0.55),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -103,6 +112,10 @@ class ListenControls extends StatelessWidget {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           backgroundColor: SpineColors.inkCard,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           content: Text(
             'Copied to clipboard',
             style: SpineText.label.copyWith(color: SpineColors.parchment),
@@ -142,15 +155,15 @@ class _Scrubber extends StatelessWidget {
           onTapDown: (details) => seekTo(details.localPosition.dx),
           onHorizontalDragUpdate: (details) => seekTo(details.localPosition.dx),
           child: Padding(
-            // A 3px line is too thin to hit; the padding gives it a real target
+            // The line is too thin to hit; the padding gives it a real target
             // without changing how it looks.
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(4),
               child: SizedBox(
-                height: 3,
+                height: 4,
                 child: ColoredBox(
-                  color: SpineColors.line,
+                  color: SpineColors.surface,
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: FractionallySizedBox(
@@ -184,23 +197,30 @@ class _PlayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TapScale(
       onTap: onTap,
+      scale: 0.93,
       semanticLabel: snapshot.isPlaying ? 'Pause' : 'Play',
       child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+        width: 68,
+        height: 68,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: accent.withValues(alpha: 0.14),
+          border: Border.all(color: accent.withValues(alpha: 0.55), width: 1.5),
+        ),
         child: snapshot.isLoading
-            ? const Padding(
-                padding: EdgeInsets.all(13),
+            ? Padding(
+                padding: const EdgeInsets.all(24),
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(SpineColors.ink),
+                  strokeWidth: 1.5,
+                  valueColor: AlwaysStoppedAnimation(accent),
                 ),
               )
             : Icon(
-                snapshot.isPlaying ? Icons.pause : Icons.play_arrow,
-                size: 20,
-                color: SpineColors.ink,
+                snapshot.isPlaying
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                size: 30,
+                color: SpineColors.parchment,
               ),
       ),
     );

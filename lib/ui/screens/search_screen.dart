@@ -37,17 +37,16 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
           child: Container(
             decoration: BoxDecoration(
-              color: SpineColors.inkCard,
-              border: Border.all(color: SpineColors.line),
-              borderRadius: BorderRadius.circular(24),
+              color: SpineColors.surface,
+              borderRadius: BorderRadius.circular(26),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
-                const Icon(
-                  Icons.search,
-                  size: 18,
-                  color: SpineColors.parchmentDim,
+                Icon(
+                  Icons.search_rounded,
+                  size: 19,
+                  color: SpineColors.onInk(0.5),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -77,12 +76,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       setState(() => _query = '');
                       FocusScope.of(context).unfocus();
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
                       child: Icon(
-                        Icons.close,
-                        size: 16,
-                        color: SpineColors.parchmentDim,
+                        Icons.close_rounded,
+                        size: 17,
+                        color: SpineColors.onInk(0.5),
                       ),
                     ),
                   ),
@@ -96,7 +95,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Text(
                     'NOTHING ON THE SHELF MATCHES',
                     style: SpineText.label.copyWith(
-                      color: SpineColors.parchmentDim,
+                      color: SpineColors.onInk(0.4),
                     ),
                   ),
                 )
@@ -105,8 +104,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: results.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, color: SpineColors.line),
+                  separatorBuilder: (_, __) => const SizedBox(height: 2),
                   itemBuilder: (context, index) => BookRow(book: results[index]),
                 ),
         ),

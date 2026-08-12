@@ -26,39 +26,47 @@ class WatchPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
+      // Scales down rather than scrolling: an inner scroll view here would
+      // swallow the swipe that moves the feed to the next book.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // The same thin ring as the play control: this is where the player
+            // will be once the explainers exist.
             Container(
-              width: 46,
-              height: 46,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
-                color: book.spineColor.withValues(alpha: 0.13),
                 shape: BoxShape.circle,
+                color: book.spineColor.withValues(alpha: 0.1),
+                border: Border.all(
+                  color: book.spineColor.withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
               ),
               child: Icon(
-                Icons.auto_awesome,
-                size: 20,
+                Icons.auto_awesome_rounded,
+                size: 28,
                 color: book.spineColor,
               ),
             ),
-            const SizedBox(height: 10),
-            const Text('Animated explainer', style: SpineText.sectionTitle),
-            const SizedBox(height: 10),
+            const SizedBox(height: 26),
+            const Text('Animated explainer', style: SpineText.ideaHeading),
+            const SizedBox(height: 12),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 260),
+              constraints: const BoxConstraints(maxWidth: 280),
               child: Text(
                 'An AI-narrated video walkthrough of “${book.title}”, built for '
                 'people who learn best by watching.',
                 textAlign: TextAlign.center,
-                style: SpineText.secondary,
+                style: SpineText.ideaBody,
               ),
             ),
-            const SizedBox(height: 12),
-            const SpinePill(label: 'Coming soon', icon: Icons.lock_outline),
-            const SizedBox(height: 14),
+            const SizedBox(height: 22),
+            const SpinePill(label: 'Coming soon', icon: Icons.lock_rounded),
+            const SizedBox(height: 18),
             _NotifyButton(
               accent: book.spineColor,
               notified: notified,
@@ -90,19 +98,20 @@ class _NotifyButton extends StatelessWidget {
           ? 'Turn off notification for this explainer'
           : 'Notify me when this explainer is ready',
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
         decoration: BoxDecoration(
-          color: notified ? Colors.transparent : accent,
-          border: Border.all(color: accent),
-          borderRadius: BorderRadius.circular(20),
+          color: notified
+              ? SpineColors.surface
+              : accent.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (notified) ...[
-              Icon(Icons.check, size: 12, color: accent),
-              const SizedBox(width: 6),
+              Icon(Icons.check_rounded, size: 13, color: accent),
+              const SizedBox(width: 8),
             ],
             Text(
               notified ? "YOU'LL BE NOTIFIED" : 'NOTIFY ME',

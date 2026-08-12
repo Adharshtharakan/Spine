@@ -63,6 +63,19 @@ flutter test        # 40 tests: catalogue, feed composition, playback, persisten
 flutter analyze
 ```
 
+**Design previews.** Every screen can be rendered to a PNG without a device,
+with the real catalogue and the real fonts:
+
+```bash
+flutter test test/preview/screens_preview.dart --update-goldens
+# → test/preview/output/*.png
+```
+
+Deliberately not named `*_test.dart`, so the default suite skips it — these
+images are supposed to change whenever the design does, and failing the build
+for that would be noise. Nothing in the folder asserts anything about
+appearance.
+
 ---
 
 ## How it's put together
@@ -73,7 +86,7 @@ lib/
   app.dart                   composition root — every dependency is built and injected here
   core/
     config/                  AppConfig, AdConfig (both --dart-define driven)
-    theme/                   palette, type scale, ThemeData
+    theme/                   palette, surfaces, type scale, ThemeData
   data/
     models/                  Book, Idea, WatchTrack, BookProgress, SessionState, FeedItem
     repository/              BookRepository + the bundled-asset implementation
