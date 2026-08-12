@@ -29,9 +29,21 @@ flutter run -d <device-id>      # debug
 flutter run -d <device-id> --release
 ```
 
-Android Studio's SDK, an emulator image (API 23+), and USB debugging on a
-physical device are the only prerequisites. `flutter doctor` will name anything
-missing.
+Android Studio's SDK, an emulator image, and USB debugging on a physical device
+are the only prerequisites. `flutter doctor` will name anything missing.
+
+**If Gradle can't find a JDK**, point it at one in your *personal* Gradle
+properties — never in `android/gradle.properties`, which is committed and has to
+work on every machine that clones the repo:
+
+```properties
+# ~/.gradle/gradle.properties
+# Windows: %USERPROFILE%\.gradle\gradle.properties
+org.gradle.java.home=C:/Users/you/.jdks/ms-17.0.20
+```
+
+The same rule covers any other machine-local setting (cache locations, proxy
+hosts, memory tuning for your box).
 
 **iOS simulator or device** (macOS only)
 
