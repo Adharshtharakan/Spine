@@ -47,7 +47,7 @@ does not.
 **Tests**
 
 ```bash
-flutter test        # 35 tests: feed composition, playback, persistence, UI
+flutter test        # 40 tests: catalogue, feed composition, playback, persistence, UI
 flutter analyze
 ```
 
@@ -85,9 +85,9 @@ the transport follow the playhead.
 
 ## Content
 
-Books live in `assets/content/books.json`. Nothing about the catalogue is
-hard-coded in a widget — the feed doesn't know how many books exist, so
-5 → 50 → 500 is a data change.
+Books live in `assets/content/books.json` — currently 25 books, 125 ideas.
+Nothing about the catalogue is hard-coded in a widget: the feed doesn't know how
+many books exist, so 25 → 50 → 500 is a data change.
 
 ```jsonc
 {
@@ -110,6 +110,22 @@ hard-coded in a widget — the feed doesn't know how many books exist, so
   ]
 }
 ```
+
+**Adding a book.** Append an entry and run `flutter test test/catalogue_test.dart`
+— it enforces what the app assumes:
+
+- exactly five ideas per book (the ribbon is drawn from that number)
+- unique book and idea ids
+- title, author, genre, duration label and idea bodies all present
+- `spine` is a palette name (`brass`, `teal`, `brick`, `indigo`, `olive`) or a
+  hex value
+- no two neighbouring books share a spine colour — consecutive cards in the same
+  colour make the feed look stuck when you swipe, so ordering is part of editing
+- any `asset:` audio reference actually exists in the bundle
+
+One editorial constraint that isn't machine-checkable: the five ideas must be
+original distillations written in Spine's voice, not passages lifted from the
+book. That's what keeps a catalogue of this shape publishable at any size.
 
 Point the app at a different manifest without touching code:
 

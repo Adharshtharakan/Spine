@@ -9,7 +9,9 @@
       "genre": "Self-Improvement",
       "durationLabel": "14 MIN",
       "spine": "brass",
-      "watch": { "available": false },
+      "watch": {
+        "available": false
+      },
       "ideas": [
         {
           "id": "atomic-habits-1",
@@ -55,7 +57,9 @@
       "genre": "History",
       "durationLabel": "15 MIN",
       "spine": "indigo",
-      "watch": { "available": false },
+      "watch": {
+        "available": false
+      },
       "ideas": [
         {
           "id": "sapiens-1",
@@ -96,7 +100,9 @@
       "genre": "Productivity",
       "durationLabel": "12 MIN",
       "spine": "teal",
-      "watch": { "available": false },
+      "watch": {
+        "available": false
+      },
       "ideas": [
         {
           "id": "deep-work-1",
@@ -137,7 +143,9 @@
       "genre": "Psychology",
       "durationLabel": "15 MIN",
       "spine": "brick",
-      "watch": { "available": false },
+      "watch": {
+        "available": false
+      },
       "ideas": [
         {
           "id": "thinking-fast-slow-1",
@@ -178,7 +186,9 @@
       "genre": "Wealth & Wisdom",
       "durationLabel": "13 MIN",
       "spine": "olive",
-      "watch": { "available": false },
+      "watch": {
+        "available": false
+      },
       "ideas": [
         {
           "id": "naval-almanack-1",
@@ -209,6 +219,866 @@
           "title": "Happiness Is a Skill",
           "body": "Peace comes from wanting what you already have — practiced deliberately, like any other skill.",
           "seconds": 9
+        }
+      ]
+    },
+    {
+      "id": "mans-search-for-meaning",
+      "title": "Man's Search for Meaning",
+      "author": "Viktor E. Frankl",
+      "genre": "Psychology",
+      "durationLabel": "13 MIN",
+      "spine": "brick",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "mans-search-for-meaning-1",
+          "title": "The Last Freedom",
+          "body": "Everything can be taken from a person except the choice of how to respond to what happens. That gap between event and reaction is where a life is decided.",
+          "seconds": 12
+        },
+        {
+          "id": "mans-search-for-meaning-2",
+          "title": "Meaning Over Happiness",
+          "body": "Happiness can't be pursued directly; it follows from having a reason to act. Chase the reason and the feeling arrives on its own.",
+          "seconds": 11
+        },
+        {
+          "id": "mans-search-for-meaning-3",
+          "title": "Three Roads to Meaning",
+          "body": "Meaning comes from work worth doing, from love for someone, or from the courage found in unavoidable suffering. Most lives use all three.",
+          "seconds": 11
+        },
+        {
+          "id": "mans-search-for-meaning-4",
+          "title": "Suffering With Purpose",
+          "body": "Pain that means something is bearable in a way pointless pain never is. Naming the purpose changes what a person can carry.",
+          "seconds": 11
+        },
+        {
+          "id": "mans-search-for-meaning-5",
+          "title": "The Why Carries the How",
+          "body": "Someone with a reason to live can survive almost any circumstance. Without one, comfort alone won't hold a person together.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "mindset",
+      "title": "Mindset",
+      "author": "Carol S. Dweck",
+      "genre": "Psychology",
+      "durationLabel": "12 MIN",
+      "spine": "teal",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "mindset-1",
+          "title": "Fixed and Growth",
+          "body": "A fixed mindset treats ability as a fact to be defended. A growth mindset treats it as something that changes with effort.",
+          "seconds": 11
+        },
+        {
+          "id": "mindset-2",
+          "title": "Praise the Process",
+          "body": "Telling someone they're smart makes them protect the label. Praising how they worked makes them willing to try something harder.",
+          "seconds": 11
+        },
+        {
+          "id": "mindset-3",
+          "title": "Failure as Information",
+          "body": "To a fixed mindset a setback is a verdict. To a growth mindset it's data about what to practise next.",
+          "seconds": 10
+        },
+        {
+          "id": "mindset-4",
+          "title": "The Power of Yet",
+          "body": "\"I can't do this\" and \"I can't do this yet\" describe the same moment and lead to entirely different next weeks.",
+          "seconds": 11
+        },
+        {
+          "id": "mindset-5",
+          "title": "Mindsets Are Situational",
+          "body": "Nobody holds one mindset everywhere. You can be growth-minded at work and quietly fixed about the thing you keep avoiding.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "psychology-of-money",
+      "title": "The Psychology of Money",
+      "author": "Morgan Housel",
+      "genre": "Wealth & Wisdom",
+      "durationLabel": "14 MIN",
+      "spine": "brass",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "psychology-of-money-1",
+          "title": "Nobody's Crazy",
+          "body": "Everyone's financial decisions make sense given what they've lived through. Your caution and their risk-taking were both taught by experience.",
+          "seconds": 11
+        },
+        {
+          "id": "psychology-of-money-2",
+          "title": "Enough",
+          "body": "The hardest financial skill is knowing when to stop. Without a definition of enough, more money keeps moving the finish line.",
+          "seconds": 11
+        },
+        {
+          "id": "psychology-of-money-3",
+          "title": "Room for Error",
+          "body": "The point of a margin of safety is to survive being wrong, because staying in the game is what compounding actually requires.",
+          "seconds": 11
+        },
+        {
+          "id": "psychology-of-money-4",
+          "title": "Wealth Is Invisible",
+          "body": "Spending shows what someone bought. Wealth is what they didn't spend — and it's the part that buys freedom.",
+          "seconds": 10
+        },
+        {
+          "id": "psychology-of-money-5",
+          "title": "Tails Drive Everything",
+          "body": "A small number of decisions produce most of the result. The rest of the work is patience while those few play out.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "zero-to-one",
+      "title": "Zero to One",
+      "author": "Peter Thiel",
+      "genre": "Business",
+      "durationLabel": "12 MIN",
+      "spine": "indigo",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "zero-to-one-1",
+          "title": "Vertical Progress",
+          "body": "Copying what works takes the world from one to many. Building something that didn't exist takes it from zero to one.",
+          "seconds": 11
+        },
+        {
+          "id": "zero-to-one-2",
+          "title": "Competition Is Overrated",
+          "body": "Fierce competition destroys the profit it fights over. Valuable companies escape competition rather than win it.",
+          "seconds": 10
+        },
+        {
+          "id": "zero-to-one-3",
+          "title": "The Secret Question",
+          "body": "Every great business rests on a truth few people agree with. Ask what important thing you believe that almost nobody else does.",
+          "seconds": 12
+        },
+        {
+          "id": "zero-to-one-4",
+          "title": "Start Small, Then Widen",
+          "body": "Dominate a market small enough to own completely, then expand outward from a position nobody can easily attack.",
+          "seconds": 10
+        },
+        {
+          "id": "zero-to-one-5",
+          "title": "The Last Mover",
+          "body": "Being first matters far less than being the last company to make a large improvement in a market.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "meditations",
+      "title": "Meditations",
+      "author": "Marcus Aurelius",
+      "genre": "Philosophy",
+      "durationLabel": "13 MIN",
+      "spine": "olive",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "meditations-1",
+          "title": "What Is Up to You",
+          "body": "Judgement, effort, and response are yours. Reputation, outcomes, and other people are not. Confusing the two causes most unhappiness.",
+          "seconds": 12
+        },
+        {
+          "id": "meditations-2",
+          "title": "The Obstacle Becomes the Path",
+          "body": "What blocks the action becomes the action. An impediment to a plan can be turned into the material of it.",
+          "seconds": 11
+        },
+        {
+          "id": "meditations-3",
+          "title": "Nothing Is New",
+          "body": "Everything happening now has happened before to someone else. The situation is rarely as unprecedented as it feels.",
+          "seconds": 10
+        },
+        {
+          "id": "meditations-4",
+          "title": "The Work in Front of You",
+          "body": "Do this task, well, as if it were the last thing you'll do. Most anxiety is about work that isn't yet at hand.",
+          "seconds": 12
+        },
+        {
+          "id": "meditations-5",
+          "title": "Remember the Ending",
+          "body": "Keeping the finite in view isn't morbid. It's the fastest way to see what actually deserves an afternoon.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "never-split-the-difference",
+      "title": "Never Split the Difference",
+      "author": "Chris Voss",
+      "genre": "Negotiation",
+      "durationLabel": "13 MIN",
+      "spine": "brick",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "never-split-the-difference-1",
+          "title": "Tactical Empathy",
+          "body": "Understanding the other side well enough to say their position out loud isn't agreement. It's leverage.",
+          "seconds": 10
+        },
+        {
+          "id": "never-split-the-difference-2",
+          "title": "Labels and Mirrors",
+          "body": "Saying \"it seems like…\", or simply repeating their last few words, invites people to keep explaining themselves.",
+          "seconds": 11
+        },
+        {
+          "id": "never-split-the-difference-3",
+          "title": "No Is the Start",
+          "body": "\"No\" makes people feel safe and in control. It's where a real conversation begins, not where it ends.",
+          "seconds": 11
+        },
+        {
+          "id": "never-split-the-difference-4",
+          "title": "That's Right",
+          "body": "Aim for the moment they say \"that's right\". It means you've summarised their view better than they did.",
+          "seconds": 11
+        },
+        {
+          "id": "never-split-the-difference-5",
+          "title": "Calibrated Questions",
+          "body": "\"How am I supposed to do that?\" hands the problem back without confrontation, and often produces their own concession.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "quiet",
+      "title": "Quiet",
+      "author": "Susan Cain",
+      "genre": "Psychology",
+      "durationLabel": "14 MIN",
+      "spine": "indigo",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "quiet-1",
+          "title": "The Extrovert Ideal",
+          "body": "Modern workplaces were built on the assumption that talking is thinking, which quietly wastes half the room.",
+          "seconds": 11
+        },
+        {
+          "id": "quiet-2",
+          "title": "Solitude Matters",
+          "body": "Deliberate practice is almost always solitary. Constant collaboration crowds out the conditions that produce good work.",
+          "seconds": 10
+        },
+        {
+          "id": "quiet-3",
+          "title": "The Brainstorming Problem",
+          "body": "Groups brainstorming together generate fewer and weaker ideas than the same people working alone and pooling results afterwards.",
+          "seconds": 12
+        },
+        {
+          "id": "quiet-4",
+          "title": "Restorative Niches",
+          "body": "Introverts can act extroverted for work they care about, as long as they get the quiet that pays the energy back.",
+          "seconds": 11
+        },
+        {
+          "id": "quiet-5",
+          "title": "Sensitivity as Signal",
+          "body": "Reacting strongly to stimulation isn't weakness. It usually travels with noticing detail and consequences that others miss.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "essentialism",
+      "title": "Essentialism",
+      "author": "Greg McKeown",
+      "genre": "Productivity",
+      "durationLabel": "12 MIN",
+      "spine": "brass",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "essentialism-1",
+          "title": "Less but Better",
+          "body": "The essentialist doesn't ask how to fit everything in. They ask which few things are worth doing at all.",
+          "seconds": 11
+        },
+        {
+          "id": "essentialism-2",
+          "title": "The Power of Choice",
+          "body": "Saying yes to everything is a decision to let other people set your priorities for you.",
+          "seconds": 10
+        },
+        {
+          "id": "essentialism-3",
+          "title": "If It's Not a Clear Yes",
+          "body": "When something is merely good, treat it as a no. Only an obvious yes has earned the space.",
+          "seconds": 10
+        },
+        {
+          "id": "essentialism-4",
+          "title": "Protect the Asset",
+          "body": "Sleep, health, and attention produce everything else. Trading them for output is a terrible exchange rate.",
+          "seconds": 10
+        },
+        {
+          "id": "essentialism-5",
+          "title": "Design the Routine",
+          "body": "Willpower is finite; routine isn't. Building the essential into the default removes the daily argument with yourself.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "why-we-sleep",
+      "title": "Why We Sleep",
+      "author": "Matthew Walker",
+      "genre": "Health",
+      "durationLabel": "14 MIN",
+      "spine": "teal",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "why-we-sleep-1",
+          "title": "Sleep Is Not Optional",
+          "body": "Every biological system measured so far works worse on short sleep. No function has been found that improves with less of it.",
+          "seconds": 12
+        },
+        {
+          "id": "why-we-sleep-2",
+          "title": "Two Kinds of Sleep",
+          "body": "Deep sleep moves memory into long-term storage. REM makes connections between what's stored. A night needs both.",
+          "seconds": 11
+        },
+        {
+          "id": "why-we-sleep-3",
+          "title": "Rhythm and Pressure",
+          "body": "Two systems set sleep: a body clock, and a chemical that builds while you're awake. Caffeine blocks the second, not the first.",
+          "seconds": 12
+        },
+        {
+          "id": "why-we-sleep-4",
+          "title": "Debt Isn't Repaid",
+          "body": "Lost sleep can't be recovered with a long weekend. The brain has no mechanism for reclaiming the hours it missed.",
+          "seconds": 11
+        },
+        {
+          "id": "why-we-sleep-5",
+          "title": "The Invisible Decline",
+          "body": "Reaction time, learning, and emotional control all degrade before anyone notices. Poor sleepers reliably rate their own performance as fine.",
+          "seconds": 12
+        }
+      ]
+    },
+    {
+      "id": "grit",
+      "title": "Grit",
+      "author": "Angela Duckworth",
+      "genre": "Psychology",
+      "durationLabel": "12 MIN",
+      "spine": "brick",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "grit-1",
+          "title": "Effort Counts Twice",
+          "body": "Talent turns effort into skill, then effort turns skill into achievement. Effort appears in the equation both times.",
+          "seconds": 11
+        },
+        {
+          "id": "grit-2",
+          "title": "Passion Is Direction",
+          "body": "Grit isn't intensity. It's the same direction held for years, with one top-level goal organising everything beneath it.",
+          "seconds": 11
+        },
+        {
+          "id": "grit-3",
+          "title": "Deliberate Practice",
+          "body": "Improvement comes from working at the edge of your ability with real feedback, not from repeating what you've already mastered.",
+          "seconds": 12
+        },
+        {
+          "id": "grit-4",
+          "title": "Setbacks Are Temporary",
+          "body": "Gritty people read a failure as specific and passing rather than permanent proof. That reading is learned, not inherited.",
+          "seconds": 11
+        },
+        {
+          "id": "grit-5",
+          "title": "Culture Carries It",
+          "body": "Persistence is contagious. Who you spend your weeks around does more for it than any amount of self-talk.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "range",
+      "title": "Range",
+      "author": "David Epstein",
+      "genre": "Learning",
+      "durationLabel": "13 MIN",
+      "spine": "olive",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "range-1",
+          "title": "Kind and Wicked Worlds",
+          "body": "Early specialisation wins in games with fixed rules. Most of life has unclear rules and slow feedback, where breadth wins.",
+          "seconds": 12
+        },
+        {
+          "id": "range-2",
+          "title": "The Sampling Period",
+          "body": "People who try several fields before committing tend to match themselves better, and improve faster once they do.",
+          "seconds": 11
+        },
+        {
+          "id": "range-3",
+          "title": "Analogies Over Details",
+          "body": "Experts solve unfamiliar problems by borrowing structure from unrelated fields. Breadth is what makes the borrowing possible.",
+          "seconds": 11
+        },
+        {
+          "id": "range-4",
+          "title": "Desirable Difficulties",
+          "body": "Learning that feels slow and effortful sticks. Learning that feels smooth usually doesn't survive the week.",
+          "seconds": 10
+        },
+        {
+          "id": "range-5",
+          "title": "Drop Your Tools",
+          "body": "Expertise turns into a liability when the situation changes and the familiar method is the thing you can't put down.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "lean-startup",
+      "title": "The Lean Startup",
+      "author": "Eric Ries",
+      "genre": "Business",
+      "durationLabel": "13 MIN",
+      "spine": "teal",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "lean-startup-1",
+          "title": "Build, Measure, Learn",
+          "body": "Treat a company as a series of experiments. The unit of progress is validated learning, not features shipped.",
+          "seconds": 11
+        },
+        {
+          "id": "lean-startup-2",
+          "title": "Minimum Viable Product",
+          "body": "Build the smallest thing that tests the riskiest assumption. Anything more is investment in an answer you don't have yet.",
+          "seconds": 12
+        },
+        {
+          "id": "lean-startup-3",
+          "title": "Vanity Metrics",
+          "body": "Totals that only ever rise flatter the team. Useful metrics compare cohorts and can tell you that you were wrong.",
+          "seconds": 11
+        },
+        {
+          "id": "lean-startup-4",
+          "title": "Pivot or Persevere",
+          "body": "Scheduled, honest reviews of whether the strategy is working prevent the slow drift that nobody has to take responsibility for.",
+          "seconds": 12
+        },
+        {
+          "id": "lean-startup-5",
+          "title": "Small Batches",
+          "body": "Shipping in small pieces surfaces problems while they're still cheap. Large batches hide them until they're expensive.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "thinking-in-bets",
+      "title": "Thinking in Bets",
+      "author": "Annie Duke",
+      "genre": "Decision Making",
+      "durationLabel": "11 MIN",
+      "spine": "indigo",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "thinking-in-bets-1",
+          "title": "Decisions Are Bets",
+          "body": "Every choice is a bet on an uncertain future made with incomplete information. Certainty was never on the table.",
+          "seconds": 11
+        },
+        {
+          "id": "thinking-in-bets-2",
+          "title": "Resulting",
+          "body": "Judging a decision by how it turned out confuses luck with skill, and teaches the wrong lesson in both directions.",
+          "seconds": 11
+        },
+        {
+          "id": "thinking-in-bets-3",
+          "title": "Skill and Luck",
+          "body": "Ask how much of this outcome you actually controlled. The answer decides whether to repeat the process or change it.",
+          "seconds": 11
+        },
+        {
+          "id": "thinking-in-bets-4",
+          "title": "Say the Odds",
+          "body": "Replacing \"I'm sure\" with a percentage makes a belief updatable, and makes being wrong survivable.",
+          "seconds": 10
+        },
+        {
+          "id": "thinking-in-bets-5",
+          "title": "A Truth-Seeking Group",
+          "body": "Find people who reward accuracy over agreement. Most groups quietly pay you to keep the opinion you already have.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "power-of-habit",
+      "title": "The Power of Habit",
+      "author": "Charles Duhigg",
+      "genre": "Self-Improvement",
+      "durationLabel": "13 MIN",
+      "spine": "brass",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "power-of-habit-1",
+          "title": "The Habit Loop",
+          "body": "Cue, routine, reward. Every habit runs the same three-part loop, whether it's flossing or reaching for your phone.",
+          "seconds": 11
+        },
+        {
+          "id": "power-of-habit-2",
+          "title": "Keep the Cue and Reward",
+          "body": "Habits aren't erased, they're replaced. Hold the cue and the reward steady, and change only the routine in between.",
+          "seconds": 12
+        },
+        {
+          "id": "power-of-habit-3",
+          "title": "Craving Does the Work",
+          "body": "Once the brain expects a reward, the cue produces wanting. The wanting, not the reward, is what makes it automatic.",
+          "seconds": 12
+        },
+        {
+          "id": "power-of-habit-4",
+          "title": "Keystone Habits",
+          "body": "Some habits reorganise the ones around them. Regular exercise or a shared meal quietly moves several unrelated behaviours.",
+          "seconds": 11
+        },
+        {
+          "id": "power-of-habit-5",
+          "title": "Belief Holds the Gap",
+          "body": "Under stress the old routine returns unless the person believes change is possible — and belief is usually something a group supplies.",
+          "seconds": 12
+        }
+      ]
+    },
+    {
+      "id": "breath",
+      "title": "Breath",
+      "author": "James Nestor",
+      "genre": "Health",
+      "durationLabel": "12 MIN",
+      "spine": "teal",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "breath-1",
+          "title": "Nose Over Mouth",
+          "body": "The nose filters, warms, and regulates air. Mouth breathing skips all of it, and costs more than most people expect.",
+          "seconds": 11
+        },
+        {
+          "id": "breath-2",
+          "title": "Slower Is Better",
+          "body": "Around six breaths a minute settles heart rate and blood pressure. Most people breathe two to three times that fast.",
+          "seconds": 12
+        },
+        {
+          "id": "breath-3",
+          "title": "Less Air, Not More",
+          "body": "Overbreathing strips carbon dioxide, which is what lets oxygen leave the blood. Breathing less can deliver more.",
+          "seconds": 11
+        },
+        {
+          "id": "breath-4",
+          "title": "The Long Exhale",
+          "body": "A slow exhale is the fastest lever on the nervous system, which is why a sigh works before any thought does.",
+          "seconds": 11
+        },
+        {
+          "id": "breath-5",
+          "title": "Built by Habit",
+          "body": "Soft diets and slumped posture narrow the airway over years. How you breathe is partly built by how you live.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "how-to-win-friends",
+      "title": "How to Win Friends and Influence People",
+      "author": "Dale Carnegie",
+      "genre": "Communication",
+      "durationLabel": "13 MIN",
+      "spine": "brass",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "how-to-win-friends-1",
+          "title": "Criticism Doesn't Land",
+          "body": "People defend themselves rather than update. Almost nobody blames themselves for anything, however plainly it's pointed out.",
+          "seconds": 11
+        },
+        {
+          "id": "how-to-win-friends-2",
+          "title": "The Deepest Craving",
+          "body": "Everyone wants to feel important. Honest, specific appreciation is rare enough that people remember it for years.",
+          "seconds": 11
+        },
+        {
+          "id": "how-to-win-friends-3",
+          "title": "Be Interested",
+          "body": "The fastest route to being found interesting is being interested. Ask, then listen longer than is comfortable.",
+          "seconds": 10
+        },
+        {
+          "id": "how-to-win-friends-4",
+          "title": "Let It Be Their Idea",
+          "body": "People support what they helped build. Ask the questions that let the other person arrive at the conclusion.",
+          "seconds": 11
+        },
+        {
+          "id": "how-to-win-friends-5",
+          "title": "Admit It First",
+          "body": "Saying you were wrong, quickly and without hedging, ends the argument that criticism would have started.",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "id": "antifragile",
+      "title": "Antifragile",
+      "author": "Nassim Nicholas Taleb",
+      "genre": "Philosophy",
+      "durationLabel": "14 MIN",
+      "spine": "brick",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "antifragile-1",
+          "title": "Beyond Resilience",
+          "body": "Fragile things break under stress, resilient things endure it, antifragile things improve because of it. Most thinking stops at the middle one.",
+          "seconds": 13
+        },
+        {
+          "id": "antifragile-2",
+          "title": "Via Negativa",
+          "body": "Improvement usually comes from removing — the wrong food, the wrong obligation, the wrong exposure — rather than from adding something new.",
+          "seconds": 12
+        },
+        {
+          "id": "antifragile-3",
+          "title": "Skin in the Game",
+          "body": "Advice from someone who doesn't carry the downside should be priced accordingly. Exposure is what makes an opinion honest.",
+          "seconds": 11
+        },
+        {
+          "id": "antifragile-4",
+          "title": "The Barbell",
+          "body": "Keep most of your position extremely safe and a small part extremely aggressive. Avoid the moderate middle that hides its risk.",
+          "seconds": 12
+        },
+        {
+          "id": "antifragile-5",
+          "title": "Small Errors, Often",
+          "body": "Systems that absorb frequent small failures rarely suffer one enormous one. Suppressing every wobble only stores the damage up.",
+          "seconds": 12
+        }
+      ]
+    },
+    {
+      "id": "make-it-stick",
+      "title": "Make It Stick",
+      "author": "Brown, Roediger & McDaniel",
+      "genre": "Learning",
+      "durationLabel": "12 MIN",
+      "spine": "olive",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "make-it-stick-1",
+          "title": "Retrieval Beats Review",
+          "body": "Testing yourself builds memory. Rereading builds only the feeling of knowing — the comfortable method is the weaker one.",
+          "seconds": 12
+        },
+        {
+          "id": "make-it-stick-2",
+          "title": "Space It Out",
+          "body": "Leaving enough time to half-forget makes the next recall harder, and harder recall is what makes it durable.",
+          "seconds": 11
+        },
+        {
+          "id": "make-it-stick-3",
+          "title": "Interleave the Practice",
+          "body": "Mixing problem types feels worse during the session and performs better when the problems arrive unsorted, which is how they arrive.",
+          "seconds": 12
+        },
+        {
+          "id": "make-it-stick-4",
+          "title": "Struggle First",
+          "body": "Attempting a problem before being taught the method improves what the teaching then has to stick to.",
+          "seconds": 10
+        },
+        {
+          "id": "make-it-stick-5",
+          "title": "Fluency Is a Trap",
+          "body": "Ease of reading gets mistaken for mastery. If the material feels effortless, you're probably not learning much from it.",
+          "seconds": 11
+        }
+      ]
+    },
+    {
+      "id": "factfulness",
+      "title": "Factfulness",
+      "author": "Hans Rosling",
+      "genre": "World & Data",
+      "durationLabel": "13 MIN",
+      "spine": "indigo",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "factfulness-1",
+          "title": "The World Improved",
+          "body": "Extreme poverty, child mortality, and illiteracy have all fallen dramatically, and almost nobody guesses this correctly.",
+          "seconds": 11
+        },
+        {
+          "id": "factfulness-2",
+          "title": "Four Levels, Not Two",
+          "body": "There is no developed and developing world. Most people live somewhere in the middle, on incomes that keep rising.",
+          "seconds": 11
+        },
+        {
+          "id": "factfulness-3",
+          "title": "The Gap Instinct",
+          "body": "We picture two camps with a gulf between them. Look at the actual distribution and the gulf usually isn't there.",
+          "seconds": 11
+        },
+        {
+          "id": "factfulness-4",
+          "title": "The Negativity Instinct",
+          "body": "Bad news travels and gradual improvement doesn't. Things can be bad and getting better at the same time.",
+          "seconds": 11
+        },
+        {
+          "id": "factfulness-5",
+          "title": "Ask for the Numbers",
+          "body": "Before reacting to a trend, ask for the figure, the comparison, and the time frame. Most alarm doesn't survive all three.",
+          "seconds": 12
+        }
+      ]
+    },
+    {
+      "id": "steal-like-an-artist",
+      "title": "Steal Like an Artist",
+      "author": "Austin Kleon",
+      "genre": "Creativity",
+      "durationLabel": "10 MIN",
+      "spine": "brass",
+      "watch": {
+        "available": false
+      },
+      "ideas": [
+        {
+          "id": "steal-like-an-artist-1",
+          "title": "Nothing Is Original",
+          "body": "Everything builds on what came before. The useful theft is of structure and method, never of surface.",
+          "seconds": 10
+        },
+        {
+          "id": "steal-like-an-artist-2",
+          "title": "Copy to Find Yourself",
+          "body": "Imitation is how a voice starts. The gap between what you copied and what came out is the beginning of your own style.",
+          "seconds": 12
+        },
+        {
+          "id": "steal-like-an-artist-3",
+          "title": "Make What's Missing",
+          "body": "Build the thing you'd want to read, watch, or use and can't find. It's the most reliable brief there is.",
+          "seconds": 11
+        },
+        {
+          "id": "steal-like-an-artist-4",
+          "title": "Keep Your Hands In It",
+          "body": "Screens are good for editing and bad for making. Keeping something physical in the loop changes what gets made.",
+          "seconds": 11
+        },
+        {
+          "id": "steal-like-an-artist-5",
+          "title": "Boring Is Productive",
+          "body": "A stable, unremarkable routine funds interesting work. Chaos is expensive and delivers less than it promises.",
+          "seconds": 11
         }
       ]
     }
