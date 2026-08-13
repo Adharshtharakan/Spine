@@ -59,7 +59,7 @@ does not.
 **Tests**
 
 ```bash
-flutter test        # 40 tests: catalogue, feed composition, playback, persistence, UI
+flutter test        # 56 tests: catalogue, feed composition, playback, persistence, UI
 flutter analyze
 ```
 
@@ -92,6 +92,7 @@ lib/
     repository/              BookRepository + the bundled-asset implementation
   services/
     ads/                     FeedComposer, AdProvider, placeholder creatives
+    feed/                    ShelfOrder (resurfacing), DailyPicker (Today card)
     audio/                   the audio contract and its two implementations
     persistence/             ProgressStore + SharedPreferences implementation
   state/                     LibraryController, ProgressController, PlaybackController, ShellController
@@ -122,6 +123,7 @@ many books exist, so 25 → 50 → 500 is a data change.
   "genre": "Self-Improvement",
   "durationLabel": "14 MIN",
   "spine": "brass",                    // palette name or #RRGGBB
+  "published": "2026-08-05",           // when it joins the shelf; future = scheduled
   "cover": null,                       // optional "asset:…" or "https://…"
   "watch": { "available": false },     // fill in videoUrl to switch Watch on
   "ideas": [
@@ -135,6 +137,25 @@ many books exist, so 25 → 50 → 500 is a data change.
   ]
 }
 ```
+
+**Scheduling a book.** `published` is the date a book joins the shelf. Give it a
+future date and the book stays out of the feed, out of search and out of the
+Today pick until that morning — so a batch can be written now and released over
+weeks. Omit the field and the book is always on the shelf.
+
+**The shelf's order** is decided once per launch, in `ShelfOrder`: books you've
+started come back to the top, then unread books newest-first, then finished ones.
+It is deliberately *not* recomputed while the app is open — the feed would
+otherwise rearrange itself under the reader's thumb the moment they started a
+book. Because the order changes between sessions, the app remembers your place
+by book id, not by feed position.
+
+**The Today card** (`DailyPicker`) pins one idea from across the library above
+the shelf. The choice is a hash of the date, so it's identical for every reader,
+changes at midnight, and needs no server. It borrows the idea — reading it
+doesn't touch that book's progress, and the card names its source as a way in.
+The pick is made at launch, so an app left open overnight shows yesterday's card
+until it's reopened.
 
 **Adding a book.** Append an entry and run `flutter test test/catalogue_test.dart`
 — it enforces what the app assumes:

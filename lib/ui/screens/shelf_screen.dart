@@ -11,6 +11,7 @@ import '../../state/progress_controller.dart';
 import '../../state/shell_controller.dart';
 import '../feed/ad_slide.dart';
 import '../feed/book_slide.dart';
+import '../feed/today_slide.dart';
 
 /// The feed. One card per screen, vertical, snapping.
 ///
@@ -25,38 +26,67 @@ class ShelfScreen extends StatefulWidget {
 }
 
 class _ShelfScreenState extends State<ShelfScreen> {
-  late final PageController _controller;
+  /// Created once the feed exists, because where the reader resumes depends on
+  /// where their book landed in today's order.
+  PageController? _controller;
   int _activeIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    final resumeAt = context.read<ProgressController>().lastFeedIndex;
-    _activeIndex = resumeAt;
-    _controller = PageController(initialPage: resumeAt);
-  }
-
-  @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
-  void _onPageChanged(int index) {
+  PageController _controllerFor(List<FeedItem> items) {
+    final existing = _controller;
+    if (existing != null) return existing;
+
+    final lastBookId = context.read<ProgressController>().lastBookId;
+    final resumeAt = lastBookId == null
+        ? -1
+        : items.indexWhere(
+            (item) => item is BookFeedItem && item.book.id == lastBookId,
+          );
+
+    _activeIndex = resumeAt < 0 ? 0 : resumeAt;
+    return _controller = PageController(initialPage: _activeIndex);
+  }
+
+  void _onPageChanged(int index, List<FeedItem> items) {
     setState(() => _activeIndex = index);
 
     // Audio belongs to the card you are on. Swiping away ends it rather than
     // letting a voice follow you down the feed.
     context.read<PlaybackController>().stop();
-    context.read<ProgressController>().setLastFeedIndex(index);
+
+    final item = items[index];
+    if (item is BookFeedItem) {
+      context.read<ProgressController>().setLastBookId(item.book.id);
+    }
+  }
+
+  void _goToBook(String bookId, List<FeedItem> items) {
+    final target = items.indexWhere(
+      (item) => item is BookFeedItem && item.book.id == bookId,
+    );
+    final controller = _controller;
+    if (target < 0 || controller == null || !controller.hasClients) return;
+
+    controller.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   /// A stored position can outlive the feed that produced it — the catalogue
   /// shrinks, or the ad cadence changes. Land on the last card instead of an
   /// empty viewport.
   void _clampToFeed(int length) {
-    if (length == 0 || _activeIndex < length || !_controller.hasClients) return;
-    _controller.jumpToPage(length - 1);
+    final controller = _controller;
+    if (length == 0 || _activeIndex < length) return;
+    if (controller == null || !controller.hasClients) return;
+    controller.jumpToPage(length - 1);
   }
 
   /// Handles a "open this book" request coming from Search or Saved.
@@ -69,12 +99,13 @@ class _ShelfScreenState extends State<ShelfScreen> {
       (item) => item is BookFeedItem && item.book.id == bookId,
     );
     shell.consumePendingBook();
-    if (target < 0 || !_controller.hasClients) return;
+    final controller = _controller;
+    if (target < 0 || controller == null || !controller.hasClients) return;
 
     if ((target - _activeIndex).abs() > 2) {
-      _controller.jumpToPage(target);
+      controller.jumpToPage(target);
     } else {
-      _controller.animateToPage(
+      controller.animateToPage(
         target,
         duration: const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
@@ -107,10 +138,12 @@ class _ShelfScreenState extends State<ShelfScreen> {
       _handlePendingBook(items);
     });
 
+    final controller = _controllerFor(items);
+
     return PageView.builder(
-      controller: _controller,
+      controller: controller,
       scrollDirection: Axis.vertical,
-      onPageChanged: _onPageChanged,
+      onPageChanged: (index) => _onPageChanged(index, items),
       physics: const PageScrollPhysics(parent: ClampingScrollPhysics()),
       itemCount: items.length,
       itemBuilder: (context, index) {
@@ -124,8 +157,12 @@ class _ShelfScreenState extends State<ShelfScreen> {
               BookFeedItem(:final book) => BookSlide(
                 book: book,
                 isActive: isActive,
-                pageController: _controller,
+                pageController: controller,
                 pageIndex: index,
+              ),
+              DailyIdeaFeedItem() => TodaySlide(
+                item: item,
+                onOpenBook: () => _goToBook(item.book.id, items),
               ),
               AdFeedItem() => AdSlide(
                 item: item,

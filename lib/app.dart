@@ -71,11 +71,14 @@ class _SpineAppState extends State<SpineApp> {
     _playback = PlaybackController(engine: _audio, progress: _progress);
     _shell = ShellController();
 
-    // Both loads are independent; the UI renders its loading state until the
-    // catalogue lands.
     _adProvider.initialize();
-    _progress.load();
-    _library.load();
+
+    // Ordered: the shelf puts books you've started back near the top, so the
+    // catalogue can't be arranged until stored progress is in memory.
+    _progress.load().then((_) {
+      if (!mounted) return;
+      _library.load(progressOf: _progress.of);
+    });
   }
 
   @override

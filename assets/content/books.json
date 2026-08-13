@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-12",
+  "updated": "2026-08-05",
   "books": [
     {
       "id": "atomic-habits",
@@ -9,6 +9,7 @@
       "genre": "Self-Improvement",
       "durationLabel": "14 MIN",
       "spine": "brass",
+      "published": "2026-08-05",
       "watch": {
         "available": false
       },
@@ -57,6 +58,7 @@
       "genre": "History",
       "durationLabel": "15 MIN",
       "spine": "indigo",
+      "published": "2026-07-31",
       "watch": {
         "available": false
       },
@@ -100,6 +102,7 @@
       "genre": "Productivity",
       "durationLabel": "12 MIN",
       "spine": "teal",
+      "published": "2026-07-26",
       "watch": {
         "available": false
       },
@@ -143,6 +146,7 @@
       "genre": "Psychology",
       "durationLabel": "15 MIN",
       "spine": "brick",
+      "published": "2026-07-21",
       "watch": {
         "available": false
       },
@@ -186,6 +190,7 @@
       "genre": "Wealth & Wisdom",
       "durationLabel": "13 MIN",
       "spine": "olive",
+      "published": "2026-07-16",
       "watch": {
         "available": false
       },
@@ -229,6 +234,7 @@
       "genre": "Psychology",
       "durationLabel": "13 MIN",
       "spine": "brick",
+      "published": "2026-07-11",
       "watch": {
         "available": false
       },
@@ -272,6 +278,7 @@
       "genre": "Psychology",
       "durationLabel": "12 MIN",
       "spine": "teal",
+      "published": "2026-07-06",
       "watch": {
         "available": false
       },
@@ -315,6 +322,7 @@
       "genre": "Wealth & Wisdom",
       "durationLabel": "14 MIN",
       "spine": "brass",
+      "published": "2026-07-01",
       "watch": {
         "available": false
       },
@@ -358,6 +366,7 @@
       "genre": "Business",
       "durationLabel": "12 MIN",
       "spine": "indigo",
+      "published": "2026-06-26",
       "watch": {
         "available": false
       },
@@ -401,6 +410,7 @@
       "genre": "Philosophy",
       "durationLabel": "13 MIN",
       "spine": "olive",
+      "published": "2026-06-21",
       "watch": {
         "available": false
       },
@@ -444,6 +454,7 @@
       "genre": "Negotiation",
       "durationLabel": "13 MIN",
       "spine": "brick",
+      "published": "2026-06-16",
       "watch": {
         "available": false
       },
@@ -487,6 +498,7 @@
       "genre": "Psychology",
       "durationLabel": "14 MIN",
       "spine": "indigo",
+      "published": "2026-06-11",
       "watch": {
         "available": false
       },
@@ -530,6 +542,7 @@
       "genre": "Productivity",
       "durationLabel": "12 MIN",
       "spine": "brass",
+      "published": "2026-06-06",
       "watch": {
         "available": false
       },
@@ -573,6 +586,7 @@
       "genre": "Health",
       "durationLabel": "14 MIN",
       "spine": "teal",
+      "published": "2026-06-01",
       "watch": {
         "available": false
       },
@@ -616,6 +630,7 @@
       "genre": "Psychology",
       "durationLabel": "12 MIN",
       "spine": "brick",
+      "published": "2026-05-27",
       "watch": {
         "available": false
       },
@@ -659,6 +674,7 @@
       "genre": "Learning",
       "durationLabel": "13 MIN",
       "spine": "olive",
+      "published": "2026-05-22",
       "watch": {
         "available": false
       },
@@ -702,6 +718,7 @@
       "genre": "Business",
       "durationLabel": "13 MIN",
       "spine": "teal",
+      "published": "2026-05-17",
       "watch": {
         "available": false
       },
@@ -745,6 +762,7 @@
       "genre": "Decision Making",
       "durationLabel": "11 MIN",
       "spine": "indigo",
+      "published": "2026-05-12",
       "watch": {
         "available": false
       },
@@ -788,6 +806,7 @@
       "genre": "Self-Improvement",
       "durationLabel": "13 MIN",
       "spine": "brass",
+      "published": "2026-05-07",
       "watch": {
         "available": false
       },
@@ -831,6 +850,7 @@
       "genre": "Health",
       "durationLabel": "12 MIN",
       "spine": "teal",
+      "published": "2026-05-02",
       "watch": {
         "available": false
       },
@@ -874,6 +894,7 @@
       "genre": "Communication",
       "durationLabel": "13 MIN",
       "spine": "brass",
+      "published": "2026-04-27",
       "watch": {
         "available": false
       },
@@ -917,6 +938,7 @@
       "genre": "Philosophy",
       "durationLabel": "14 MIN",
       "spine": "brick",
+      "published": "2026-04-22",
       "watch": {
         "available": false
       },
@@ -960,6 +982,7 @@
       "genre": "Learning",
       "durationLabel": "12 MIN",
       "spine": "olive",
+      "published": "2026-04-17",
       "watch": {
         "available": false
       },
@@ -1003,6 +1026,7 @@
       "genre": "World & Data",
       "durationLabel": "13 MIN",
       "spine": "indigo",
+      "published": "2026-04-12",
       "watch": {
         "available": false
       },
@@ -1046,6 +1070,7 @@
       "genre": "Creativity",
       "durationLabel": "10 MIN",
       "spine": "brass",
+      "published": "2026-04-07",
       "watch": {
         "available": false
       },

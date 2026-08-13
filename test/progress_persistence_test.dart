@@ -82,18 +82,20 @@ void main() {
       expect(reloaded.savedBookIds, ['sapiens']);
     });
 
-    test('remembers the feed position', () async {
+    test('remembers which book the reader was on', () async {
       final store = InMemoryProgressStore();
       final controller = ProgressController(store);
       await controller.load();
 
-      controller.setLastFeedIndex(4);
+      controller.setLastBookId('deep-work');
       await controller.flush();
 
       final reloaded = ProgressController(store);
       await reloaded.load();
 
-      expect(reloaded.lastFeedIndex, 4);
+      // Stored by id, not by feed position — the shelf reorders between
+      // sessions.
+      expect(reloaded.lastBookId, 'deep-work');
     });
 
     test('an untouched book reads as a fresh start', () {

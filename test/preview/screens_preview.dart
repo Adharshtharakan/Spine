@@ -6,9 +6,16 @@ import 'render_preview.dart';
 void main() {
   setUpAll(loadRealFonts);
 
+  testWidgets('today — the day\'s idea', (tester) async {
+    usePhoneSurface(tester);
+    await pumpApp(tester);
+    await capture(tester, 'today');
+  });
+
   testWidgets('shelf — read mode', (tester) async {
     usePhoneSurface(tester);
     await pumpApp(tester);
+    await swipeToCard(tester, 1);
     await capture(tester, 'shelf_read');
   });
 
@@ -16,7 +23,7 @@ void main() {
     usePhoneSurface(tester);
     await pumpApp(tester);
 
-    await swipeToCard(tester, 2);
+    await swipeToCard(tester, 3);
     await tester.tap(find.text('NEXT'));
     await tester.pumpAndSettle();
 
@@ -26,6 +33,7 @@ void main() {
   testWidgets('shelf — listen mode, playing', (tester) async {
     usePhoneSurface(tester);
     final audio = await pumpApp(tester);
+    await swipeToCard(tester, 1);
 
     await tester.tap(find.text('LISTEN'));
     await tester.pumpAndSettle();
@@ -40,6 +48,7 @@ void main() {
   testWidgets('shelf — watch, coming soon', (tester) async {
     usePhoneSurface(tester);
     await pumpApp(tester);
+    await swipeToCard(tester, 1);
 
     await tester.tap(find.text('WATCH'));
     await tester.pumpAndSettle();
@@ -51,7 +60,7 @@ void main() {
     usePhoneSurface(tester);
     await pumpApp(tester, ads: const AdConfig(frequency: 2, leadIn: 2));
 
-    await swipeToCard(tester, 2);
+    await swipeToCard(tester, 3);
 
     await capture(tester, 'feed_ad');
   });
@@ -69,6 +78,7 @@ void main() {
   testWidgets('saved', (tester) async {
     usePhoneSurface(tester);
     await pumpApp(tester);
+    await swipeToCard(tester, 1);
 
     await tester.tap(find.bySemanticsLabel('Save book'));
     await tester.pumpAndSettle();

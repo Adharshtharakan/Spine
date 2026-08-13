@@ -48,10 +48,24 @@ void main() {
     return audio;
   }
 
-  testWidgets('the feed opens on the first book with its first idea', (
+
+  /// A reader with no history lands on the Today card. Tests about the shelf
+  /// itself step past it first.
+  Future<void> swipeToShelf(WidgetTester tester) async {
+    await tester.fling(find.byType(PageView), const Offset(0, -400), 1400);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('the feed opens on the day\'s idea, then the shelf', (
     tester,
   ) async {
     await pumpSpine(tester);
+
+    // The Today card leads the feed for a reader with no history.
+    expect(find.text('TODAY'), findsOneWidget);
+    expect(find.text('FROM'), findsOneWidget);
+
+    await swipeToShelf(tester);
 
     expect(find.text('First Book'), findsOneWidget);
     expect(find.text('IDEA 1 OF 5'), findsOneWidget);
@@ -62,6 +76,7 @@ void main() {
 
   testWidgets('swiping up moves to the next book', (tester) async {
     await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.fling(find.text('Idea 1'), const Offset(0, -400), 1200);
     await tester.pumpAndSettle();
@@ -74,6 +89,7 @@ void main() {
     tester,
   ) async {
     await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.tap(find.text('NEXT'));
     await tester.pumpAndSettle();
@@ -87,6 +103,7 @@ void main() {
 
   testWidgets('a sideways flick moves to the next idea', (tester) async {
     await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.fling(find.text('Idea 1'), const Offset(-300, 0), 1000);
     await tester.pumpAndSettle();
@@ -96,6 +113,7 @@ void main() {
 
   testWidgets('Listen mode cues the track and plays it', (tester) async {
     final audio = await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.tap(find.text('LISTEN'));
     await tester.pumpAndSettle();
@@ -114,6 +132,7 @@ void main() {
     tester,
   ) async {
     final audio = await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.tap(find.text('LISTEN'));
     await tester.pumpAndSettle();
@@ -129,6 +148,7 @@ void main() {
 
   testWidgets('swiping to another book stops playback', (tester) async {
     final audio = await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.tap(find.text('LISTEN'));
     await tester.pumpAndSettle();
@@ -145,6 +165,7 @@ void main() {
     tester,
   ) async {
     await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.tap(find.text('WATCH'));
     await tester.pumpAndSettle();
@@ -167,6 +188,7 @@ void main() {
 
   testWidgets('saving a book fills the Saved tab', (tester) async {
     await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     await tester.tap(find.bySemanticsLabel('Save book'));
     await tester.pumpAndSettle();
@@ -180,6 +202,7 @@ void main() {
 
   testWidgets('search finds a book and opens the shelf on it', (tester) async {
     await pumpSpine(tester);
+    await swipeToShelf(tester);
 
     // Both the masthead icon and the tab are called Search; take the tab.
     await tester.tap(find.bySemanticsLabel('Search').last);
@@ -202,6 +225,7 @@ void main() {
       tester,
       ads: const AdConfig(frequency: 2, leadIn: 2),
     );
+    await swipeToShelf(tester);
 
     await tester.fling(find.text('Idea 1'), const Offset(0, -400), 1200);
     await tester.pumpAndSettle();
@@ -215,6 +239,7 @@ void main() {
   testWidgets('the reader returns to the card they left on', (tester) async {
     final store = InMemoryProgressStore();
     await pumpSpine(tester, store: store);
+    await swipeToShelf(tester);
 
     await tester.fling(find.text('Idea 1'), const Offset(0, -400), 1200);
     await tester.pumpAndSettle();

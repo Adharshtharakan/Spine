@@ -25,7 +25,7 @@ class ProgressController extends ChangeNotifier {
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
-  int get lastFeedIndex => _session.feedIndex;
+  String? get lastBookId => _session.lastBookId;
   int get streak => _session.streak;
 
   /// Books the reader has saved. Order follows the store, which is enough for
@@ -97,9 +97,9 @@ class ProgressController extends ChangeNotifier {
     );
   }
 
-  void setLastFeedIndex(int index) {
-    if (_session.feedIndex == index) return;
-    _session = _session.copyWith(feedIndex: index);
+  void setLastBookId(String bookId) {
+    if (_session.lastBookId == bookId) return;
+    _session = _session.copyWith(lastBookId: bookId);
     unawaited(_store.saveSession(_session));
   }
 

@@ -50,6 +50,32 @@ void main() {
     }
   });
 
+  test('every book carries a publication date', () async {
+    final books = await AssetBookRepository(manifestPath: manifestPath).loadBooks();
+
+    for (final book in books) {
+      expect(
+        book.publishedAt,
+        isNotNull,
+        reason: '${book.title} has no "published" date, so it can never be '
+            'scheduled and will sort last on the shelf',
+      );
+    }
+  });
+
+  test('the shipped catalogue is fully released', () async {
+    final books = await AssetBookRepository(manifestPath: manifestPath).loadBooks();
+    final unreleased = [
+      for (final book in books)
+        if (!book.isPublished(DateTime.now())) book.title,
+    ];
+
+    // Not a rule about the product — future-dated books are the point of the
+    // schedule. This guards the current catalogue, where hiding a book that
+    // shipped in an earlier build would look like data loss to a reader.
+    expect(unreleased, isEmpty, reason: 'scheduled for the future: $unreleased');
+  });
+
   test('ids are unique across the catalogue', () async {
     final books = await AssetBookRepository(manifestPath: manifestPath).loadBooks();
 

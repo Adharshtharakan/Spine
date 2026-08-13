@@ -52,6 +52,7 @@ class Book {
     required this.ideas,
     this.coverUrl,
     this.watch = const WatchTrack(),
+    this.publishedAt,
   });
 
   final String id;
@@ -73,7 +74,23 @@ class Book {
   final List<Idea> ideas;
   final WatchTrack watch;
 
+  /// When this book joins the shelf. A future date keeps it out of the feed
+  /// until that day, so a catalogue can be written in batches and released on a
+  /// schedule. Null means "always on the shelf".
+  final DateTime? publishedAt;
+
   int get ideaCount => ideas.length;
+
+  /// Books dated in the future aren't on the shelf yet.
+  bool isPublished(DateTime now) =>
+      publishedAt == null || !publishedAt!.isAfter(now);
+
+  /// Recent enough to be worth marking as new.
+  bool isNew(DateTime now, {Duration window = const Duration(days: 7)}) {
+    final published = publishedAt;
+    if (published == null || published.isAfter(now)) return false;
+    return now.difference(published) <= window;
+  }
 
   bool get hasAnyAudio => ideas.any((idea) => idea.hasAudio);
 
@@ -103,6 +120,7 @@ class Book {
       spineColor: SpineColors.resolveSpine(json['spine'] as String? ?? 'brass'),
       coverUrl: json['cover'] as String?,
       watch: WatchTrack.fromJson(json['watch'] as Map<String, dynamic>?),
+      publishedAt: DateTime.tryParse(json['published'] as String? ?? ''),
       ideas: [
         for (var i = 0; i < rawIdeas.length; i++)
           Idea.fromJson(rawIdeas[i] as Map<String, dynamic>, order: i),

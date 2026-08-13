@@ -16,6 +16,7 @@ Book testBook({
   String title = 'Test Book',
   int ideaCount = 5,
   bool withAudio = false,
+  DateTime? publishedAt,
 }) {
   return Book(
     id: id,
@@ -24,6 +25,7 @@ Book testBook({
     genre: 'Testing',
     durationLabel: '10 MIN',
     spineColor: const Color(0xFFC9A227),
+    publishedAt: publishedAt,
     ideas: [
       for (var i = 0; i < ideaCount; i++)
         Idea(

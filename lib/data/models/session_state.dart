@@ -2,12 +2,15 @@
 /// left, and the reading streak shown next to the wordmark.
 class SessionState {
   const SessionState({
-    this.feedIndex = 0,
+    this.lastBookId,
     this.streak = 0,
     this.lastActiveDay,
   });
 
-  final int feedIndex;
+  /// The book the reader was last on. Stored by id rather than by feed position
+  /// because the shelf reorders between sessions — position 4 is not the same
+  /// card tomorrow.
+  final String? lastBookId;
 
   /// Consecutive days with any reading activity. Deliberately the only
   /// game-like number in the app — it already exists in the prototype.
@@ -16,23 +19,27 @@ class SessionState {
   /// `yyyy-mm-dd` of the last day the app was opened.
   final String? lastActiveDay;
 
-  SessionState copyWith({int? feedIndex, int? streak, String? lastActiveDay}) {
+  SessionState copyWith({
+    String? lastBookId,
+    int? streak,
+    String? lastActiveDay,
+  }) {
     return SessionState(
-      feedIndex: feedIndex ?? this.feedIndex,
+      lastBookId: lastBookId ?? this.lastBookId,
       streak: streak ?? this.streak,
       lastActiveDay: lastActiveDay ?? this.lastActiveDay,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'feedIndex': feedIndex,
+    'lastBookId': lastBookId,
     'streak': streak,
     'lastActiveDay': lastActiveDay,
   };
 
   factory SessionState.fromJson(Map<String, dynamic> json) {
     return SessionState(
-      feedIndex: json['feedIndex'] as int? ?? 0,
+      lastBookId: json['lastBookId'] as String?,
       streak: json['streak'] as int? ?? 0,
       lastActiveDay: json['lastActiveDay'] as String?,
     );
