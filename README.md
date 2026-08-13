@@ -59,7 +59,7 @@ does not.
 **Tests**
 
 ```bash
-flutter test        # 56 tests: catalogue, feed composition, playback, persistence, UI
+flutter test        # 77 tests: catalogue, feed composition, playback, persistence, UI
 flutter analyze
 ```
 
@@ -181,6 +181,71 @@ flutter run --dart-define=SPINE_CONTENT=assets/content/staging.json
 
 Moving the catalogue to a backend means writing one more `BookRepository`
 implementation and swapping it in `app.dart`. No screen changes.
+
+---
+
+## Learning
+
+Reading something once is exposure, not learning. Four features exist to close
+that gap, and they lean on each other:
+
+**Ideas are marked read.** Read mode has no natural completion event the way
+audio does, so a card banks an idea once it has held the screen for three
+seconds — long enough that a fast scroll past doesn't count, short enough that
+actually reading always does. Everything below depends on this being true.
+
+**Saved ideas.** The bookmark on a book keeps the whole book; the one beside an
+idea keeps that line. Saved ideas are stored by idea id rather than position, so
+they survive an edit that reorders a book.
+
+**The recap.** The last idea in a book opens onto all five as one page — the
+only place a book exists as a whole rather than as five cards seen separately.
+
+**Spaced review.** Finishing an idea queues it. It returns as a feed card after
+2 days, then 6, 14, 30, 90, and then retires. The card shows the title and
+withholds the body until asked: that gap is the mechanism. There is no score and
+no wrong answer, and rereading an idea doesn't reset its schedule, because
+rereading isn't recalling.
+
+The queue lives in one JSON record (`ReviewStore`). At a few hundred ideas,
+written only on finish or review, that is cheaper than a database — the
+interface leaves room to change that if the catalogue ever makes it false.
+
+---
+
+## The daily idea
+
+One notification a day carrying the idea itself — title and opening sentence,
+cut at a sentence boundary so a lock screen shows a whole thought — rather than
+a reminder to come back. If someone reads it and doesn't open the app, that
+counts as working.
+
+Because the day's pick is a pure function of the date, a fortnight of real ideas
+is scheduled on the device. No server, no push certificates, nothing leaves the
+phone. It's off until a reader picks a time on the You tab, and the OS
+permission is requested at that moment rather than on first launch.
+
+The same pick feeds the **home-screen widget**. Android's is wired up and works
+on the next build. iOS needs its extension target added once in Xcode — five
+minutes, instructions in `ios/SpineWidget/README.md`.
+
+---
+
+## Screen capture
+
+`CaptureGuard` turns on protection for the reading surface. The two platforms
+are genuinely different, and it's worth being precise about which you have:
+
+| | Android | iOS |
+|---|---|---|
+| Screenshots | **Blocked** (`FLAG_SECURE`) | Cannot be blocked — Apple exposes no API |
+| Screen recording | **Blocked** | Not blocked |
+| App switcher | Blanked by the OS | Covered by the app |
+| Detection | n/a — it didn't happen | Reported to Dart |
+
+On both platforms, a second phone pointed at the screen defeats it. This raises
+the effort required to lift content; it is not DRM, and the app should never
+tell users their content can't be captured.
 
 ---
 

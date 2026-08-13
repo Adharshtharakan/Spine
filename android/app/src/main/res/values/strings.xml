@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">TODAY</string>
+    <string name="widget_name">Spine · the day\'s idea</string>
+    <string name="widget_description">One idea from your library, on the home screen.</string>
+</resources>

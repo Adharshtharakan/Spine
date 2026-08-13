@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spine's palette, mirrored for the home-screen widget. Kept in step with
+     lib/core/theme/spine_colors.dart by hand — the widget is drawn by Android,
+     not by Flutter, so it cannot read the Dart tokens. -->
+<resources>
+    <color name="spine_ink">#FF0D0C09</color>
+    <color name="spine_parchment">#FFF1E9D6</color>
+    <color name="spine_parchment_dim">#B3F1E9D6</color>
+    <color name="spine_brass">#FFC9A227</color>
+</resources>

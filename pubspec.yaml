@@ -25,6 +25,9 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   timezone: ^0.9.4
 
+  # Bridges today's idea into the Android/iOS home-screen widgets.
+  home_widget: ^0.7.0
+
   # Remote audio caching for the (future) cloud-hosted catalogue.
   path_provider: ^2.1.4
   http: ^1.2.2

@@ -8,6 +8,7 @@ import 'package:spine/services/persistence/progress_store.dart';
 import 'package:spine/data/models/review_item.dart';
 import 'package:spine/services/notifications/daily_idea_notifier.dart';
 import 'package:spine/services/persistence/review_store.dart';
+import 'package:spine/services/widgets/home_widget_publisher.dart';
 import 'package:spine/state/progress_controller.dart';
 import 'package:spine/state/review_controller.dart';
 
@@ -21,6 +22,7 @@ void main() {
     ProgressStore? store,
     ReviewStore? reviewStore,
     IdeaNotifier? notifier,
+    HomeWidgetPublisher? homeWidget,
   }) async {
     final audio = FakeAudioPlayer();
 
@@ -50,6 +52,7 @@ void main() {
         ),
         adProviderOverride: FakeAdProvider(),
         notifierOverride: notifier ?? NoopIdeaNotifier(),
+        homeWidgetOverride: homeWidget ?? NoopHomeWidgetPublisher(),
         audioOverride: audio,
       ),
     );
@@ -385,6 +388,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(notifier.calls.last, 'cancelAll');
+  });
+
+  testWidgets("the home-screen widget is handed today's idea on launch", (
+    tester,
+  ) async {
+    final widget = NoopHomeWidgetPublisher();
+    await pumpSpine(tester, homeWidget: widget);
+
+    // Same pick the Today card shows — the widget never computes its own.
+    expect(widget.published, hasLength(1));
+    expect(find.text(widget.published.single), findsOneWidget);
   });
 
   testWidgets('the reader returns to the card they left on', (tester) async {

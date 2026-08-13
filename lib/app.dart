@@ -15,6 +15,7 @@ import 'services/persistence/progress_store.dart';
 import 'services/notifications/daily_idea_notifier.dart';
 import 'services/persistence/review_store.dart';
 import 'services/security/capture_guard.dart';
+import 'services/widgets/home_widget_publisher.dart';
 import 'state/library_controller.dart';
 import 'state/playback_controller.dart';
 import 'state/progress_controller.dart';
@@ -36,6 +37,7 @@ class SpineApp extends StatefulWidget {
     this.audioOverride,
     this.notifierOverride,
     this.captureGuardOverride,
+    this.homeWidgetOverride,
   });
 
   final AppConfig config;
@@ -46,6 +48,7 @@ class SpineApp extends StatefulWidget {
   final SpineAudioPlayer? audioOverride;
   final IdeaNotifier? notifierOverride;
   final CaptureGuard? captureGuardOverride;
+  final HomeWidgetPublisher? homeWidgetOverride;
 
   @override
   State<SpineApp> createState() => _SpineAppState();
@@ -64,6 +67,7 @@ class _SpineAppState extends State<SpineApp> {
   late final ShellController _shell;
   late final IdeaNotifier _notifier;
   late final CaptureGuard _captureGuard;
+  late final HomeWidgetPublisher _homeWidget;
 
   @override
   void initState() {
@@ -71,6 +75,7 @@ class _SpineAppState extends State<SpineApp> {
 
     _notifier = widget.notifierOverride ?? LocalIdeaNotifier();
     _captureGuard = widget.captureGuardOverride ?? CaptureGuard();
+    _homeWidget = widget.homeWidgetOverride ?? const SpineHomeWidgetPublisher();
 
     // On Android this genuinely blocks screenshots and screen recording; on
     // iOS it only hides the app-switcher snapshot and reports captures. See
@@ -107,7 +112,12 @@ class _SpineAppState extends State<SpineApp> {
       _library.load(
         progressOf: _progress.of,
         dueReviews: _review.due(limit: 2),
-      ).then((_) => _refreshDailyIdea());
+      ).then((_) {
+        _refreshDailyIdea();
+        // The widget is a reader: the app hands it today's idea on launch and
+        // it renders whatever it was last given.
+        _homeWidget.publish(books: _library.books, now: DateTime.now());
+      });
     });
 
     // Re-scheduling when the preference changes keeps the queued notifications

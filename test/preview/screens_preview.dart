@@ -92,6 +92,19 @@ void main() {
     await capture(tester, 'saved');
   });
 
+  testWidgets('shelf — the recap', (tester) async {
+    usePhoneSurface(tester);
+    await pumpApp(tester);
+    await swipeToCard(tester, 1);
+
+    await tester.tap(find.bySemanticsLabel('Idea 5'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('RECAP'));
+    await tester.pumpAndSettle();
+
+    await capture(tester, 'shelf_recap');
+  });
+
   testWidgets('you', (tester) async {
     usePhoneSurface(tester);
     await pumpApp(tester);

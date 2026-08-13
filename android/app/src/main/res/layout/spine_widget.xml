@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Deliberately plain: a home-screen widget is a quiet card, and RemoteViews
+     supports only a small set of widgets, so the type does the work. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/spine_widget_background"
+    android:padding="18dp">
+
+    <TextView
+        android:id="@+id/widget_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_label"
+        android:textColor="@color/spine_brass"
+        android:textSize="10sp"
+        android:letterSpacing="0.18"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:textColor="@color/spine_parchment"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_body"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/spine_parchment_dim"
+        android:textSize="13sp"
+        android:lineSpacingMultiplier="1.3"
+        android:maxLines="4"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/spine_parchment_dim"
+        android:textSize="9sp"
+        android:letterSpacing="0.14"
+        android:fontFamily="monospace"
+        android:maxLines="1"
+        android:ellipsize="end" />
+</LinearLayout>
