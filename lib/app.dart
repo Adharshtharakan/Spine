@@ -12,7 +12,9 @@ import 'services/audio/audio_source_resolver.dart';
 import 'services/audio/spine_audio_engine.dart';
 import 'services/audio/spine_audio_player.dart';
 import 'services/persistence/progress_store.dart';
+import 'services/notifications/daily_idea_notifier.dart';
 import 'services/persistence/review_store.dart';
+import 'services/security/capture_guard.dart';
 import 'state/library_controller.dart';
 import 'state/playback_controller.dart';
 import 'state/progress_controller.dart';
@@ -32,6 +34,8 @@ class SpineApp extends StatefulWidget {
     this.repositoryOverride,
     this.adProviderOverride,
     this.audioOverride,
+    this.notifierOverride,
+    this.captureGuardOverride,
   });
 
   final AppConfig config;
@@ -40,6 +44,8 @@ class SpineApp extends StatefulWidget {
   final BookRepository? repositoryOverride;
   final AdProvider? adProviderOverride;
   final SpineAudioPlayer? audioOverride;
+  final IdeaNotifier? notifierOverride;
+  final CaptureGuard? captureGuardOverride;
 
   @override
   State<SpineApp> createState() => _SpineAppState();
@@ -56,10 +62,20 @@ class _SpineAppState extends State<SpineApp> {
   late final LibraryController _library;
   late final PlaybackController _playback;
   late final ShellController _shell;
+  late final IdeaNotifier _notifier;
+  late final CaptureGuard _captureGuard;
 
   @override
   void initState() {
     super.initState();
+
+    _notifier = widget.notifierOverride ?? LocalIdeaNotifier();
+    _captureGuard = widget.captureGuardOverride ?? CaptureGuard();
+
+    // On Android this genuinely blocks screenshots and screen recording; on
+    // iOS it only hides the app-switcher snapshot and reports captures. See
+    // CaptureGuard.
+    _captureGuard.enable();
 
     _repository =
         widget.repositoryOverride ??
@@ -91,12 +107,42 @@ class _SpineAppState extends State<SpineApp> {
       _library.load(
         progressOf: _progress.of,
         dueReviews: _review.due(limit: 2),
-      );
+      ).then((_) => _refreshDailyIdea());
     });
+
+    // Re-scheduling when the preference changes keeps the queued notifications
+    // honest without the settings screen knowing about the notifier.
+    _progress.addListener(_refreshDailyIdea);
+  }
+
+  int? _scheduledHour;
+  bool _scheduling = false;
+
+  /// Keeps the fortnight of queued ideas in step with the reader's preference.
+  Future<void> _refreshDailyIdea() async {
+    final hour = _progress.dailyIdeaHour;
+    if (_scheduling || hour == _scheduledHour) return;
+    if (_library.status != LibraryStatus.ready) return;
+
+    _scheduling = true;
+    try {
+      if (hour == null) {
+        await _notifier.cancelAll();
+      } else {
+        await _notifier.schedule(
+          books: _library.books,
+          timeOfDay: Duration(hours: hour),
+        );
+      }
+      _scheduledHour = hour;
+    } finally {
+      _scheduling = false;
+    }
   }
 
   @override
   void dispose() {
+    _progress.removeListener(_refreshDailyIdea);
     _playback.dispose();
     _progress.dispose();
     _review.dispose();
@@ -112,6 +158,7 @@ class _SpineAppState extends State<SpineApp> {
       providers: [
         Provider<AppConfig>.value(value: widget.config),
         Provider<AdProvider>.value(value: _adProvider),
+        Provider<IdeaNotifier>.value(value: _notifier),
         ChangeNotifierProvider<ProgressController>.value(value: _progress),
         ChangeNotifierProvider<ReviewController>.value(value: _review),
         ChangeNotifierProvider<LibraryController>.value(value: _library),

@@ -6,6 +6,7 @@ import 'package:spine/core/config/app_config.dart';
 import 'package:spine/data/models/book.dart';
 import 'package:spine/services/persistence/progress_store.dart';
 import 'package:spine/data/models/review_item.dart';
+import 'package:spine/services/notifications/daily_idea_notifier.dart';
 import 'package:spine/services/persistence/review_store.dart';
 import 'package:spine/state/progress_controller.dart';
 import 'package:spine/state/review_controller.dart';
@@ -19,6 +20,7 @@ void main() {
     AdConfig ads = const AdConfig(enabled: false),
     ProgressStore? store,
     ReviewStore? reviewStore,
+    IdeaNotifier? notifier,
   }) async {
     final audio = FakeAudioPlayer();
 
@@ -47,6 +49,7 @@ void main() {
               ],
         ),
         adProviderOverride: FakeAdProvider(),
+        notifierOverride: notifier ?? NoopIdeaNotifier(),
         audioOverride: audio,
       ),
     );
@@ -344,6 +347,44 @@ void main() {
     await reloaded.load();
     expect(reloaded.due(), isEmpty);
     expect(reloaded.isQueued('one-2'), isTrue);
+  });
+
+  testWidgets('turning on the daily idea schedules it and remembers the time', (
+    tester,
+  ) async {
+    final notifier = NoopIdeaNotifier();
+    final store = InMemoryProgressStore();
+    await pumpSpine(tester, store: store, notifier: notifier);
+
+    await tester.tap(find.bySemanticsLabel('You'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("THE DAY'S IDEA"), findsOneWidget);
+
+    await tester.tap(find.text('MORNING'));
+    await tester.pumpAndSettle();
+
+    // Permission is asked for at the moment it's turned on, not at launch.
+    expect(notifier.calls, contains('requestPermission'));
+    expect(notifier.calls.any((c) => c.startsWith('schedule:8')), isTrue);
+
+    final progress = ProgressController(store);
+    await progress.load();
+    expect(progress.dailyIdeaHour, 8);
+  });
+
+  testWidgets('tapping the chosen time again turns it off', (tester) async {
+    final notifier = NoopIdeaNotifier();
+    await pumpSpine(tester, notifier: notifier);
+
+    await tester.tap(find.bySemanticsLabel('You'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('EVENING'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('EVENING'));
+    await tester.pumpAndSettle();
+
+    expect(notifier.calls.last, 'cancelAll');
   });
 
   testWidgets('the reader returns to the card they left on', (tester) async {

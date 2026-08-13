@@ -4,8 +4,11 @@ import 'package:provider/provider.dart';
 import '../../core/config/app_config.dart';
 import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
+import '../../services/notifications/daily_idea_notifier.dart';
 import '../../state/library_controller.dart';
 import '../../state/progress_controller.dart';
+import '../../state/review_controller.dart';
+import '../widgets/tap_scale.dart';
 
 /// You. Deliberately thin: what you've read, and nothing that turns Spine into
 /// a social product.
@@ -70,10 +73,15 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(width: 10),
             _Stat(value: '${progress.booksStarted}', label: 'Started'),
             const SizedBox(width: 10),
-            _Stat(value: '${progress.savedBookIds.length}', label: 'Saved'),
+            _Stat(
+              value: '${context.watch<ReviewController>().queuedCount}',
+              label: 'In review',
+            ),
           ],
         ),
         const SizedBox(height: 28),
+        const _DailyIdeaSetting(),
+        const SizedBox(height: 10),
         _Block(
           label: 'Your library',
           value: '${library.books.length} books · $totalIdeas ideas',
@@ -148,6 +156,132 @@ class _Block extends StatelessWidget {
           const SizedBox(height: 8),
           Text(value, style: SpineText.ideaBody.copyWith(fontSize: 15)),
         ],
+      ),
+    );
+  }
+}
+
+
+/// The one setting Spine has: when the day's idea arrives.
+///
+/// Off until chosen — the notification permission is requested at the moment
+/// the reader asks for the notification, never on first launch.
+class _DailyIdeaSetting extends StatelessWidget {
+  const _DailyIdeaSetting();
+
+  static const _times = <(String, int)>[
+    ('Morning', 8),
+    ('Midday', 13),
+    ('Evening', 20),
+  ];
+
+  Future<void> _choose(BuildContext context, int? hour) async {
+    final progress = context.read<ProgressController>();
+
+    if (hour != null && progress.dailyIdeaHour == null) {
+      final granted = await context.read<IdeaNotifier>().requestPermission();
+      if (!granted) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: SpineColors.inkCard,
+              content: Text(
+                'Notifications are off in system settings',
+                style: SpineText.label.copyWith(color: SpineColors.parchment),
+              ),
+            ),
+          );
+        return;
+      }
+    }
+
+    progress.setDailyIdeaHour(hour);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = context.select<ProgressController, int?>(
+      (controller) => controller.dailyIdeaHour,
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      decoration: BoxDecoration(
+        color: SpineColors.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'THE DAY\'S IDEA',
+            style: SpineText.labelSmall.copyWith(
+              color: SpineColors.onInk(0.42),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            selected == null
+                ? 'One idea, delivered. Off.'
+                : 'One idea, delivered each day.',
+            style: SpineText.ideaBody.copyWith(fontSize: 15),
+          ),
+          const SizedBox(height: 14),
+          // Wraps rather than a Row: three chips plus large system type
+          // overflows a narrow phone.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final (label, hour) in _times)
+                _TimeChip(
+                  label: label,
+                  active: selected == hour,
+                  onTap: () => _choose(context, selected == hour ? null : hour),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimeChip extends StatelessWidget {
+  const _TimeChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TapScale(
+      onTap: onTap,
+      semanticLabel: '$label notification',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: active
+              ? SpineColors.brass.withValues(alpha: 0.2)
+              : SpineColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: SpineText.labelSmall.copyWith(
+            color: active ? SpineColors.brass : SpineColors.onInk(0.55),
+          ),
+        ),
       ),
     );
   }

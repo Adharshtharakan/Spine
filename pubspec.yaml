@@ -21,6 +21,10 @@ dependencies:
   just_audio: ^0.9.42
   audio_session: ^0.1.21
 
+  # The daily idea notification. Local only — no server, no push certificates.
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+
   # Remote audio caching for the (future) cloud-hosted catalogue.
   path_provider: ^2.1.4
   http: ^1.2.2

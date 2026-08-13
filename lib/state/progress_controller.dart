@@ -31,6 +31,7 @@ class ProgressController extends ChangeNotifier {
   bool get isLoaded => _loaded;
   String? get lastBookId => _session.lastBookId;
   int get streak => _session.streak;
+  int? get dailyIdeaHour => _session.dailyIdeaHour;
 
   /// Books the reader has saved. Order follows the store, which is enough for
   /// a shelf of this size.
@@ -117,6 +118,17 @@ class ProgressController extends ChangeNotifier {
     for (final entry in _entries.values)
       for (final ideaId in entry.savedIdeaIds) (entry.bookId, ideaId),
   ];
+
+  /// null turns the daily idea off.
+  void setDailyIdeaHour(int? hour) {
+    if (_session.dailyIdeaHour == hour) return;
+    _session = _session.copyWith(
+      dailyIdeaHour: hour,
+      clearDailyIdeaHour: hour == null,
+    );
+    unawaited(_store.saveSession(_session));
+    notifyListeners();
+  }
 
   void setLastBookId(String bookId) {
     if (_session.lastBookId == bookId) return;
