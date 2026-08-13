@@ -25,6 +25,19 @@ class CaptureGuard {
   bool _enabled = false;
   bool get isEnabled => _enabled;
 
+  /// Asks the platform whether the window is actually protected right now.
+  ///
+  /// Android applies FLAG_SECURE in `MainActivity.onCreate`, before Dart runs,
+  /// so protection does not depend on this class having been called at all —
+  /// this is how you check rather than assume.
+  Future<bool> isProtectedOnPlatform() async {
+    try {
+      return await _channel.invokeMethod<bool>('isProtected') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Turns protection on. Safe to call more than once, and safe on platforms
   /// where the channel isn't implemented — capture protection failing must
   /// never stop the app from opening.

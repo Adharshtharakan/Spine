@@ -99,7 +99,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Idea 5'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('RECAP'));
+    await tester.tap(find.text('ALL 5 IDEAS'));
     await tester.pumpAndSettle();
 
     await capture(tester, 'shelf_recap');

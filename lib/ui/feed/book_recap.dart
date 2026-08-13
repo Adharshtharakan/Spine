@@ -5,21 +5,28 @@ import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../widgets/tap_scale.dart';
 
-/// What you get for finishing a book: all five ideas on one page.
+/// All five ideas of a book on one page.
 ///
-/// Reading the fifth idea used to just stop. This is the artifact — the thing
-/// worth keeping, and the only place the book exists as a whole rather than as
-/// five cards seen one at a time.
+/// Swiping through five cards one at a time never shows you the book — only its
+/// parts, in sequence. This is the whole thing at once, which is the form worth
+/// remembering and the natural end of reading it.
 class BookRecap extends StatelessWidget {
   const BookRecap({
     super.key,
     required this.book,
     required this.onBack,
+    required this.finished,
     this.compact = false,
   });
 
   final Book book;
   final VoidCallback onBack;
+
+  /// True once every idea has been read. The page is the same either way; only
+  /// the framing changes, because arriving here having read the book means
+  /// something that arriving here early does not.
+  final bool finished;
+
   final bool compact;
 
   @override
@@ -28,15 +35,28 @@ class BookRecap extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'THE WHOLE BOOK',
+          finished ? 'FINISHED' : 'THE WHOLE BOOK',
           style: SpineText.label.copyWith(color: book.spineColor),
         ),
         SizedBox(height: compact ? 10 : 14),
         Text(
-          'Five ideas from ${book.title}',
+          finished
+              ? 'You\'ve read ${book.title}'
+              : 'All of ${book.title}, on one page',
           style: SpineText.ideaHeading.copyWith(fontSize: compact ? 20 : 23),
         ),
-        SizedBox(height: compact ? 14 : 20),
+        SizedBox(height: compact ? 8 : 10),
+        Text(
+          finished
+              ? 'The five ideas together. They\'ll come back over the next few '
+                    'weeks so they stick.'
+              : 'The five ideas together, rather than one at a time.',
+          style: SpineText.ideaBody.copyWith(
+            fontSize: compact ? 13.5 : 14.5,
+            color: SpineColors.onInk(0.5),
+          ),
+        ),
+        SizedBox(height: compact ? 16 : 22),
         Expanded(
           child: ListView.separated(
             padding: EdgeInsets.zero,

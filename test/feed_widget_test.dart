@@ -288,6 +288,10 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Save this idea'));
     await tester.pumpAndSettle();
 
+    // The control itself has to flip, not just the stored state.
+    expect(find.bySemanticsLabel('Unsave this idea'), findsOneWidget);
+    expect(find.bySemanticsLabel('Save this idea'), findsNothing);
+
     await tester.tap(find.bySemanticsLabel('Saved'));
     await tester.pumpAndSettle();
 
@@ -306,14 +310,20 @@ void main() {
     expect(find.text('IDEA 5 OF 5'), findsOneWidget);
 
     // The end of the book is a destination, not a dead end.
-    await tester.tap(find.text('RECAP'));
+    await tester.tap(find.text('ALL 5 IDEAS'));
     await tester.pumpAndSettle();
 
     expect(find.text('THE WHOLE BOOK'), findsOneWidget);
-    expect(find.text('Five ideas from First Book'), findsOneWidget);
-    for (var i = 1; i <= 5; i++) {
-      expect(find.text('Idea $i'), findsOneWidget);
-    }
+    expect(find.text('All of First Book, on one page'), findsOneWidget);
+
+    // The page holds all five; the later ones are a scroll away rather than
+    // built off-screen.
+    expect(find.text('Idea 1'), findsOneWidget);
+    expect(find.text('Idea 2'), findsOneWidget);
+
+    await tester.drag(find.text('Idea 2'), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(find.text('Idea 5'), findsOneWidget);
 
     await tester.tap(find.text('BACK'));
     await tester.pumpAndSettle();

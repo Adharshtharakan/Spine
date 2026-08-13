@@ -1,5 +1,6 @@
 package com.spineapp.spine
 
+import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,6 +10,14 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val CHANNEL = "spine/capture_guard"
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Applied here rather than waiting for Dart to ask: the flag must be on
+        // the window before the first frame, and the app should never be
+        // capturable during the moments before the Flutter side has started.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        super.onCreate(savedInstanceState)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -29,7 +38,14 @@ class MainActivity : FlutterActivity() {
                                 window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                             }
                         }
-                        result.success(null)
+                        result.success(true)
+                    }
+
+                    "isProtected" -> {
+                        val flags = window.attributes.flags
+                        result.success(
+                            flags and WindowManager.LayoutParams.FLAG_SECURE != 0
+                        )
                     }
 
                     else -> result.notImplemented()

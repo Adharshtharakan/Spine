@@ -6,5 +6,6 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_description"
+    android:previewImage="@drawable/spine_widget_preview"
     android:previewLayout="@layout/spine_widget"
     android:updatePeriodMillis="0" />

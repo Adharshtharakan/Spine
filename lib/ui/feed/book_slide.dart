@@ -285,8 +285,14 @@ class _Body extends StatelessWidget {
       );
     }
 
+    // The recap is reachable from the end of any book, finished or not.
     if (showRecap) {
-      return BookRecap(book: book, compact: compact, onBack: onHideRecap);
+      return BookRecap(
+        book: book,
+        compact: compact,
+        finished: progress.isFinished(book.ideaCount),
+        onBack: onHideRecap,
+      );
     }
 
     final idea = book.ideaAt(ideaIndex);
@@ -346,9 +352,10 @@ class _Body extends StatelessWidget {
                   accent: book.spineColor,
                   canGoBack: ideaIndex > 0,
                   canGoForward: true,
-                  // The last idea used to be a dead end. Now it opens the recap
-                  // — the five ideas as one page.
-                  nextLabel: onLastIdea ? 'Recap' : 'Next',
+                  // The last idea used to be a dead end. Now it opens onto the
+                  // whole book — and says so, because "Recap" didn't explain
+                  // itself.
+                  nextLabel: onLastIdea ? 'All 5 ideas' : 'Next',
                   onPrev: () => onSelectIdea(ideaIndex - 1),
                   onNext: onLastIdea
                       ? onShowRecap

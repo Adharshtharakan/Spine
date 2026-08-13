@@ -91,6 +91,7 @@ class _IdeaText extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Text(
@@ -100,19 +101,50 @@ class _IdeaText extends StatelessWidget {
                   ),
                 ),
               ),
+              // A real target, not a hairline glyph: this used to be an 18px
+              // icon at 38% opacity, which readers could neither see nor hit.
               TapScale(
                 onTap: onToggleSave,
                 semanticLabel: saved ? 'Unsave this idea' : 'Save this idea',
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 12, bottom: 4),
-                  child: Icon(
-                    saved
-                        ? Icons.bookmark_added_rounded
-                        : Icons.bookmark_add_outlined,
-                    size: 18,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
                     color: saved
-                        ? SpineColors.brass
-                        : SpineColors.onInk(0.38),
+                        ? SpineColors.brass.withValues(alpha: 0.18)
+                        : SpineColors.surfaceRaised,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  // The caps label is decoration; the button's name comes from
+                  // TapScale's semantics, and a Text child would otherwise
+                  // swallow it.
+                  child: ExcludeSemantics(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          saved
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
+                          size: 15,
+                          color: saved
+                              ? SpineColors.brass
+                              : SpineColors.onInk(0.65),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          saved ? 'SAVED' : 'SAVE',
+                          style: SpineText.labelSmall.copyWith(
+                            color: saved
+                                ? SpineColors.brass
+                                : SpineColors.onInk(0.65),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
