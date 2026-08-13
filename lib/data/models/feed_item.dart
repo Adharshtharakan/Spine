@@ -47,6 +47,26 @@ class DailyIdeaFeedItem extends FeedItem {
   String get key => 'today:$day';
 }
 
+/// An idea coming back for a second look.
+class ReviewFeedItem extends FeedItem {
+  const ReviewFeedItem({
+    required this.book,
+    required this.ideaIndex,
+    required this.stage,
+  });
+
+  final Book book;
+  final int ideaIndex;
+
+  /// Which pass through the schedule this is — used only to word the card.
+  final int stage;
+
+  Idea get idea => book.ideaAt(ideaIndex);
+
+  @override
+  String get key => 'review:${idea.id}';
+}
+
 class AdFeedItem extends FeedItem {
   const AdFeedItem({required this.slot, required this.position});
 

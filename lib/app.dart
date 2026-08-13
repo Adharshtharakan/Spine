@@ -12,9 +12,11 @@ import 'services/audio/audio_source_resolver.dart';
 import 'services/audio/spine_audio_engine.dart';
 import 'services/audio/spine_audio_player.dart';
 import 'services/persistence/progress_store.dart';
+import 'services/persistence/review_store.dart';
 import 'state/library_controller.dart';
 import 'state/playback_controller.dart';
 import 'state/progress_controller.dart';
+import 'state/review_controller.dart';
 import 'state/shell_controller.dart';
 import 'ui/screens/root_shell.dart';
 
@@ -26,6 +28,7 @@ class SpineApp extends StatefulWidget {
     super.key,
     required this.config,
     required this.store,
+    required this.reviewStore,
     this.repositoryOverride,
     this.adProviderOverride,
     this.audioOverride,
@@ -33,6 +36,7 @@ class SpineApp extends StatefulWidget {
 
   final AppConfig config;
   final ProgressStore store;
+  final ReviewStore reviewStore;
   final BookRepository? repositoryOverride;
   final AdProvider? adProviderOverride;
   final SpineAudioPlayer? audioOverride;
@@ -48,6 +52,7 @@ class _SpineAppState extends State<SpineApp> {
   late final SpineAudioPlayer _audio;
 
   late final ProgressController _progress;
+  late final ReviewController _review;
   late final LibraryController _library;
   late final PlaybackController _playback;
   late final ShellController _shell;
@@ -64,6 +69,12 @@ class _SpineAppState extends State<SpineApp> {
     _audio = widget.audioOverride ?? SpineAudioEngine(resolver: _resolver);
 
     _progress = ProgressController(widget.store);
+    _review = ReviewController(widget.reviewStore);
+
+    // Finishing an idea is what puts it in the review queue. Progress stays
+    // ignorant of reviews; it just announces the completion.
+    _progress.onIdeaCompleted = (bookId, ideaId) =>
+        _review.schedule(ideaId: ideaId, bookId: bookId);
     _library = LibraryController(
       repository: _repository,
       adConfig: widget.config.ads,
@@ -75,9 +86,12 @@ class _SpineAppState extends State<SpineApp> {
 
     // Ordered: the shelf puts books you've started back near the top, so the
     // catalogue can't be arranged until stored progress is in memory.
-    _progress.load().then((_) {
+    _progress.load().then((_) => _review.load()).then((_) {
       if (!mounted) return;
-      _library.load(progressOf: _progress.of);
+      _library.load(
+        progressOf: _progress.of,
+        dueReviews: _review.due(limit: 2),
+      );
     });
   }
 
@@ -85,6 +99,7 @@ class _SpineAppState extends State<SpineApp> {
   void dispose() {
     _playback.dispose();
     _progress.dispose();
+    _review.dispose();
     _library.dispose();
     _shell.dispose();
     _resolver.dispose();
@@ -98,6 +113,7 @@ class _SpineAppState extends State<SpineApp> {
         Provider<AppConfig>.value(value: widget.config),
         Provider<AdProvider>.value(value: _adProvider),
         ChangeNotifierProvider<ProgressController>.value(value: _progress),
+        ChangeNotifierProvider<ReviewController>.value(value: _review),
         ChangeNotifierProvider<LibraryController>.value(value: _library),
         ChangeNotifierProvider<PlaybackController>.value(value: _playback),
         ChangeNotifierProvider<ShellController>.value(value: _shell),

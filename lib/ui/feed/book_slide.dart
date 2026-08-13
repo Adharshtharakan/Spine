@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +11,7 @@ import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
 import 'ambient_backdrop.dart';
 import 'book_header.dart';
+import 'book_recap.dart';
 import 'idea_view.dart';
 import 'listen_controls.dart';
 import 'mode_toggle.dart';
@@ -26,7 +29,7 @@ const double _railWidth = 28;
 /// Rebuild scope is deliberate: the card as a whole reacts to that book's
 /// progress, while the backdrop, the ribbon and the transport — the only things
 /// that move at scroll or playback rate — subscribe on their own.
-class BookSlide extends StatelessWidget {
+class BookSlide extends StatefulWidget {
   const BookSlide({
     super.key,
     required this.book,
@@ -46,6 +49,56 @@ class BookSlide extends StatelessWidget {
   final int pageIndex;
 
   @override
+  State<BookSlide> createState() => _BookSlideState();
+}
+
+class _BookSlideState extends State<BookSlide> {
+  /// How long an idea has to be the thing on screen before it counts as read.
+  /// Long enough that a fast scroll past doesn't bank it, short enough that
+  /// actually reading it always does.
+  static const _dwell = Duration(seconds: 3);
+
+  Timer? _dwellTimer;
+  bool _showRecap = false;
+  int? _dwellingOn;
+
+  Book get book => widget.book;
+
+  @override
+  void dispose() {
+    _dwellTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Read mode has no natural "finished" event the way audio does, so the card
+  /// banks an idea once it has held the screen. Without this, reading a book
+  /// end to end never marks a single idea complete.
+  void _watchDwell(int ideaIndex, BookProgress progress) {
+    final active = widget.isActive && progress.mode == ReadingMode.read;
+    final alreadyRead = progress.completedIdeas.contains(ideaIndex);
+
+    if (!active || alreadyRead || _showRecap) {
+      _dwellTimer?.cancel();
+      _dwellTimer = null;
+      _dwellingOn = null;
+      return;
+    }
+
+    if (_dwellingOn == ideaIndex && _dwellTimer != null) return;
+
+    _dwellTimer?.cancel();
+    _dwellingOn = ideaIndex;
+    _dwellTimer = Timer(_dwell, () {
+      if (!mounted) return;
+      context.read<ProgressController>().markIdeaComplete(
+        book.id,
+        ideaIndex,
+        ideaId: book.ideaAt(ideaIndex).id,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final progress = context.select<ProgressController, BookProgress>(
       (controller) => controller.of(book.id),
@@ -56,13 +109,15 @@ class BookSlide extends StatelessWidget {
     // itself never loses its room.
     final compact = MediaQuery.sizeOf(context).height < 760;
 
+    _watchDwell(ideaIndex, progress);
+
     return Stack(
       fit: StackFit.expand,
       children: [
         _Backdrop(
           color: book.spineColor,
-          controller: pageController,
-          index: pageIndex,
+          controller: widget.pageController,
+          index: widget.pageIndex,
         ),
         Padding(
           // Clears the floating masthead at the top; the light behind it does
@@ -106,8 +161,11 @@ class BookSlide extends StatelessWidget {
                   book: book,
                   progress: progress,
                   ideaIndex: ideaIndex,
-                  isActive: isActive,
+                  isActive: widget.isActive,
                   compact: compact,
+                  showRecap: _showRecap,
+                  onShowRecap: () => setState(() => _showRecap = true),
+                  onHideRecap: () => setState(() => _showRecap = false),
                   onSelectIdea: (index) => _selectIdea(context, progress, index),
                 ),
               ),
@@ -120,6 +178,7 @@ class BookSlide extends StatelessWidget {
 
   void _selectIdea(BuildContext context, BookProgress progress, int index) {
     final clamped = index.clamp(0, book.ideaCount - 1);
+    if (_showRecap) setState(() => _showRecap = false);
     if (clamped == progress.ideaIndex) return;
 
     context.read<ProgressController>().setIdeaIndex(book.id, clamped);
@@ -199,6 +258,9 @@ class _Body extends StatelessWidget {
     required this.ideaIndex,
     required this.isActive,
     required this.compact,
+    required this.showRecap,
+    required this.onShowRecap,
+    required this.onHideRecap,
     required this.onSelectIdea,
   });
 
@@ -207,6 +269,9 @@ class _Body extends StatelessWidget {
   final int ideaIndex;
   final bool isActive;
   final bool compact;
+  final bool showRecap;
+  final VoidCallback onShowRecap;
+  final VoidCallback onHideRecap;
   final ValueChanged<int> onSelectIdea;
 
   @override
@@ -220,8 +285,13 @@ class _Body extends StatelessWidget {
       );
     }
 
+    if (showRecap) {
+      return BookRecap(book: book, compact: compact, onBack: onHideRecap);
+    }
+
     final idea = book.ideaAt(ideaIndex);
     final listening = progress.mode == ReadingMode.listen;
+    final onLastIdea = ideaIndex >= book.ideaCount - 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -256,6 +326,10 @@ class _Body extends StatelessWidget {
                       index: ideaIndex,
                       total: book.ideaCount,
                       compact: compact,
+                      saved: progress.isIdeaSaved(idea.id),
+                      onToggleSave: () => context
+                          .read<ProgressController>()
+                          .toggleSavedIdea(book.id, idea.id),
                     ),
                   ),
                 ),
@@ -271,9 +345,14 @@ class _Body extends StatelessWidget {
               : ReadControls(
                   accent: book.spineColor,
                   canGoBack: ideaIndex > 0,
-                  canGoForward: ideaIndex < book.ideaCount - 1,
+                  canGoForward: true,
+                  // The last idea used to be a dead end. Now it opens the recap
+                  // — the five ideas as one page.
+                  nextLabel: onLastIdea ? 'Recap' : 'Next',
                   onPrev: () => onSelectIdea(ideaIndex - 1),
-                  onNext: () => onSelectIdea(ideaIndex + 1),
+                  onNext: onLastIdea
+                      ? onShowRecap
+                      : () => onSelectIdea(ideaIndex + 1),
                 ),
         ),
       ],

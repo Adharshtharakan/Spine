@@ -12,6 +12,7 @@ class BookProgress {
     this.notifyOnWatch = false,
     this.resumeAt = Duration.zero,
     this.completedIdeas = const <int>{},
+    this.savedIdeaIds = const <String>{},
   });
 
   final String bookId;
@@ -34,6 +35,16 @@ class BookProgress {
   /// and the reading-progress figure on the profile.
   final Set<int> completedIdeas;
 
+  /// Ideas kept on their own, by idea id rather than by position: a saved idea
+  /// outlives an edit that reorders the book, where the completion set (already
+  /// shipped as indices) does not.
+  final Set<String> savedIdeaIds;
+
+  bool isIdeaSaved(String ideaId) => savedIdeaIds.contains(ideaId);
+
+  bool isFinished(int totalIdeas) =>
+      totalIdeas > 0 && completedIdeas.length >= totalIdeas;
+
   bool get isStarted =>
       ideaIndex > 0 || completedIdeas.isNotEmpty || resumeAt > Duration.zero;
 
@@ -47,6 +58,7 @@ class BookProgress {
     bool? notifyOnWatch,
     Duration? resumeAt,
     Set<int>? completedIdeas,
+    Set<String>? savedIdeaIds,
   }) {
     return BookProgress(
       bookId: bookId,
@@ -56,6 +68,7 @@ class BookProgress {
       notifyOnWatch: notifyOnWatch ?? this.notifyOnWatch,
       resumeAt: resumeAt ?? this.resumeAt,
       completedIdeas: completedIdeas ?? this.completedIdeas,
+      savedIdeaIds: savedIdeaIds ?? this.savedIdeaIds,
     );
   }
 
@@ -71,7 +84,8 @@ class BookProgress {
           other.mode == mode &&
           other.saved == saved &&
           other.notifyOnWatch == notifyOnWatch &&
-          setEquals(other.completedIdeas, completedIdeas);
+          setEquals(other.completedIdeas, completedIdeas) &&
+          setEquals(other.savedIdeaIds, savedIdeaIds);
 
   @override
   int get hashCode => Object.hash(
@@ -81,6 +95,7 @@ class BookProgress {
     saved,
     notifyOnWatch,
     completedIdeas.length,
+    savedIdeaIds.length,
   );
 
   Map<String, dynamic> toJson() => {
@@ -91,6 +106,7 @@ class BookProgress {
     'notifyOnWatch': notifyOnWatch,
     'resumeMs': resumeAt.inMilliseconds,
     'completed': completedIdeas.toList()..sort(),
+    'savedIdeas': savedIdeaIds.toList()..sort(),
   };
 
   factory BookProgress.fromJson(Map<String, dynamic> json) {
@@ -104,6 +120,10 @@ class BookProgress {
       completedIdeas: {
         for (final value in (json['completed'] as List<dynamic>? ?? const []))
           value as int,
+      },
+      savedIdeaIds: {
+        for (final value in (json['savedIdeas'] as List<dynamic>? ?? const []))
+          value as String,
       },
     );
   }

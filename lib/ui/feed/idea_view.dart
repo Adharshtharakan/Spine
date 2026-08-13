@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/idea.dart';
+import '../widgets/tap_scale.dart';
 
 /// The idea itself: counter, heading, body.
 ///
@@ -13,12 +14,20 @@ class IdeaView extends StatelessWidget {
     required this.idea,
     required this.index,
     required this.total,
+    required this.saved,
+    required this.onToggleSave,
     this.compact = false,
   });
 
   final Idea idea;
   final int index;
   final int total;
+
+  /// Ideas are kept individually, not just whole books — the one line that
+  /// struck you is usually smaller than the book it came from.
+  final bool saved;
+  final VoidCallback onToggleSave;
+
   final bool compact;
 
   @override
@@ -46,6 +55,8 @@ class IdeaView extends StatelessWidget {
         idea: idea,
         index: index,
         total: total,
+        saved: saved,
+        onToggleSave: onToggleSave,
         compact: compact,
       ),
     );
@@ -58,12 +69,16 @@ class _IdeaText extends StatelessWidget {
     required this.idea,
     required this.index,
     required this.total,
+    required this.saved,
+    required this.onToggleSave,
     required this.compact,
   });
 
   final Idea idea;
   final int index;
   final int total;
+  final bool saved;
+  final VoidCallback onToggleSave;
   final bool compact;
 
   @override
@@ -75,9 +90,33 @@ class _IdeaText extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'IDEA ${index + 1} OF $total',
-            style: SpineText.label.copyWith(color: SpineColors.onInk(0.4)),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'IDEA ${index + 1} OF $total',
+                  style: SpineText.label.copyWith(
+                    color: SpineColors.onInk(0.4),
+                  ),
+                ),
+              ),
+              TapScale(
+                onTap: onToggleSave,
+                semanticLabel: saved ? 'Unsave this idea' : 'Save this idea',
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12, bottom: 4),
+                  child: Icon(
+                    saved
+                        ? Icons.bookmark_added_rounded
+                        : Icons.bookmark_add_outlined,
+                    size: 18,
+                    color: saved
+                        ? SpineColors.brass
+                        : SpineColors.onInk(0.38),
+                  ),
+                ),
+              ),
+            ],
           ),
           SizedBox(height: compact ? 10 : 14),
           Text(

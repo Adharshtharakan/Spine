@@ -5,6 +5,10 @@ import 'package:spine/core/config/ad_config.dart';
 import 'package:spine/core/config/app_config.dart';
 import 'package:spine/data/models/book.dart';
 import 'package:spine/services/persistence/progress_store.dart';
+import 'package:spine/data/models/review_item.dart';
+import 'package:spine/services/persistence/review_store.dart';
+import 'package:spine/state/progress_controller.dart';
+import 'package:spine/state/review_controller.dart';
 
 import 'support/fakes.dart';
 
@@ -14,6 +18,7 @@ void main() {
     List<Book>? books,
     AdConfig ads = const AdConfig(enabled: false),
     ProgressStore? store,
+    ReviewStore? reviewStore,
   }) async {
     final audio = FakeAudioPlayer();
 
@@ -32,6 +37,7 @@ void main() {
           ads: ads,
         ),
         store: store ?? InMemoryProgressStore(),
+        reviewStore: reviewStore ?? InMemoryReviewStore(),
         repositoryOverride: FakeBookRepository(
           books ??
               [
@@ -234,6 +240,110 @@ void main() {
 
     expect(find.text('TEST AD'), findsOneWidget);
     expect(find.text('Fake headline'), findsOneWidget);
+  });
+
+
+  testWidgets('reading an idea marks it read, which fills the ribbon', (
+    tester,
+  ) async {
+    final store = InMemoryProgressStore();
+    await pumpSpine(tester, store: store);
+    await swipeToShelf(tester);
+
+    // Reading has no "finished" event of its own; holding the screen is it.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
+    final progress = ProgressController(store);
+    await progress.load();
+    expect(progress.of('one').completedIdeas, contains(0));
+  });
+
+  testWidgets('a quick scroll past an idea does not count as reading it', (
+    tester,
+  ) async {
+    final store = InMemoryProgressStore();
+    await pumpSpine(tester, store: store);
+    await swipeToShelf(tester);
+
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.fling(find.text('Idea 1'), const Offset(0, -400), 1200);
+    await tester.pumpAndSettle();
+
+    final progress = ProgressController(store);
+    await progress.load();
+    expect(progress.of('one').completedIdeas, isEmpty);
+  });
+
+  testWidgets('an idea can be saved on its own', (tester) async {
+    await pumpSpine(tester);
+    await swipeToShelf(tester);
+
+    await tester.tap(find.bySemanticsLabel('Save this idea'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Saved'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('IDEAS'), findsOneWidget);
+    expect(find.text('Idea 1'), findsOneWidget);
+    // The whole book was not saved, only the idea.
+    expect(find.text('BOOKS'), findsNothing);
+  });
+
+  testWidgets('the last idea opens the recap', (tester) async {
+    await pumpSpine(tester);
+    await swipeToShelf(tester);
+
+    await tester.tap(find.bySemanticsLabel('Idea 5'));
+    await tester.pumpAndSettle();
+    expect(find.text('IDEA 5 OF 5'), findsOneWidget);
+
+    // The end of the book is a destination, not a dead end.
+    await tester.tap(find.text('RECAP'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('THE WHOLE BOOK'), findsOneWidget);
+    expect(find.text('Five ideas from First Book'), findsOneWidget);
+    for (var i = 1; i <= 5; i++) {
+      expect(find.text('Idea $i'), findsOneWidget);
+    }
+
+    await tester.tap(find.text('BACK'));
+    await tester.pumpAndSettle();
+    expect(find.text('IDEA 5 OF 5'), findsOneWidget);
+  });
+
+  testWidgets('a due idea comes back as a review card', (tester) async {
+    final reviews = InMemoryReviewStore();
+    await reviews.saveAll([
+      ReviewItem(
+        ideaId: 'one-2',
+        bookId: 'one',
+        dueAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+    ]);
+
+    await pumpSpine(tester, reviewStore: reviews);
+    await tester.fling(find.byType(PageView), const Offset(0, -400), 1400);
+    await tester.pumpAndSettle();
+
+    // The prompt comes first; the idea itself is withheld until asked for.
+    expect(find.text('REVIEW'), findsOneWidget);
+    expect(find.text('Idea 2'), findsOneWidget);
+    expect(find.text('What was this one about?'), findsOneWidget);
+    expect(find.text('Body of idea 2.'), findsNothing);
+
+    await tester.tap(find.text('SHOW ME'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Body of idea 2.'), findsOneWidget);
+
+    // Seeing it again pushes it out to the next interval.
+    final reloaded = ReviewController(reviews);
+    await reloaded.load();
+    expect(reloaded.due(), isEmpty);
+    expect(reloaded.isQueued('one-2'), isTrue);
   });
 
   testWidgets('the reader returns to the card they left on', (tester) async {

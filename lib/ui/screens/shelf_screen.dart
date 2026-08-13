@@ -8,9 +8,11 @@ import '../../services/ads/ad_provider.dart';
 import '../../state/library_controller.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
+import '../../state/review_controller.dart';
 import '../../state/shell_controller.dart';
 import '../feed/ad_slide.dart';
 import '../feed/book_slide.dart';
+import '../feed/review_slide.dart';
 import '../feed/today_slide.dart';
 
 /// The feed. One card per screen, vertical, snapping.
@@ -162,6 +164,12 @@ class _ShelfScreenState extends State<ShelfScreen> {
               ),
               DailyIdeaFeedItem() => TodaySlide(
                 item: item,
+                onOpenBook: () => _goToBook(item.book.id, items),
+              ),
+              ReviewFeedItem() => ReviewSlide(
+                item: item,
+                onReviewed: () =>
+                    context.read<ReviewController>().markReviewed(item.idea.id),
                 onOpenBook: () => _goToBook(item.book.id, items),
               ),
               AdFeedItem() => AdSlide(

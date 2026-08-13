@@ -7,6 +7,7 @@ import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/theme/spine_theme.dart';
 import 'services/audio/spine_audio_engine.dart';
+import 'services/persistence/review_store.dart';
 import 'services/persistence/shared_preferences_progress_store.dart';
 
 Future<void> main() async {
@@ -27,6 +28,7 @@ Future<void> main() async {
   unawaited(SpineAudioEngine.configureSession());
 
   final store = await SharedPreferencesProgressStore.open();
+  final reviewStore = await SharedPreferencesReviewStore.open();
 
-  runApp(SpineApp(config: config, store: store));
+  runApp(SpineApp(config: config, store: store, reviewStore: reviewStore));
 }

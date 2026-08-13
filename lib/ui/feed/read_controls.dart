@@ -16,6 +16,7 @@ class ReadControls extends StatelessWidget {
     required this.canGoForward,
     required this.onPrev,
     required this.onNext,
+    this.nextLabel = 'Next',
   });
 
   final Color accent;
@@ -23,6 +24,9 @@ class ReadControls extends StatelessWidget {
   final bool canGoForward;
   final VoidCallback onPrev;
   final VoidCallback onNext;
+
+  /// "Next" through the book, "Recap" at the end of it.
+  final String nextLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,7 @@ class ReadControls extends StatelessWidget {
           onTap: onPrev,
         ),
         _NavButton(
-          label: 'Next',
+          label: nextLabel,
           icon: Icons.arrow_forward_rounded,
           iconTrailing: true,
           enabled: canGoForward,

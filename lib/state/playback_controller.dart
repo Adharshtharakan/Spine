@@ -129,7 +129,11 @@ class PlaybackController extends ChangeNotifier {
     _advancing = true;
     try {
       final finishedIndex = snapshot.ideaIndex;
-      _progress.markIdeaComplete(book.id, finishedIndex);
+      _progress.markIdeaComplete(
+        book.id,
+        finishedIndex,
+        ideaId: book.ideaAt(finishedIndex).id,
+      );
 
       final nextIndex = finishedIndex + 1;
       if (nextIndex >= book.ideaCount) {

@@ -24,6 +24,10 @@ class ProgressController extends ChangeNotifier {
   SessionState _session = const SessionState();
   bool _loaded = false;
 
+  /// Notified the first time an idea is finished, so the review queue can pick
+  /// it up without progress having to know what a review is.
+  void Function(String bookId, String ideaId)? onIdeaCompleted;
+
   bool get isLoaded => _loaded;
   String? get lastBookId => _session.lastBookId;
   int get streak => _session.streak;
@@ -89,13 +93,30 @@ class ProgressController extends ChangeNotifier {
     _write(current.copyWith(resumeAt: position), notify: false);
   }
 
-  void markIdeaComplete(String bookId, int ideaIndex) {
+  void markIdeaComplete(String bookId, int ideaIndex, {String? ideaId}) {
     final current = of(bookId);
     if (current.completedIdeas.contains(ideaIndex)) return;
     _write(
       current.copyWith(completedIdeas: {...current.completedIdeas, ideaIndex}),
     );
+    if (ideaId != null) onIdeaCompleted?.call(bookId, ideaId);
   }
+
+  bool toggleSavedIdea(String bookId, String ideaId) {
+    final current = of(bookId);
+    final next = {...current.savedIdeaIds};
+    final added = next.add(ideaId);
+    if (!added) next.remove(ideaId);
+
+    _write(current.copyWith(savedIdeaIds: next));
+    return added;
+  }
+
+  /// Every saved idea across the library, as (bookId, ideaId) pairs.
+  Iterable<(String, String)> get savedIdeas => [
+    for (final entry in _entries.values)
+      for (final ideaId in entry.savedIdeaIds) (entry.bookId, ideaId),
+  ];
 
   void setLastBookId(String bookId) {
     if (_session.lastBookId == bookId) return;

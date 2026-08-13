@@ -4,6 +4,7 @@ import '../core/config/ad_config.dart';
 import '../data/models/book.dart';
 import '../data/models/book_progress.dart';
 import '../data/models/feed_item.dart';
+import '../data/models/review_item.dart';
 import '../data/repository/book_repository.dart';
 import '../services/ads/feed_composer.dart';
 import '../services/feed/daily_pick.dart';
@@ -49,11 +50,17 @@ class LibraryController extends ChangeNotifier {
   /// Books written but not yet released. Only useful for diagnostics.
   int get scheduledCount => _catalogue.length - _books.length;
 
+  /// Ideas due to come back, resolved into cards at compose time.
+  List<ReviewItem> _dueReviews = const [];
+
   /// [progressOf] decides the ordering: books you've started come back to the
-  /// top. It is read once, here — see `ShelfOrder.arrange`.
+  /// top. It is read once, here — see `ShelfOrder.arrange`. [dueReviews] are the
+  /// ideas the review queue wants to resurface today.
   Future<void> load({
     BookProgress Function(String bookId)? progressOf,
+    List<ReviewItem> dueReviews = const [],
   }) async {
+    _dueReviews = dueReviews;
     _status = LibraryStatus.loading;
     notifyListeners();
 
@@ -109,8 +116,29 @@ class LibraryController extends ChangeNotifier {
           ideaIndex: today.ideaIndex,
           day: today.day,
         ),
+      ..._reviewCards(),
       ...FeedComposer.compose(books: _books, config: _adConfig),
     ]);
+  }
+
+  /// Turns due review entries into cards, dropping any whose idea has since
+  /// left the catalogue.
+  List<ReviewFeedItem> _reviewCards() {
+    final cards = <ReviewFeedItem>[];
+
+    for (final item in _dueReviews) {
+      final book = bookById(item.bookId);
+      if (book == null) continue;
+
+      final index = book.ideas.indexWhere((idea) => idea.id == item.ideaId);
+      if (index < 0) continue;
+
+      cards.add(
+        ReviewFeedItem(book: book, ideaIndex: index, stage: item.stage),
+      );
+    }
+
+    return cards;
   }
 
   /// Looks through the whole catalogue, not just the published shelf, so a

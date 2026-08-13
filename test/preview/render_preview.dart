@@ -9,6 +9,7 @@ import 'package:spine/core/config/ad_config.dart';
 import 'package:spine/core/config/app_config.dart';
 import 'package:spine/data/repository/asset_book_repository.dart';
 import 'package:spine/services/persistence/progress_store.dart';
+import 'package:spine/services/persistence/review_store.dart';
 
 import '../support/fakes.dart';
 
@@ -98,6 +99,7 @@ Future<FakeAudioPlayer> pumpApp(
         ads: ads,
       ),
       store: store ?? InMemoryProgressStore(),
+      reviewStore: InMemoryReviewStore(),
       repositoryOverride: FakeBookRepository(books!),
       adProviderOverride: FakeAdProvider(),
       audioOverride: audio,
