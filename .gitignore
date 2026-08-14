@@ -39,10 +39,14 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Gradle/Android Studio build output — regenerated on every build, and large
+# (Gradle's own HTML reports run to hundreds of KB per report).
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
+/android/app/build/
+/android/.gradle/
 
 # Android release signing — never commit keystores or their passwords.
 android/key.properties
