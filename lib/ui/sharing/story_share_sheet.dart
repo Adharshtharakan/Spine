@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/spine_colors.dart';
@@ -11,35 +12,28 @@ import '../../services/sharing/story_share_service.dart';
 import '../widgets/tap_scale.dart';
 import 'story_card.dart';
 
-/// The sheet behind the share icon: Instagram, Facebook, or the plain OS
-/// share sheet. Each option renders the card fresh and hands it straight to
-/// the platform — nothing is cached between shares, since a share happens
-/// once in a while, not often enough for that to matter.
+/// The sheet behind the share icon: Instagram, Facebook, the plain OS share
+/// sheet, or the idea as text. Each option renders the card fresh and hands
+/// it straight to the platform — nothing is cached between shares, since a
+/// share happens once in a while, not often enough for that to matter.
 Future<void> showStoryShareSheet(
   BuildContext context, {
   required Book book,
   required Idea idea,
-
-  /// When set, adds a "Copy text" row that closes the sheet and hands control
-  /// back to the caller — kept here rather than duplicated, since the caller
-  /// already knows how it wants the plain-text version formatted.
-  VoidCallback? onCopyText,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (sheetContext) =>
-        _StoryShareSheet(book: book, idea: idea, onCopyText: onCopyText),
+    builder: (sheetContext) => _StoryShareSheet(book: book, idea: idea),
   );
 }
 
 class _StoryShareSheet extends StatefulWidget {
-  const _StoryShareSheet({required this.book, required this.idea, this.onCopyText});
+  const _StoryShareSheet({required this.book, required this.idea});
 
   final Book book;
   final Idea idea;
-  final VoidCallback? onCopyText;
 
   @override
   State<_StoryShareSheet> createState() => _StoryShareSheetState();
@@ -55,6 +49,38 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
 
   Future<void> _shareGeneric(BuildContext context) =>
       _run(context, (renderer, service, file) => service.shareGeneric(file));
+
+  /// The plain-text version, for anywhere an image doesn't belong.
+  ///
+  /// Both the messenger and the navigator are resolved before the sheet pops,
+  /// since this context dies with it.
+  Future<void> _copyText(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final text =
+        '“${widget.idea.title}” — ${widget.book.title} '
+        'by ${widget.book.author}, on Spine';
+
+    await Clipboard.setData(ClipboardData(text: text));
+    navigator.pop();
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: SpineColors.inkCard,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Text(
+            'Copied to clipboard',
+            style: SpineText.label.copyWith(color: SpineColors.parchment),
+          ),
+        ),
+      );
+  }
 
   Future<void> _run(
     BuildContext context,
@@ -125,16 +151,12 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
               busy: _busy,
               onTap: () => _shareGeneric(context),
             ),
-            if (widget.onCopyText case final onCopyText?)
-              _ShareRow(
-                icon: Icons.content_copy_rounded,
-                label: 'Copy text',
-                busy: _busy,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  onCopyText();
-                },
-              ),
+            _ShareRow(
+              icon: Icons.content_copy_rounded,
+              label: 'Copy text',
+              busy: _busy,
+              onTap: () => _copyText(context),
+            ),
           ],
         ),
       ),

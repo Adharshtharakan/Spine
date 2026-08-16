@@ -301,6 +301,24 @@ void main() {
     expect(find.text('BOOKS'), findsNothing);
   });
 
+  testWidgets('an idea can be shared without going into Listen', (tester) async {
+    await pumpSpine(tester);
+    await swipeToShelf(tester);
+
+    // Read is the mode readers land in, and sharing used to be reachable
+    // only from the Listen transport — invisible to anyone who never played
+    // audio. It belongs on the idea, in every mode.
+    expect(find.bySemanticsLabel('Share this idea'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Share this idea'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SHARE THIS IDEA'), findsOneWidget);
+    expect(find.text('Instagram Stories'), findsOneWidget);
+    expect(find.text('Facebook Stories'), findsOneWidget);
+    expect(find.text('Copy text'), findsOneWidget);
+  });
+
   testWidgets('the last idea opens the recap', (tester) async {
     await pumpSpine(tester);
     await swipeToShelf(tester);

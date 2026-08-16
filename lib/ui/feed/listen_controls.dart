@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
-import '../../data/models/book.dart';
-import '../../data/models/idea.dart';
 import '../../services/audio/playback_snapshot.dart';
-import '../sharing/story_share_sheet.dart';
 import '../widgets/tap_scale.dart';
 
 /// Transport for Listen mode.
 ///
 /// The play control is the centre of gravity: a large thin ring, the way a
 /// player looks when it isn't pretending to be a toolbar. Time sits under the
-/// scrubber, share stays at the edge.
+/// scrubber. Nothing else — sharing lives on the idea itself.
 class ListenControls extends StatelessWidget {
   const ListenControls({
     super.key,
@@ -21,20 +17,12 @@ class ListenControls extends StatelessWidget {
     required this.snapshot,
     required this.onTogglePlay,
     required this.onSeekFraction,
-    required this.shareText,
-    required this.book,
-    required this.idea,
   });
 
   final Color accent;
   final PlaybackSnapshot snapshot;
   final VoidCallback onTogglePlay;
   final ValueChanged<double> onSeekFraction;
-  final String shareText;
-
-  /// The idea currently in view — what a story card shares.
-  final Book book;
-  final Idea idea;
 
   @override
   Widget build(BuildContext context) {
@@ -80,64 +68,12 @@ class ListenControls extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            const Expanded(child: SizedBox.shrink()),
-            _PlayButton(accent: accent, snapshot: snapshot, onTap: onTogglePlay),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TapScale(
-                  semanticLabel: 'Share this idea',
-                  onTap: () => _share(context),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: SpineColors.surface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.ios_share_rounded,
-                      size: 17,
-                      color: SpineColors.onInk(0.55),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        // Share used to sit out here at the edge. It moved up to the idea's
+        // own counter row, where it shows in Read mode too — leaving the
+        // transport to do nothing but transport.
+        _PlayButton(accent: accent, snapshot: snapshot, onTap: onTogglePlay),
       ],
     );
-  }
-
-  Future<void> _share(BuildContext context) => showStoryShareSheet(
-    context,
-    book: book,
-    idea: idea,
-    onCopyText: () => _copyText(context),
-  );
-
-  Future<void> _copyText(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: shareText));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: SpineColors.inkCard,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          content: Text(
-            'Copied to clipboard',
-            style: SpineText.label.copyWith(color: SpineColors.parchment),
-          ),
-        ),
-      );
   }
 
   static String _clock(Duration value) {

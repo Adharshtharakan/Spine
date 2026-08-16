@@ -16,6 +16,7 @@ class IdeaView extends StatelessWidget {
     required this.total,
     required this.saved,
     required this.onToggleSave,
+    required this.onShare,
     this.compact = false,
   });
 
@@ -27,6 +28,9 @@ class IdeaView extends StatelessWidget {
   /// struck you is usually smaller than the book it came from.
   final bool saved;
   final VoidCallback onToggleSave;
+
+  /// Opens the story-share sheet for this idea.
+  final VoidCallback onShare;
 
   final bool compact;
 
@@ -57,6 +61,7 @@ class IdeaView extends StatelessWidget {
         total: total,
         saved: saved,
         onToggleSave: onToggleSave,
+        onShare: onShare,
         compact: compact,
       ),
     );
@@ -71,6 +76,7 @@ class _IdeaText extends StatelessWidget {
     required this.total,
     required this.saved,
     required this.onToggleSave,
+    required this.onShare,
     required this.compact,
   });
 
@@ -79,6 +85,9 @@ class _IdeaText extends StatelessWidget {
   final int total;
   final bool saved;
   final VoidCallback onToggleSave;
+
+  /// Opens the story-share sheet for this idea.
+  final VoidCallback onShare;
   final bool compact;
 
   @override
@@ -145,6 +154,27 @@ class _IdeaText extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Sharing belongs next to saving, in the row that renders in
+              // both Read and Listen. It used to live in the Listen transport
+              // alone, which hid it from every reader who never plays audio.
+              TapScale(
+                onTap: onShare,
+                semanticLabel: 'Share this idea',
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                    color: SpineColors.surfaceRaised,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.ios_share_rounded,
+                    size: 15,
+                    color: SpineColors.onInk(0.65),
                   ),
                 ),
               ),

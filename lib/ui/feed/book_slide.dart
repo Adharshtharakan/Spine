@@ -18,6 +18,7 @@ import 'mode_toggle.dart';
 import 'read_controls.dart';
 import 'spine_ribbon.dart';
 import 'watch_panel.dart';
+import '../sharing/story_share_sheet.dart';
 import '../widgets/spine_top_bar.dart';
 
 /// Width of the ribbon rail on the left of every card. Text on the card lines
@@ -336,6 +337,8 @@ class _Body extends StatelessWidget {
                       onToggleSave: () => context
                           .read<ProgressController>()
                           .toggleSavedIdea(book.id, idea.id),
+                      onShare: () =>
+                          showStoryShareSheet(context, book: book, idea: idea),
                     ),
                   ),
                 ),
@@ -452,9 +455,6 @@ class _ListenFooter extends StatelessWidget {
       child: ListenControls(
         accent: book.spineColor,
         snapshot: snapshot,
-        shareText: '“${idea.title}” — ${book.title} by ${book.author}, on Spine',
-        book: book,
-        idea: idea,
         onTogglePlay: () =>
             context.read<PlaybackController>().toggle(book, ideaIndex),
         onSeekFraction: (fraction) =>
