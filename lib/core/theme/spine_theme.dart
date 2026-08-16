@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+// CupertinoPageTransitionsBuilder, used below. Some Flutter versions
+// re-export it through material.dart and flag this import as unnecessary;
+// others don't, and removing it breaks the build there. Keep it.
+// ignore: unnecessary_import
+import 'package:flutter/cupertino.dart';
 import 'spine_colors.dart';
 import 'spine_text.dart';
 
