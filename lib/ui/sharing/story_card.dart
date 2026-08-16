@@ -65,7 +65,10 @@ class StoryCard extends StatelessWidget {
               right: 0,
               child: _Wordmark(template: template),
             ),
-            const Positioned(top: 96, right: 88, child: _BookmarkGlyph()),
+            // Flush with the top edge: the ribbon hangs into the page from
+            // above it, the way a bookmark actually sits in a book. Inset
+            // from the right to the same 96 margin the text uses.
+            const Positioned(top: 0, right: 96, child: _BookmarkGlyph()),
             Positioned(
               left: 96,
               right: 96,
@@ -94,8 +97,8 @@ class StoryCard extends StatelessWidget {
                             text: split.dot,
                             style: TextStyle(
                               fontFamily: 'Fraunces',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 92,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 98,
                               height: 1.12,
                               color: template.terminalDotColor,
                               shadows: halo,
@@ -278,19 +281,22 @@ class _Wordmark extends StatelessWidget {
 class _BookmarkGlyph extends StatelessWidget {
   const _BookmarkGlyph();
 
+  static const _width = 150.0;
+
   @override
   Widget build(BuildContext context) {
     return Image.asset(
       'assets/story/bookmark.png',
-      width: 96,
-      height: 220,
-      // The ribbon art carries its own transparent margin, so it's fitted
-      // inside the box rather than stretched to it.
+      // Sized to the ribbon's own 1:2.99 proportions. The asset is trimmed
+      // to its opaque bounds — any transparent margin left in the file gets
+      // fitted along with the art and shrinks the visible ribbon.
+      width: _width,
+      height: _width * 2.99,
       fit: BoxFit.contain,
       // See `tool/generate_story_templates.py` — a real bookmark.png ships,
       // so this is a defensive fallback rather than the primary path.
       errorBuilder: (context, error, stack) => const CustomPaint(
-        size: Size(96, 220),
+        size: Size(_width, _width * 2.99),
         painter: _RibbonPainter(color: Color(0xFFD0A13B)),
       ),
     );
