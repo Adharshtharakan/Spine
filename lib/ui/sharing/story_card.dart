@@ -281,7 +281,7 @@ class _Wordmark extends StatelessWidget {
 class _BookmarkGlyph extends StatelessWidget {
   const _BookmarkGlyph();
 
-  static const _width = 150.0;
+  static const _width = 65.0;
 
   @override
   Widget build(BuildContext context) {
