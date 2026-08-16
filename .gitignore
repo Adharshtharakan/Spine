@@ -52,3 +52,6 @@ app.*.map.json
 android/key.properties
 **/*.jks
 **/*.keystore
+
+# Transient golden-diff artifacts from a failed preview run.
+/test/preview/failures/

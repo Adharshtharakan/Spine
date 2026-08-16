@@ -82,9 +82,9 @@ class StoryCard extends StatelessWidget {
                             text: split.body,
                             style: TextStyle(
                               fontFamily: 'Fraunces',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 64,
-                              height: 1.18,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 92,
+                              height: 1.12,
                               letterSpacing: -1,
                               color: template.mainTitleColor,
                               shadows: halo,
@@ -94,9 +94,9 @@ class StoryCard extends StatelessWidget {
                             text: split.dot,
                             style: TextStyle(
                               fontFamily: 'Fraunces',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 64,
-                              height: 1.18,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 92,
+                              height: 1.12,
                               color: template.terminalDotColor,
                               shadows: halo,
                             ),
@@ -105,35 +105,26 @@ class StoryCard extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 52),
-                    Text(
-                      book.title.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'IBMPlexMono',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 24,
-                        letterSpacing: 3,
-                        color: template.bookTitleColor,
-                        shadows: lift,
-                      ),
+                    const SizedBox(height: 56),
+                    // Scaled down to fit rather than ellipsised: a truncated
+                    // book title reads as a broken image once it's on
+                    // someone's story, and titles run to 39 characters.
+                    _Subtitle(
+                      text: book.title.toUpperCase(),
+                      size: 38,
+                      weight: FontWeight.w700,
+                      spacing: 4,
+                      colour: template.bookTitleColor,
+                      shadows: lift,
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      book.author.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'IBMPlexMono',
-                        fontWeight: FontWeight.w500,
-                        fontSize: 19,
-                        letterSpacing: 2,
-                        color: template.authorColor,
-                        shadows: lift,
-                      ),
+                    const SizedBox(height: 18),
+                    _Subtitle(
+                      text: book.author.toUpperCase(),
+                      size: 29,
+                      weight: FontWeight.w600,
+                      spacing: 2.5,
+                      colour: template.authorColor,
+                      shadows: lift,
                     ),
                   ],
                 ),
@@ -146,6 +137,50 @@ class StoryCard extends StatelessWidget {
               child: _Footer(template: template),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A single line of secondary type, shrunk to fit rather than clipped.
+///
+/// [FittedBox] only scales down, so short titles keep the full size and only
+/// the long ones give way — which is the behaviour you want when the output
+/// is an image someone posts rather than a screen they can scroll.
+class _Subtitle extends StatelessWidget {
+  const _Subtitle({
+    required this.text,
+    required this.size,
+    required this.weight,
+    required this.spacing,
+    required this.colour,
+    required this.shadows,
+  });
+
+  final String text;
+  final double size;
+  final FontWeight weight;
+  final double spacing;
+  final Color colour;
+  final List<Shadow> shadows;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          fontFamily: 'IBMPlexMono',
+          fontWeight: weight,
+          fontSize: size,
+          letterSpacing: spacing,
+          color: colour,
+          shadows: shadows,
         ),
       ),
     );
