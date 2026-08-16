@@ -82,8 +82,8 @@ class StoryCard extends StatelessWidget {
                             text: split.body,
                             style: TextStyle(
                               fontFamily: 'Fraunces',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 92,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 98,
                               height: 1.12,
                               letterSpacing: -1,
                               color: template.mainTitleColor,
