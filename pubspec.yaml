@@ -28,6 +28,10 @@ dependencies:
   # Bridges today's idea into the Android/iOS home-screen widgets.
   home_widget: ^0.7.0
 
+  # Generic OS share sheet — the fallback when Instagram/Facebook Stories
+  # aren't installed, or on a platform the native story channel doesn't cover.
+  share_plus: ^7.2.2
+
   # Remote audio caching for the (future) cloud-hosted catalogue.
   path_provider: ^2.1.4
   http: ^1.2.2
@@ -74,6 +78,7 @@ flutter:
   assets:
     - assets/content/
     - assets/audio/atomic-habits/
+    - assets/story/
 
   # Fraunces and Inter ship as variable fonts — Flutter maps FontWeight onto the
   # `wght` axis, so one file covers every weight the design uses.

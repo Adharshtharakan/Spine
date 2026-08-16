@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 
 import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
+import '../../data/models/book.dart';
+import '../../data/models/idea.dart';
 import '../../services/audio/playback_snapshot.dart';
+import '../sharing/story_share_sheet.dart';
 import '../widgets/tap_scale.dart';
 
 /// Transport for Listen mode.
@@ -19,6 +22,8 @@ class ListenControls extends StatelessWidget {
     required this.onTogglePlay,
     required this.onSeekFraction,
     required this.shareText,
+    required this.book,
+    required this.idea,
   });
 
   final Color accent;
@@ -26,6 +31,10 @@ class ListenControls extends StatelessWidget {
   final VoidCallback onTogglePlay;
   final ValueChanged<double> onSeekFraction;
   final String shareText;
+
+  /// The idea currently in view — what a story card shares.
+  final Book book;
+  final Idea idea;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +112,14 @@ class ListenControls extends StatelessWidget {
     );
   }
 
-  Future<void> _share(BuildContext context) async {
+  Future<void> _share(BuildContext context) => showStoryShareSheet(
+    context,
+    book: book,
+    idea: idea,
+    onCopyText: () => _copyText(context),
+  );
+
+  Future<void> _copyText(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: shareText));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)

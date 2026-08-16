@@ -77,6 +77,9 @@ dependencies {
     // Pairs with isCoreLibraryDesugaringEnabled above. 2.1.x needs AGP 8.1+;
     // this project is on 8.9.1.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // FileProvider, used by MainActivity to hand Instagram/Facebook a
+    // content:// URI for a shared story image.
+    implementation("androidx.core:core-ktx:1.13.1")
 }
 
 flutter {

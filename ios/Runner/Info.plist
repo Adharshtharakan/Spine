@@ -43,5 +43,12 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Lets AppDelegate check whether Instagram/Facebook are installed
+		     and hand off a story image via their pasteboard contract. -->
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>instagram-stories</string>
+			<string>facebook-stories</string>
+		</array>
 	</dict>
 </plist>

@@ -453,6 +453,8 @@ class _ListenFooter extends StatelessWidget {
         accent: book.spineColor,
         snapshot: snapshot,
         shareText: '“${idea.title}” — ${book.title} by ${book.author}, on Spine',
+        book: book,
+        idea: idea,
         onTogglePlay: () =>
             context.read<PlaybackController>().toggle(book, ideaIndex),
         onSeekFraction: (fraction) =>

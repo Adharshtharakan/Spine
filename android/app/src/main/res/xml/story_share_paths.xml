@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exposes the app's cache dir so FileProvider can hand Instagram/Facebook a
+     content:// URI for a story image written by StoryCardRenderer, which
+     saves into getTemporaryDirectory() (i.e. the cache dir). -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="story_share" path="." />
+</paths>

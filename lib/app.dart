@@ -15,6 +15,8 @@ import 'services/persistence/progress_store.dart';
 import 'services/notifications/daily_idea_notifier.dart';
 import 'services/persistence/review_store.dart';
 import 'services/security/capture_guard.dart';
+import 'services/sharing/story_card_renderer.dart';
+import 'services/sharing/story_share_service.dart';
 import 'services/widgets/home_widget_publisher.dart';
 import 'state/library_controller.dart';
 import 'state/playback_controller.dart';
@@ -38,6 +40,7 @@ class SpineApp extends StatefulWidget {
     this.notifierOverride,
     this.captureGuardOverride,
     this.homeWidgetOverride,
+    this.storyShareServiceOverride,
   });
 
   final AppConfig config;
@@ -49,6 +52,7 @@ class SpineApp extends StatefulWidget {
   final IdeaNotifier? notifierOverride;
   final CaptureGuard? captureGuardOverride;
   final HomeWidgetPublisher? homeWidgetOverride;
+  final StoryShareService? storyShareServiceOverride;
 
   @override
   State<SpineApp> createState() => _SpineAppState();
@@ -68,6 +72,8 @@ class _SpineAppState extends State<SpineApp> {
   late final IdeaNotifier _notifier;
   late final CaptureGuard _captureGuard;
   late final HomeWidgetPublisher _homeWidget;
+  late final StoryCardRenderer _storyRenderer;
+  late final StoryShareService _storyShareService;
 
   @override
   void initState() {
@@ -76,6 +82,9 @@ class _SpineAppState extends State<SpineApp> {
     _notifier = widget.notifierOverride ?? LocalIdeaNotifier();
     _captureGuard = widget.captureGuardOverride ?? CaptureGuard();
     _homeWidget = widget.homeWidgetOverride ?? const SpineHomeWidgetPublisher();
+    _storyRenderer = const StoryCardRenderer();
+    _storyShareService =
+        widget.storyShareServiceOverride ?? NativeStoryShareService();
 
     // On Android this genuinely blocks screenshots and screen recording; on
     // iOS it only hides the app-switcher snapshot and reports captures. See
@@ -169,6 +178,8 @@ class _SpineAppState extends State<SpineApp> {
         Provider<AppConfig>.value(value: widget.config),
         Provider<AdProvider>.value(value: _adProvider),
         Provider<IdeaNotifier>.value(value: _notifier),
+        Provider<StoryCardRenderer>.value(value: _storyRenderer),
+        Provider<StoryShareService>.value(value: _storyShareService),
         ChangeNotifierProvider<ProgressController>.value(value: _progress),
         ChangeNotifierProvider<ReviewController>.value(value: _review),
         ChangeNotifierProvider<LibraryController>.value(value: _library),

@@ -1,0 +1,190 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_text.dart';
+import '../../data/models/book.dart';
+import '../../data/models/idea.dart';
+import '../../data/models/story_template.dart';
+import '../../services/sharing/story_card_renderer.dart';
+import '../../services/sharing/story_share_service.dart';
+import '../widgets/tap_scale.dart';
+import 'story_card.dart';
+
+/// The sheet behind the share icon: Instagram, Facebook, or the plain OS
+/// share sheet. Each option renders the card fresh and hands it straight to
+/// the platform — nothing is cached between shares, since a share happens
+/// once in a while, not often enough for that to matter.
+Future<void> showStoryShareSheet(
+  BuildContext context, {
+  required Book book,
+  required Idea idea,
+
+  /// When set, adds a "Copy text" row that closes the sheet and hands control
+  /// back to the caller — kept here rather than duplicated, since the caller
+  /// already knows how it wants the plain-text version formatted.
+  VoidCallback? onCopyText,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (sheetContext) =>
+        _StoryShareSheet(book: book, idea: idea, onCopyText: onCopyText),
+  );
+}
+
+class _StoryShareSheet extends StatefulWidget {
+  const _StoryShareSheet({required this.book, required this.idea, this.onCopyText});
+
+  final Book book;
+  final Idea idea;
+  final VoidCallback? onCopyText;
+
+  @override
+  State<_StoryShareSheet> createState() => _StoryShareSheetState();
+}
+
+class _StoryShareSheetState extends State<_StoryShareSheet> {
+  bool _busy = false;
+
+  Future<void> _share(BuildContext context, StoryTarget target) => _run(
+    context,
+    (renderer, service, file) => service.shareToStory(file, target: target),
+  );
+
+  Future<void> _shareGeneric(BuildContext context) =>
+      _run(context, (renderer, service, file) => service.shareGeneric(file));
+
+  Future<void> _run(
+    BuildContext context,
+    Future<void> Function(
+      StoryCardRenderer renderer,
+      StoryShareService service,
+      dynamic file,
+    )
+    action,
+  ) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+
+    final renderer = context.read<StoryCardRenderer>();
+    final service = context.read<StoryShareService>();
+    final template = StoryTemplates.forIdea(widget.idea.id);
+    final navigator = Navigator.of(context);
+
+    try {
+      final file = await renderer.capture(
+        context: context,
+        fileName: 'spine-${widget.idea.id}.png',
+        card: StoryCard(idea: widget.idea, book: widget.book, template: template),
+      );
+      await action(renderer, service, file);
+    } catch (error) {
+      debugPrint('Spine: story share failed — $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      if (navigator.canPop()) navigator.pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        decoration: BoxDecoration(
+          color: SpineColors.inkCard,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'SHARE THIS IDEA',
+              style: SpineText.label.copyWith(color: SpineColors.onInk(0.5)),
+            ),
+            const SizedBox(height: 16),
+            _ShareRow(
+              icon: Icons.camera_alt_outlined,
+              label: 'Instagram Stories',
+              busy: _busy,
+              onTap: () => _share(context, StoryTarget.instagram),
+            ),
+            _ShareRow(
+              icon: Icons.facebook_outlined,
+              label: 'Facebook Stories',
+              busy: _busy,
+              onTap: () => _share(context, StoryTarget.facebook),
+            ),
+            _ShareRow(
+              icon: Icons.ios_share_rounded,
+              label: 'More',
+              busy: _busy,
+              onTap: () => _shareGeneric(context),
+            ),
+            if (widget.onCopyText case final onCopyText?)
+              _ShareRow(
+                icon: Icons.content_copy_rounded,
+                label: 'Copy text',
+                busy: _busy,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onCopyText();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShareRow extends StatelessWidget {
+  const _ShareRow({
+    required this.icon,
+    required this.label,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TapScale(
+      enabled: !busy,
+      onTap: onTap,
+      semanticLabel: 'Share to $label',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: SpineColors.onInk(0.75)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: SpineText.ideaBody.copyWith(fontSize: 15),
+              ),
+            ),
+            if (busy)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(SpineColors.brass),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -61,6 +61,19 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/spine_widget_info" />
         </receiver>
+
+        <!-- Hands Instagram/Facebook a content:// URI for a story image
+             written to the cache dir by StoryCardRenderer — those apps
+             can't read a plain file:// path from another app's sandbox. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.storyshare.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/story_share_paths" />
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -72,5 +85,10 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Android 11+ hides installed-app info unless declared here — needed
+             both to check whether Instagram/Facebook are installed and to
+             target their "Add to Story" intent. -->
+        <package android:name="com.instagram.android" />
+        <package android:name="com.facebook.katana" />
     </queries>
 </manifest>
