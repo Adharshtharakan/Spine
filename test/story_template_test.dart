@@ -33,6 +33,22 @@ void main() {
         expect(StoryTemplates.all.map((t) => t.id), contains(template.id));
       }
     });
+
+    test('lightText agrees with how bright the title colour actually is', () {
+      // The card derives its scrim, wordmark and footer polarity from
+      // lightText while the title uses mainTitleColor, so the two drifting
+      // apart would put white type on a white scrim. This catches that.
+      for (final template in StoryTemplates.all) {
+        final luminance = template.mainTitleColor.computeLuminance();
+        expect(
+          template.lightText,
+          luminance > 0.5,
+          reason:
+              'template ${template.id} declares lightText=${template.lightText} '
+              'but its title colour has luminance $luminance',
+        );
+      }
+    });
   });
 
   group('SplitTitle', () {

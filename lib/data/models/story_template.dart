@@ -15,10 +15,20 @@ class StoryTemplate {
     required this.terminalDotColor,
     required this.bookTitleColor,
     required this.authorColor,
+    required this.lightText,
   });
 
   final int id;
   final String backgroundAsset;
+
+  /// Whether this template's text is light-on-dark.
+  ///
+  /// The background art is photographic, so nothing can be assumed about what
+  /// sits behind a given word. This is the one bit that lets the card protect
+  /// its own text: the scrim, the wordmark, the footer and the title's halo
+  /// all take their polarity from it — dark treatments under light text, and
+  /// the reverse. Without it, white type lands on white cloud.
+  final bool lightText;
 
   /// Colour of the idea title, apart from its terminal period.
   final Color mainTitleColor;
@@ -40,6 +50,7 @@ abstract final class StoryTemplates {
     StoryTemplate(
       id: 1,
       backgroundAsset: 'assets/story/image1.png',
+      lightText: false,
       mainTitleColor: Color(0xFF134071),
       terminalDotColor: _gold,
       bookTitleColor: _gold,
@@ -48,6 +59,7 @@ abstract final class StoryTemplates {
     StoryTemplate(
       id: 2,
       backgroundAsset: 'assets/story/image2.png',
+      lightText: false,
       mainTitleColor: Color(0xFF152D12),
       terminalDotColor: _gold,
       bookTitleColor: _gold,
@@ -56,6 +68,7 @@ abstract final class StoryTemplates {
     StoryTemplate(
       id: 3,
       backgroundAsset: 'assets/story/image3.png',
+      lightText: false,
       mainTitleColor: Color(0xFF02182E),
       terminalDotColor: _gold,
       bookTitleColor: _gold,
@@ -64,6 +77,7 @@ abstract final class StoryTemplates {
     StoryTemplate(
       id: 4,
       backgroundAsset: 'assets/story/image4.png',
+      lightText: true,
       mainTitleColor: _white,
       terminalDotColor: _gold,
       bookTitleColor: _gold,
@@ -72,6 +86,7 @@ abstract final class StoryTemplates {
     StoryTemplate(
       id: 5,
       backgroundAsset: 'assets/story/image5.png',
+      lightText: true,
       mainTitleColor: _white,
       terminalDotColor: _gold,
       bookTitleColor: _gold,
@@ -80,6 +95,7 @@ abstract final class StoryTemplates {
     StoryTemplate(
       id: 6,
       backgroundAsset: 'assets/story/image6.png',
+      lightText: true,
       mainTitleColor: _white,
       terminalDotColor: _gold,
       bookTitleColor: _gold,

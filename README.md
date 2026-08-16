@@ -275,6 +275,14 @@ The six template backgrounds and the bookmark ribbon graphic in
 replacing `assets/story/image1.png`–`image6.png` and
 `assets/story/bookmark.png` — no code changes needed, since
 `story_template.dart` and `story_card.dart` reference those exact paths.
+See `assets/story/README.md` for sizes and which templates expect light
+versus dark backgrounds.
+
+Because the art is photographic, the card can't assume what sits behind any
+given word. Each template declares `lightText`, and the scrim, wordmark,
+footer and the title's halo all take their polarity from it, so type stays
+readable whatever the photo does. A test fails if a template's `lightText`
+and its title colour ever disagree.
 
 **Native side.** Android implements the real "Add to Story" intent
 (`MainActivity.kt`, via a `FileProvider` so Instagram/Facebook can read a
