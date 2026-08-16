@@ -42,13 +42,11 @@ class _StoryShareSheet extends StatefulWidget {
 class _StoryShareSheetState extends State<_StoryShareSheet> {
   bool _busy = false;
 
-  Future<void> _share(BuildContext context, StoryTarget target) => _run(
-    context,
-    (renderer, service, file) => service.shareToStory(file, target: target),
-  );
+  Future<void> _share(StoryTarget target) =>
+      _run((renderer, service, file) => service.shareToStory(file, target: target));
 
-  Future<void> _shareGeneric(BuildContext context) =>
-      _run(context, (renderer, service, file) => service.shareGeneric(file));
+  Future<void> _shareGeneric() =>
+      _run((renderer, service, file) => service.shareGeneric(file));
 
   /// The plain-text version, for anywhere an image doesn't belong.
   ///
@@ -82,8 +80,9 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
       );
   }
 
+  /// Uses the State's own `context` rather than one passed in, so the
+  /// `mounted` checks across the awaits actually guard the context in use.
   Future<void> _run(
-    BuildContext context,
     Future<void> Function(
       StoryCardRenderer renderer,
       StoryShareService service,
@@ -100,6 +99,12 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
     final navigator = Navigator.of(context);
 
     try {
+      // Before the capture, not during it: the renderer only waits a couple
+      // of frames, which is nowhere near long enough to decode a multi-megabyte
+      // background, and a card photographed mid-decode comes out without one.
+      await StoryCard.precacheAssets(context, template);
+      if (!mounted) return;
+
       final file = await renderer.capture(
         context: context,
         fileName: 'spine-${widget.idea.id}.png',
@@ -137,19 +142,19 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
               icon: Icons.camera_alt_outlined,
               label: 'Instagram Stories',
               busy: _busy,
-              onTap: () => _share(context, StoryTarget.instagram),
+              onTap: () => _share(StoryTarget.instagram),
             ),
             _ShareRow(
               icon: Icons.facebook_outlined,
               label: 'Facebook Stories',
               busy: _busy,
-              onTap: () => _share(context, StoryTarget.facebook),
+              onTap: () => _share(StoryTarget.facebook),
             ),
             _ShareRow(
               icon: Icons.ios_share_rounded,
               label: 'More',
               busy: _busy,
-              onTap: () => _shareGeneric(context),
+              onTap: () => _shareGeneric(),
             ),
             _ShareRow(
               icon: Icons.content_copy_rounded,

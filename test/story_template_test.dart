@@ -1,6 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spine/data/models/story_template.dart';
 import 'package:spine/services/sharing/story_typography.dart';
+import 'package:spine/ui/sharing/story_card.dart';
 
 void main() {
   group('StoryTemplates', () {
@@ -48,6 +50,31 @@ void main() {
               'but its title colour has luminance $luminance',
         );
       }
+    });
+  });
+
+  group('story assets', () {
+    // A renamed or missing file doesn't crash — Image.asset quietly falls
+    // through to its errorBuilder — so nothing else would catch this. The art
+    // gets replaced by hand, which is exactly when it happens.
+    test('every template background is really bundled', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+
+      for (final template in StoryTemplates.all) {
+        final data = await rootBundle.load(template.backgroundAsset);
+        expect(
+          data.lengthInBytes,
+          greaterThan(0),
+          reason: '${template.backgroundAsset} is empty',
+        );
+      }
+    });
+
+    test('the bookmark ribbon is really bundled', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+
+      final data = await rootBundle.load(StoryCard.bookmarkAsset);
+      expect(data.lengthInBytes, greaterThan(0));
     });
   });
 

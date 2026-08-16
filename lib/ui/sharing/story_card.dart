@@ -28,6 +28,30 @@ class StoryCard extends StatelessWidget {
   /// constant *is* the output resolution, not just a layout hint.
   static const size = Size(1080, 1920);
 
+  static const bookmarkAsset = 'assets/story/bookmark.png';
+
+  /// Decodes the card's images before anything tries to photograph it.
+  ///
+  /// [StoryCardRenderer] captures after a couple of frames, but a multi-megabyte
+  /// background takes far longer than that to decode off the asset bundle, and
+  /// a widget mid-decode paints nothing. The result was a card exported without
+  /// its background — but only until the [ImageCache] happened to be warm, so
+  /// it looked like a bug that "fixed itself" after a few shares.
+  ///
+  /// Failures are swallowed: a missing background should still export a card
+  /// with the idea on it, which is the part worth sharing.
+  static Future<void> precacheAssets(
+    BuildContext context,
+    StoryTemplate template,
+  ) async {
+    await Future.wait([
+      for (final asset in [template.backgroundAsset, bookmarkAsset])
+        precacheImage(AssetImage(asset), context).catchError(
+          (Object error) => debugPrint('Spine: story asset $asset — $error'),
+        ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final split = SplitTitle.of(idea.title);
@@ -286,7 +310,7 @@ class _BookmarkGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/story/bookmark.png',
+      StoryCard.bookmarkAsset,
       // Sized to the ribbon's own 1:2.99 proportions. The asset is trimmed
       // to its opaque bounds — any transparent margin left in the file gets
       // fitted along with the art and shrinks the visible ribbon.
