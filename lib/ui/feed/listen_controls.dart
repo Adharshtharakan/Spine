@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
 import '../../services/audio/playback_snapshot.dart';
+import '../sharing/story_share_button.dart';
 import '../widgets/tap_scale.dart';
 
 /// Transport for Listen mode.
 ///
 /// The play control is the centre of gravity: a large thin ring, the way a
 /// player looks when it isn't pretending to be a toolbar. Time sits under the
-/// scrubber. Nothing else — sharing lives on the idea itself.
+/// scrubber, share sits opposite it at the edge.
 class ListenControls extends StatelessWidget {
   const ListenControls({
     super.key,
@@ -17,12 +18,19 @@ class ListenControls extends StatelessWidget {
     required this.snapshot,
     required this.onTogglePlay,
     required this.onSeekFraction,
+    required this.onShare,
+    this.compact = false,
   });
 
   final Color accent;
   final PlaybackSnapshot snapshot;
   final VoidCallback onTogglePlay;
   final ValueChanged<double> onSeekFraction;
+
+  /// Opens the story-share sheet for the idea on screen.
+  final VoidCallback onShare;
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -68,10 +76,20 @@ class ListenControls extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        // Share used to sit out here at the edge. It moved up to the idea's
-        // own counter row, where it shows in Read mode too — leaving the
-        // transport to do nothing but transport.
-        _PlayButton(accent: accent, snapshot: snapshot, onTap: onTogglePlay),
+        Row(
+          children: [
+            const Expanded(child: SizedBox.shrink()),
+            _PlayButton(accent: accent, snapshot: snapshot, onTap: onTogglePlay),
+            // Mirrors where Read mode puts it, so switching modes doesn't
+            // move the control out from under the reader's thumb.
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: StoryShareButton(onTap: onShare, compact: compact),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

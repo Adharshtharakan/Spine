@@ -337,8 +337,6 @@ class _Body extends StatelessWidget {
                       onToggleSave: () => context
                           .read<ProgressController>()
                           .toggleSavedIdea(book.id, idea.id),
-                      onShare: () =>
-                          showStoryShareSheet(context, book: book, idea: idea),
                     ),
                   ),
                 ),
@@ -350,9 +348,12 @@ class _Body extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: _railWidth),
           child: listening
-              ? _ListenFooter(book: book, ideaIndex: ideaIndex)
+              ? _ListenFooter(book: book, ideaIndex: ideaIndex, compact: compact)
               : ReadControls(
                   accent: book.spineColor,
+                  compact: compact,
+                  onShare: () =>
+                      showStoryShareSheet(context, book: book, idea: idea),
                   canGoBack: ideaIndex > 0,
                   canGoForward: true,
                   // The last idea used to be a dead end. Now it opens onto the
@@ -425,10 +426,15 @@ class _Ribbon extends StatelessWidget {
 }
 
 class _ListenFooter extends StatelessWidget {
-  const _ListenFooter({required this.book, required this.ideaIndex});
+  const _ListenFooter({
+    required this.book,
+    required this.ideaIndex,
+    required this.compact,
+  });
 
   final Book book;
   final int ideaIndex;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -455,6 +461,8 @@ class _ListenFooter extends StatelessWidget {
       child: ListenControls(
         accent: book.spineColor,
         snapshot: snapshot,
+        compact: compact,
+        onShare: () => showStoryShareSheet(context, book: book, idea: idea),
         onTogglePlay: () =>
             context.read<PlaybackController>().toggle(book, ideaIndex),
         onSeekFraction: (fraction) =>
