@@ -37,6 +37,23 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- AdMob's own sample app id. The SDK throws at launch if this is
+             missing or malformed, so it ships with a working value rather
+             than a placeholder. Replace with the app id from your AdMob
+             console before release — see README, "Ads". -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <!-- Ads are requested while the reader is still several cards away,
+             not at launch, so the SDK is left to initialise lazily. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+            android:value="true" />
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
+            android:value="true" />
+
         <!-- flutter_local_notifications: restores scheduled notifications
              after the device reboots. -->
         <receiver

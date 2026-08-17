@@ -5,6 +5,7 @@ import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/feed_item.dart';
 import '../../services/ads/ad_provider.dart';
+import '../../services/ads/native_ad_preloader.dart';
 import '../../state/library_controller.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
@@ -65,6 +66,38 @@ class _ShelfScreenState extends State<ShelfScreen> {
     if (item is BookFeedItem) {
       context.read<ProgressController>().setLastBookId(item.book.id);
     }
+
+    _warmAds(index, items);
+  }
+
+  /// How far ahead ad slots are filled. Three cards is roughly two seconds of
+  /// unhurried swiping and comfortably longer than a native ad takes to load,
+  /// so a slot is ready well before it is reached. One card behind is kept
+  /// warm too, since scrolling back up is common and re-requesting an ad the
+  /// reader just passed would both stall and waste a request.
+  static const _lookAhead = 4;
+  static const _lookBehind = 1;
+
+  void _warmAds(int index, List<FeedItem> items) {
+    final preloader = context.read<NativeAdPreloader?>();
+    if (preloader == null) return;
+
+    final from = (index - _lookBehind).clamp(0, items.length - 1);
+    final to = (index + _lookAhead).clamp(0, items.length - 1);
+
+    // Ads are keyed by their slot position, not their feed index — the feed
+    // index of a given ad shifts as the shelf reorders between sessions.
+    final positions = <int>[
+      for (var i = from; i <= to; i++)
+        if (items[i] case AdFeedItem(:final position)) position,
+    ];
+    if (positions.isEmpty) return;
+
+    final focused = switch (items[index]) {
+      AdFeedItem(:final position) => position,
+      _ => null,
+    };
+    preloader.preload(positions, focused: focused);
   }
 
   void _goToBook(String bookId, List<FeedItem> items) {
@@ -138,6 +171,10 @@ class _ShelfScreenState extends State<ShelfScreen> {
       if (!mounted) return;
       _clampToFeed(items.length);
       _handlePendingBook(items);
+      // onPageChanged never fires for the page the feed opens on, so without
+      // this the first ad slot only starts loading after a swipe — which is
+      // exactly the slot most likely to be reached before it is ready.
+      _warmAds(_activeIndex, items);
     });
 
     final controller = _controllerFor(items);
@@ -175,6 +212,7 @@ class _ShelfScreenState extends State<ShelfScreen> {
               AdFeedItem() => AdSlide(
                 item: item,
                 provider: context.read<AdProvider>(),
+                preloader: context.read<NativeAdPreloader?>(),
                 isActive: isActive,
               ),
             },

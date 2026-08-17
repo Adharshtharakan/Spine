@@ -20,3 +20,17 @@
 
 # Keep annotated members Play Core / Flutter deferred components look up.
 -keep class io.flutter.embedding.** { *; }
+
+# The Google Mobile Ads SDK and the reel native ad layout. NativeAdView and
+# MediaView are named only in reel_native_ad.xml, so R8 sees no reference to
+# them from code and would otherwise strip them — the ad then inflates to a
+# ClassNotFoundException in release only, which is the worst place to find it.
+-keep class com.google.android.gms.ads.** { *; }
+-dontwarn com.google.android.gms.ads.**
+-keep class com.spineapp.spine.ReelNativeAdFactory { *; }
+
+# Mediation adapters are loaded reflectively by class name from the AdMob
+# server response, so nothing in the APK references them directly.
+-keep class com.google.ads.mediation.** { *; }
+-keep class com.facebook.ads.** { *; }
+-dontwarn com.facebook.ads.**

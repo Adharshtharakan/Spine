@@ -35,6 +35,7 @@ dependencies:
   # Remote audio caching for the (future) cloud-hosted catalogue.
   path_provider: ^2.1.4
   http: ^1.2.2
+  google_mobile_ads: ^7.0.0
 
 dev_dependencies:
   flutter_test:

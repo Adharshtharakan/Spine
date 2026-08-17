@@ -6,7 +6,10 @@ import 'core/theme/spine_colors.dart';
 import 'core/theme/spine_theme.dart';
 import 'data/repository/asset_book_repository.dart';
 import 'data/repository/book_repository.dart';
+import 'core/config/ad_config.dart';
 import 'services/ads/ad_provider.dart';
+import 'services/ads/admob_ad_provider.dart';
+import 'services/ads/native_ad_preloader.dart';
 import 'services/ads/placeholder_ad_provider.dart';
 import 'services/audio/audio_source_resolver.dart';
 import 'services/audio/spine_audio_engine.dart';
@@ -36,6 +39,7 @@ class SpineApp extends StatefulWidget {
     required this.reviewStore,
     this.repositoryOverride,
     this.adProviderOverride,
+    this.adPreloaderOverride,
     this.audioOverride,
     this.notifierOverride,
     this.captureGuardOverride,
@@ -48,6 +52,10 @@ class SpineApp extends StatefulWidget {
   final ReviewStore reviewStore;
   final BookRepository? repositoryOverride;
   final AdProvider? adProviderOverride;
+
+  /// Null keeps the feed on house creatives — which is what tests and any
+  /// platform without the ads SDK get.
+  final NativeAdPreloader? adPreloaderOverride;
   final SpineAudioPlayer? audioOverride;
   final IdeaNotifier? notifierOverride;
   final CaptureGuard? captureGuardOverride;
@@ -61,6 +69,7 @@ class SpineApp extends StatefulWidget {
 class _SpineAppState extends State<SpineApp> {
   late final BookRepository _repository;
   late final AdProvider _adProvider;
+  NativeAdPreloader? _adPreloader;
   late final AudioSourceResolver _resolver;
   late final SpineAudioPlayer _audio;
 
@@ -94,7 +103,17 @@ class _SpineAppState extends State<SpineApp> {
     _repository =
         widget.repositoryOverride ??
         AssetBookRepository(manifestPath: widget.config.contentManifest);
-    _adProvider = widget.adProviderOverride ?? PlaceholderAdProvider();
+    // AdMob only where there is an AdMob: desktop and test runs stay on the
+    // house creatives rather than reaching for an SDK that isn't there.
+    final useAdMob = widget.config.ads.enabled && AdConfig.supportsAds;
+    _adProvider =
+        widget.adProviderOverride ??
+        (useAdMob
+            ? AdMobAdProvider(config: widget.config.ads)
+            : PlaceholderAdProvider());
+    _adPreloader =
+        widget.adPreloaderOverride ??
+        (useAdMob ? NativeAdPreloader(config: widget.config.ads) : null);
     _resolver = AudioSourceResolver(baseUrl: widget.config.contentBaseUrl);
     _audio = widget.audioOverride ?? SpineAudioEngine(resolver: _resolver);
 
@@ -168,6 +187,7 @@ class _SpineAppState extends State<SpineApp> {
     _library.dispose();
     _shell.dispose();
     _resolver.dispose();
+    _adPreloader?.dispose();
     super.dispose();
   }
 
@@ -177,6 +197,9 @@ class _SpineAppState extends State<SpineApp> {
       providers: [
         Provider<AppConfig>.value(value: widget.config),
         Provider<AdProvider>.value(value: _adProvider),
+        // Nullable on purpose: the feed treats "no preloader" as "no network
+        // ads", so nothing downstream needs a platform check of its own.
+        Provider<NativeAdPreloader?>.value(value: _adPreloader),
         Provider<IdeaNotifier>.value(value: _notifier),
         Provider<StoryCardRenderer>.value(value: _storyRenderer),
         Provider<StoryShareService>.value(value: _storyShareService),

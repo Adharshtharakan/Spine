@@ -8,7 +8,9 @@ import '../../services/ads/ad_provider.dart';
 import '../widgets/spine_pill.dart';
 import '../widgets/spine_top_bar.dart';
 import '../widgets/tap_scale.dart';
+import '../../services/ads/native_ad_preloader.dart';
 import 'ambient_backdrop.dart';
+import 'reel_ad_card.dart';
 
 /// A sponsored card between books.
 ///
@@ -22,11 +24,17 @@ class AdSlide extends StatefulWidget {
     required this.item,
     required this.provider,
     required this.isActive,
+    this.preloader,
   });
 
   final AdFeedItem item;
   final AdProvider provider;
   final bool isActive;
+
+  /// Where a real network ad comes from, when one has loaded for this slot.
+  /// Null on platforms without ads, and in tests, which is what keeps this
+  /// widget renderable without the SDK.
+  final NativeAdPreloader? preloader;
 
   @override
   State<AdSlide> createState() => _AdSlideState();
@@ -60,6 +68,26 @@ class _AdSlideState extends State<AdSlide> {
 
   @override
   Widget build(BuildContext context) {
+    final preloader = widget.preloader;
+    if (preloader == null) return _house(context);
+
+    // The preloader notifies when a slot fills, which may well be after this
+    // card was first built — without listening, an ad that arrives a moment
+    // late never gets shown.
+    return ListenableBuilder(
+      listenable: preloader,
+      builder: (context, _) {
+        // A loaded network ad wins the slot; the house creative fills it when
+        // AdMob doesn't, which in a full-screen feed is the difference
+        // between a quiet card and a hole.
+        final ad = preloader.adFor(widget.item.position);
+        if (ad != null) return ReelAdCard(ad: ad);
+        return _house(context);
+      },
+    );
+  }
+
+  Widget _house(BuildContext context) {
     final creative = _creative;
     if (creative == null) return const _EmptyAdCard();
 

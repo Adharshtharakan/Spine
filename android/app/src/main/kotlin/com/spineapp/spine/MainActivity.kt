@@ -9,6 +9,7 @@ import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin
 import java.io.File
 
 class MainActivity : FlutterActivity() {
@@ -19,6 +20,10 @@ class MainActivity : FlutterActivity() {
         const val FILE_PROVIDER_AUTHORITY = "com.spineapp.spine.storyshare.fileprovider"
         const val INSTAGRAM_PACKAGE = "com.instagram.android"
         const val FACEBOOK_PACKAGE = "com.facebook.katana"
+
+        // Must match kReelAdFactoryId in native_ad_preloader.dart. A mismatch
+        // surfaces only at ad-load time, as "factory not found".
+        const val REEL_AD_FACTORY = "reelAd"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,6 +36,12 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        GoogleMobileAdsPlugin.registerNativeAdFactory(
+            flutterEngine,
+            REEL_AD_FACTORY,
+            ReelNativeAdFactory(applicationContext),
+        )
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CAPTURE_GUARD_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -78,6 +89,13 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        super.cleanUpFlutterEngine(flutterEngine)
+        // Without this a hot restart re-registers over a live factory and the
+        // engine keeps the old one alive with it.
+        GoogleMobileAdsPlugin.unregisterNativeAdFactory(flutterEngine, REEL_AD_FACTORY)
     }
 
     private fun packageFor(target: String?): String? = when (target) {

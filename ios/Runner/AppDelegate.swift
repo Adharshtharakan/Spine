@@ -1,10 +1,14 @@
 import Flutter
 import UIKit
+import google_mobile_ads
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private static let captureChannelName = "spine/capture_guard"
   private static let storyShareChannelName = "spine/story_share"
+  /// Must match kReelAdFactoryId in native_ad_preloader.dart. A mismatch shows
+  /// up only when an ad tries to load, as "factory not found".
+  private static let reelAdFactoryId = "reelAd"
 
   private var captureChannel: FlutterMethodChannel?
   private var isProtected = false
@@ -17,6 +21,12 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+
+    FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
+      self,
+      factoryId: AppDelegate.reelAdFactoryId,
+      nativeAdFactory: ReelNativeAdFactory()
+    )
 
     if let controller = window?.rootViewController as? FlutterViewController {
       let channel = FlutterMethodChannel(

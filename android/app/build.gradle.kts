@@ -39,7 +39,10 @@ android {
 
     defaultConfig {
         applicationId = "com.spineapp.spine"
-        minSdk = flutter.minSdkVersion
+        // The Google Mobile Ads SDK requires 23; Flutter's own floor has been
+        // at or above that for a while, but pinning it means an SDK bump can't
+        // silently drop the build below what the ads SDK will link against.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

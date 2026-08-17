@@ -59,7 +59,7 @@ does not.
 **Tests**
 
 ```bash
-flutter test        # 77 tests: catalogue, feed composition, playback, persistence, UI
+flutter test        # 100 tests: catalogue, feed composition, playback, persistence, UI
 flutter analyze
 ```
 
@@ -91,7 +91,7 @@ lib/
     models/                  Book, Idea, WatchTrack, BookProgress, SessionState, FeedItem
     repository/              BookRepository + the bundled-asset implementation
   services/
-    ads/                     FeedComposer, AdProvider, placeholder creatives
+    ads/                     FeedComposer, AdProvider, AdMob native ads + preloader
     feed/                    ShelfOrder (resurfacing), DailyPicker (Today card)
     audio/                   the audio contract and its two implementations
     persistence/             ProgressStore + SharedPreferences implementation
@@ -362,8 +362,8 @@ Book Book Book Ad Book Book Book Ad …
 | Field | Default | Meaning |
 |---|---|---|
 | `enabled` | `true` | master switch |
-| `frequency` | `4` | insert an ad after every N books |
-| `leadIn` | `4` | books shown before the first ad is allowed |
+| `frequency` | `6` | insert an ad after every N books |
+| `leadIn` | `5` | books shown before the first ad is allowed |
 | `maxAdsPerSession` | `null` | optional ceiling |
 
 ```bash
@@ -374,11 +374,126 @@ The feed renders `FeedItem`s, never books directly, so changing the cadence — 
 turning ads off entirely — never touches the scrolling architecture. The feed
 also never opens or ends on an ad.
 
-For MVP, `PlaceholderAdProvider` serves clearly-marked **TEST AD** creatives, so
-the app is fully testable with no advertising account. Swapping in Google Mobile
-Ads means one new `AdProvider` implementation: `initialize()` becomes
-`MobileAds.instance.initialize()`, `creativeFor` returns a loaded native ad, and
-the impression/click hooks forward to the SDK.
+### What fills a slot
+
+Two things can, and the order matters:
+
+1. **A Google native ad**, rendered full-screen by `ReelAdCard`.
+2. **The house creative** (`PlaceholderAdProvider`), when AdMob doesn't fill.
+
+The fallback isn't a nicety. AdMob fill is never 100%, and a full-screen feed
+has no graceful way to show an empty card — so an unfilled slot gets the same
+editorial card the app shipped with before any network was wired up.
+
+### Preloading
+
+`NativeAdPreloader` loads ads for slots the reader hasn't reached yet, keyed by
+ad slot position. The feed warms four cards ahead and one behind on every page
+change, so a slot is ready well before it is swiped to; without this the reader
+reliably beats the network and lands on an empty card.
+
+It holds at most three loaded ads and evicts by distance from the reader, not by
+age — scrolling back up shouldn't discard the ad directly above you in favour of
+one twenty cards down. Native ads are heavyweight (each retains a platform view
+and its media), which is why the cache is deliberately small.
+
+Slots that fail are remembered for the session rather than retried on every
+rebuild, which would burn requests against a no-fill placement.
+
+### The native layouts
+
+A full-screen native ad can't be built from Flutter widgets. The AdMob SDK
+tracks clicks and viewability through its *own* registered subviews, so a CTA
+drawn in Flutter over the ad would look right and record nothing. The layout is
+therefore native on both platforms, registered under the factory id
+`kReelAdFactoryId` (`native_ad_preloader.dart`):
+
+| | File |
+|---|---|
+| Android | `ReelNativeAdFactory.kt` + `res/layout/reel_native_ad.xml` |
+| iOS | `ios/Runner/ReelNativeAdFactory.swift` (built in code, no nib) |
+
+Both are registered at engine setup — `MainActivity.configureFlutterEngine` and
+`AppDelegate.application(_:didFinishLaunchingWithOptions:)`. The id is a bare
+string shared across three languages with no compiler between them, so a test
+in `test/ad_config_test.dart` reads both native sources and fails if they drift.
+
+`ReelAdCard` owns only the frame around the ad: the ground colour, masthead
+clearance, and the **SPONSORED** badge. The badge is required, and deliberately
+not styled to disappear — an ad that reads as editorial is both a policy breach
+and the fastest way to lose a reader's trust in everything around it.
+
+### Ad unit ids
+
+Ships with **Google's test units**, and stays on them unless a real id is
+defined:
+
+```bash
+flutter build appbundle \
+  --dart-define=SPINE_AD_UNIT_ANDROID=ca-app-pub-XXXX/YYYY \
+  --dart-define=SPINE_AD_UNIT_IOS=ca-app-pub-XXXX/ZZZZ
+```
+
+There is no way to serve live ads by accident. Requesting live inventory from a
+development build is what gets AdMob accounts suspended, so opting in takes a
+deliberate flag.
+
+The **app id** is separate from the unit id and lives in the manifests
+(`com.google.android.gms.ads.APPLICATION_ID`) and `Info.plist`
+(`GADApplicationIdentifier`). Both currently hold Google's sample app id and
+must be replaced with your console values before release. The SDK **throws at
+launch** if either is missing or malformed — which is why they ship with
+working sample values rather than empty placeholders.
+
+### Meta Audience Network mediation
+
+Meta is wired through AdMob mediation rather than a second SDK in the app, so
+the feed keeps one ad path and Meta competes for the same slot.
+
+Setup is entirely console-side plus one dependency:
+
+1. **Meta**: create a property and a *native* placement at
+   [business.facebook.com](https://business.facebook.com) → Monetization
+   Manager. Note the Placement ID and the app's App ID and App Secret.
+2. **AdMob**: Mediation → Create Mediation Group, ad format **Native**,
+   platform Android/iOS. Add your native ad unit to it.
+3. In that group, **Add Custom Event → Meta Audience Network**, and paste the
+   Placement ID. AdMob will ask you to link the Meta account under
+   Settings → Linked accounts.
+4. Add the adapter to `android/app/build.gradle.kts`:
+
+   ```kotlin
+   implementation("com.google.ads.mediation:facebook:6.20.0.0")
+   ```
+
+   iOS pulls its adapter through CocoaPods — add to `ios/Podfile`:
+
+   ```ruby
+   pod 'GoogleMobileAdsMediationFacebook'
+   ```
+
+   then `cd ios && pod install`.
+5. Meta requires test mode during development, or it returns no fill and can
+   flag the account. Register the device with the hashed id Meta logs on the
+   first request, in Monetization Manager → Testing.
+
+Nothing in the Dart code changes: mediation is resolved server-side, and a Meta
+creative arrives through the same `NativeAd` and the same factory. The ProGuard
+rules already keep `com.google.ads.mediation.**` and `com.facebook.ads.**`,
+which are loaded reflectively by class name from the AdMob response and would
+otherwise be stripped in release builds only.
+
+### GDPR, ATT and children
+
+Not wired up, and required before a public release:
+
+- **iOS**: `NSUserTrackingUsageDescription` is in `Info.plist`, but nothing
+  calls `ATTrackingManager.requestTrackingAuthorization`. Until it does, iOS 14+
+  requests are non-personalised, which materially lowers revenue.
+- **EEA/UK**: needs a CMP. Google's own User Messaging Platform
+  (`ConsentInformation` in this same SDK) is the least-effort route.
+- **COPPA/families**: if Spine is ever marked for children, `RequestConfiguration`
+  needs `tagForChildDirectedTreatment` set, and Meta mediation is not eligible.
 
 ---
 

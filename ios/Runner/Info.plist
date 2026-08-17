@@ -43,6 +43,18 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- AdMob's own sample app id. The SDK throws at launch without it;
+		     replace with your console value before release. -->
+		<key>GADApplicationIdentifier</key>
+		<string>ca-app-pub-3940256099942544~1458002511</string>
+		<!-- Ads load ahead of the reader rather than at launch. -->
+		<key>GADDelayAppMeasurementInit</key>
+		<true/>
+		<!-- Shown before the first ad request on iOS 14+. Without this the
+		     tracking prompt cannot be presented and requests fall back to
+		     non-personalised, which materially lowers fill and revenue. -->
+		<key>NSUserTrackingUsageDescription</key>
+		<string>Spine uses this to show ads that are relevant to you. Declining keeps ads, but makes them generic.</string>
 		<!-- Lets AppDelegate check whether Instagram/Facebook are installed
 		     and hand off a story image via their pasteboard contract. -->
 		<key>LSApplicationQueriesSchemes</key>
