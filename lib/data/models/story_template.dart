@@ -49,7 +49,7 @@ abstract final class StoryTemplates {
   static const all = <StoryTemplate>[
     StoryTemplate(
       id: 1,
-      backgroundAsset: 'assets/story/image1.png',
+      backgroundAsset: 'assets/story/image1.jpg',
       lightText: false,
       mainTitleColor: Color(0xFF134071),
       terminalDotColor: _gold,
@@ -58,7 +58,7 @@ abstract final class StoryTemplates {
     ),
     StoryTemplate(
       id: 2,
-      backgroundAsset: 'assets/story/image2.png',
+      backgroundAsset: 'assets/story/image2.jpg',
       lightText: false,
       mainTitleColor: Color(0xFF152D12),
       terminalDotColor: _gold,
@@ -67,7 +67,7 @@ abstract final class StoryTemplates {
     ),
     StoryTemplate(
       id: 3,
-      backgroundAsset: 'assets/story/image3.png',
+      backgroundAsset: 'assets/story/image3.jpg',
       lightText: false,
       mainTitleColor: Color(0xFF02182E),
       terminalDotColor: _gold,
@@ -76,7 +76,7 @@ abstract final class StoryTemplates {
     ),
     StoryTemplate(
       id: 4,
-      backgroundAsset: 'assets/story/image4.png',
+      backgroundAsset: 'assets/story/image4.jpg',
       lightText: true,
       mainTitleColor: _white,
       terminalDotColor: _gold,
@@ -85,7 +85,7 @@ abstract final class StoryTemplates {
     ),
     StoryTemplate(
       id: 5,
-      backgroundAsset: 'assets/story/image5.png',
+      backgroundAsset: 'assets/story/image5.jpg',
       lightText: true,
       mainTitleColor: _white,
       terminalDotColor: _gold,
@@ -94,7 +94,7 @@ abstract final class StoryTemplates {
     ),
     StoryTemplate(
       id: 6,
-      backgroundAsset: 'assets/story/image6.png',
+      backgroundAsset: 'assets/story/image6.jpg',
       lightText: true,
       mainTitleColor: _white,
       terminalDotColor: _gold,

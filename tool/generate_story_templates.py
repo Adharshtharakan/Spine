@@ -154,8 +154,10 @@ def main() -> int:
 
     for template_id, (accent, light_center) in TEMPLATES.items():
         image = make_background(accent, light_center)
-        path = OUT / f"image{template_id}.png"
-        image.save(path)
+        # JPEG to match the shipped art: these are photographs, and the
+        # PNGs of the same images cost six times the bytes for no gain.
+        path = OUT / f"image{template_id}.jpg"
+        image.save(path, "JPEG", quality=85, optimize=True, subsampling=0)
         print(f"  {path.relative_to(ROOT)}")
 
     bookmark_path = OUT / "bookmark.png"
