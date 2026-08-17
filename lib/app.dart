@@ -70,6 +70,11 @@ class _SpineAppState extends State<SpineApp> {
   late final BookRepository _repository;
   late final AdProvider _adProvider;
   NativeAdPreloader? _adPreloader;
+
+  /// Only what this State built is torn down by it. An injected preloader
+  /// belongs to whoever injected it, and disposing it here would be a second
+  /// dispose on an object the caller still owns.
+  bool _ownsAdPreloader = false;
   late final AudioSourceResolver _resolver;
   late final SpineAudioPlayer _audio;
 
@@ -111,6 +116,7 @@ class _SpineAppState extends State<SpineApp> {
         (useAdMob
             ? AdMobAdProvider(config: widget.config.ads)
             : PlaceholderAdProvider());
+    _ownsAdPreloader = widget.adPreloaderOverride == null;
     _adPreloader =
         widget.adPreloaderOverride ??
         (useAdMob ? NativeAdPreloader(config: widget.config.ads) : null);
@@ -187,7 +193,7 @@ class _SpineAppState extends State<SpineApp> {
     _library.dispose();
     _shell.dispose();
     _resolver.dispose();
-    _adPreloader?.dispose();
+    if (_ownsAdPreloader) _adPreloader?.dispose();
     super.dispose();
   }
 
@@ -197,9 +203,18 @@ class _SpineAppState extends State<SpineApp> {
       providers: [
         Provider<AppConfig>.value(value: widget.config),
         Provider<AdProvider>.value(value: _adProvider),
-        // Nullable on purpose: the feed treats "no preloader" as "no network
-        // ads", so nothing downstream needs a platform check of its own.
-        Provider<NativeAdPreloader?>.value(value: _adPreloader),
+        // ChangeNotifierProvider, not Provider: the preloader notifies when a
+        // slot fills, and plain Provider rejects a Listenable outright since
+        // it can't pass those notifications on.
+        //
+        // Nullable on purpose — the feed treats "no preloader" as "no network
+        // ads", so nothing downstream needs a platform check of its own. That
+        // null is also why this took a device to find: every test left it
+        // null, and null isn't a Listenable, so the assert stayed quiet.
+        //
+        // `.value` deliberately: disposal belongs to this State, alongside
+        // every other service it builds.
+        ChangeNotifierProvider<NativeAdPreloader?>.value(value: _adPreloader),
         Provider<IdeaNotifier>.value(value: _notifier),
         Provider<StoryCardRenderer>.value(value: _storyRenderer),
         Provider<StoryShareService>.value(value: _storyShareService),

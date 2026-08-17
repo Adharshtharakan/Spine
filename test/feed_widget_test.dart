@@ -6,6 +6,7 @@ import 'package:spine/core/config/app_config.dart';
 import 'package:spine/data/models/book.dart';
 import 'package:spine/services/persistence/progress_store.dart';
 import 'package:spine/data/models/review_item.dart';
+import 'package:spine/services/ads/native_ad_preloader.dart';
 import 'package:spine/services/notifications/daily_idea_notifier.dart';
 import 'package:spine/services/persistence/review_store.dart';
 import 'package:spine/services/widgets/home_widget_publisher.dart';
@@ -23,6 +24,7 @@ void main() {
     ReviewStore? reviewStore,
     IdeaNotifier? notifier,
     HomeWidgetPublisher? homeWidget,
+    NativeAdPreloader? adPreloader,
   }) async {
     final audio = FakeAudioPlayer();
 
@@ -51,6 +53,7 @@ void main() {
               ],
         ),
         adProviderOverride: FakeAdProvider(),
+        adPreloaderOverride: adPreloader,
         notifierOverride: notifier ?? NoopIdeaNotifier(),
         homeWidgetOverride: homeWidget ?? NoopHomeWidgetPublisher(),
         audioOverride: audio,
@@ -448,5 +451,24 @@ void main() {
 
     expect(find.text('Second Book'), findsOneWidget);
     expect(find.text('IDEA 2 OF 5'), findsOneWidget);
+  });
+
+  testWidgets('the feed builds with a real ad preloader in the tree', (
+    tester,
+  ) async {
+    // The preloader is a ChangeNotifier, and Provider asserts against holding
+    // one — it can't notify dependents, so it treats that as a mistake. Every
+    // other test leaves the preloader null, and null is not a Listenable, so
+    // the assert stayed quiet here while throwing on any real device.
+    final preloader = NativeAdPreloader(config: const AdConfig());
+    addTearDown(preloader.dispose);
+
+    await pumpSpine(tester, adPreloader: preloader);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('TODAY'), findsOneWidget);
+
+    await swipeToShelf(tester);
+    expect(find.text('First Book'), findsOneWidget);
   });
 }
