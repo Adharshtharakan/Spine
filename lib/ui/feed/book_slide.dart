@@ -328,12 +328,19 @@ class _Body extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Align(
-                    alignment: Alignment.topLeft,
+                    // Centred, not top-aligned. The type now fills most of the
+                    // card on its own, so what's left is a small remainder —
+                    // split above and below it reads as breathing room, where
+                    // pooling all of it under the text read as a dead zone.
+                    // A body long enough to overflow fills the box and this
+                    // becomes a no-op.
+                    alignment: Alignment.centerLeft,
                     child: IdeaView(
                       idea: idea,
                       index: ideaIndex,
                       total: book.ideaCount,
                       compact: compact,
+                      dense: listening,
                       saved: progress.isIdeaSaved(idea.id),
                       onToggleSave: () => context
                           .read<ProgressController>()

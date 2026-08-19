@@ -21,6 +21,7 @@ class IdeaView extends StatelessWidget {
     required this.highlights,
     required this.onToggleHighlight,
     this.compact = false,
+    this.dense = false,
   });
 
   final Idea idea;
@@ -39,6 +40,12 @@ class IdeaView extends StatelessWidget {
   final ValueChanged<String> onToggleHighlight;
 
   final bool compact;
+
+  /// Set where the card carries a transport as well as the idea. Listen mode
+  /// gives up roughly a fifth of the card to the scrubber and play control, and
+  /// at Read's size the last line of the body is cut off — which reads worse
+  /// than the empty space this sizing exists to remove.
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +77,7 @@ class IdeaView extends StatelessWidget {
         highlights: highlights,
         onToggleHighlight: onToggleHighlight,
         compact: compact,
+        dense: dense,
       ),
     );
   }
@@ -86,6 +94,7 @@ class _IdeaText extends StatelessWidget {
     required this.highlights,
     required this.onToggleHighlight,
     required this.compact,
+    required this.dense,
   });
 
   final Idea idea;
@@ -96,6 +105,22 @@ class _IdeaText extends StatelessWidget {
   final List<String> highlights;
   final ValueChanged<String> onToggleHighlight;
   final bool compact;
+  final bool dense;
+
+  /// The idea is the content of the card, so it should fill the room it has.
+  ///
+  /// Catalogue bodies run 87 to 154 characters — tight enough that this is
+  /// really one size with a little give at the ends, rather than a layout that
+  /// has to cope with anything. The old 15.5 left roughly a fifth of every card
+  /// empty below the text, on every idea, because the surplus was constant.
+  double get _bodySize {
+    final base = switch (idea.body.length) {
+      <= 110 => 20.0,
+      <= 135 => 18.5,
+      _ => 17.0,
+    };
+    return base - (compact ? 2.5 : 0) - (dense ? 3 : 0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,17 +191,20 @@ class _IdeaText extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: compact ? 10 : 14),
+          SizedBox(height: compact || dense ? 12 : 18),
           Text(
             idea.title,
-            style: SpineText.ideaHeading.copyWith(fontSize: compact ? 22 : 25),
+            style: SpineText.ideaHeading.copyWith(
+              fontSize: (compact ? 27 : 32) - (dense ? 5 : 0),
+              height: 1.15,
+            ),
           ),
-          SizedBox(height: compact ? 12 : 16),
+          SizedBox(height: compact || dense ? 14 : 20),
           _Body(
             body: idea.body,
             highlights: highlights,
             onToggleHighlight: onToggleHighlight,
-            compact: compact,
+            fontSize: _bodySize,
           ),
         ],
       ),
@@ -194,13 +222,13 @@ class _Body extends StatefulWidget {
     required this.body,
     required this.highlights,
     required this.onToggleHighlight,
-    required this.compact,
+    required this.fontSize,
   });
 
   final String body;
   final List<String> highlights;
   final ValueChanged<String> onToggleHighlight;
-  final bool compact;
+  final double fontSize;
 
   @override
   State<_Body> createState() => _BodyState();
@@ -231,9 +259,7 @@ class _BodyState extends State<_Body> {
   @override
   Widget build(BuildContext context) {
     final sentences = Sentences.of(widget.body);
-    final style = SpineText.ideaBody.copyWith(
-      fontSize: widget.compact ? 14.5 : 15.5,
-    );
+    final style = SpineText.ideaBody.copyWith(fontSize: widget.fontSize);
 
     return Text.rich(
       TextSpan(
