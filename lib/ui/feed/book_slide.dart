@@ -9,7 +9,7 @@ import '../../data/models/reading_mode.dart';
 import '../../services/audio/playback_snapshot.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
-import 'ambient_backdrop.dart';
+import 'cover_backdrop.dart';
 import 'book_header.dart';
 import 'book_recap.dart';
 import 'idea_view.dart';
@@ -116,7 +116,7 @@ class _BookSlideState extends State<BookSlide> {
       fit: StackFit.expand,
       children: [
         _Backdrop(
-          color: book.spineColor,
+          book: book,
           controller: widget.pageController,
           index: widget.pageIndex,
         ),
@@ -216,12 +216,12 @@ class _BookSlideState extends State<BookSlide> {
 /// The light drifts at a fraction of the scroll, and dims as the card leaves.
 class _Backdrop extends StatelessWidget {
   const _Backdrop({
-    required this.color,
+    required this.book,
     required this.controller,
     required this.index,
   });
 
-  final Color color;
+  final Book book;
   final PageController? controller;
   final int index;
 
@@ -229,7 +229,7 @@ class _Backdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = this.controller;
     if (controller == null) {
-      return RepaintBoundary(child: AmbientBackdrop(color: color));
+      return RepaintBoundary(child: CoverBackdrop(book: book));
     }
 
     return RepaintBoundary(
@@ -241,8 +241,8 @@ class _Backdrop extends StatelessWidget {
               : controller.initialPage.toDouble();
           final delta = (page - index).clamp(-1.0, 1.0);
 
-          return AmbientBackdrop(
-            color: color,
+          return CoverBackdrop(
+            book: book,
             parallax: delta,
             intensity: 1 - delta.abs() * 0.55,
           );

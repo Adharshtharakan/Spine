@@ -80,6 +80,7 @@ flutter:
     - assets/content/
     - assets/audio/atomic-habits/
     - assets/story/
+    - assets/covers/
 
   # Fraunces and Inter ship as variable fonts — Flutter maps FontWeight onto the
   # `wght` axis, so one file covers every weight the design uses.

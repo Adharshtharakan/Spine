@@ -49,7 +49,8 @@
           "seconds": 9,
           "audio": "asset:assets/audio/atomic-habits/05.wav"
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/atomic-habits.jpg"
     },
     {
       "id": "sapiens",
@@ -93,7 +94,8 @@
           "body": "Progress in power hasn't guaranteed progress in wellbeing. History's biggest gains didn't always make individual lives better.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/sapiens.jpg"
     },
     {
       "id": "deep-work",
@@ -137,7 +139,8 @@
           "body": "Evaluate apps and platforms by whether they serve your core goals, not by the fear of missing out.",
           "seconds": 9
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/deep-work.jpg"
     },
     {
       "id": "thinking-fast-slow",
@@ -181,7 +184,8 @@
           "body": "We reliably underestimate how long tasks will take, even when we know the pattern from experience.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/thinking-fast-slow.jpg"
     },
     {
       "id": "naval-almanack",
@@ -225,7 +229,8 @@
           "body": "Peace comes from wanting what you already have — practiced deliberately, like any other skill.",
           "seconds": 9
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/naval-almanack.jpg"
     },
     {
       "id": "mans-search-for-meaning",
@@ -269,7 +274,8 @@
           "body": "Someone with a reason to live can survive almost any circumstance. Without one, comfort alone won't hold a person together.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/mans-search-for-meaning.jpg"
     },
     {
       "id": "mindset",
@@ -313,7 +319,8 @@
           "body": "Nobody holds one mindset everywhere. You can be growth-minded at work and quietly fixed about the thing you keep avoiding.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/mindset.jpg"
     },
     {
       "id": "psychology-of-money",
@@ -357,7 +364,8 @@
           "body": "A small number of decisions produce most of the result. The rest of the work is patience while those few play out.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/psychology-of-money.jpg"
     },
     {
       "id": "zero-to-one",
@@ -401,7 +409,8 @@
           "body": "Being first matters far less than being the last company to make a large improvement in a market.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/zero-to-one.jpg"
     },
     {
       "id": "meditations",
@@ -445,7 +454,8 @@
           "body": "Keeping the finite in view isn't morbid. It's the fastest way to see what actually deserves an afternoon.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/meditations.jpg"
     },
     {
       "id": "never-split-the-difference",
@@ -489,7 +499,8 @@
           "body": "\"How am I supposed to do that?\" hands the problem back without confrontation, and often produces their own concession.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/never-split-the-difference.jpg"
     },
     {
       "id": "quiet",
@@ -533,7 +544,8 @@
           "body": "Reacting strongly to stimulation isn't weakness. It usually travels with noticing detail and consequences that others miss.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/quiet.jpg"
     },
     {
       "id": "essentialism",
@@ -577,7 +589,8 @@
           "body": "Willpower is finite; routine isn't. Building the essential into the default removes the daily argument with yourself.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/essentialism.jpg"
     },
     {
       "id": "why-we-sleep",
@@ -621,7 +634,8 @@
           "body": "Reaction time, learning, and emotional control all degrade before anyone notices. Poor sleepers reliably rate their own performance as fine.",
           "seconds": 12
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/why-we-sleep.jpg"
     },
     {
       "id": "grit",
@@ -665,7 +679,8 @@
           "body": "Persistence is contagious. Who you spend your weeks around does more for it than any amount of self-talk.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/grit.jpg"
     },
     {
       "id": "range",
@@ -709,7 +724,8 @@
           "body": "Expertise turns into a liability when the situation changes and the familiar method is the thing you can't put down.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/range.jpg"
     },
     {
       "id": "lean-startup",
@@ -753,7 +769,8 @@
           "body": "Shipping in small pieces surfaces problems while they're still cheap. Large batches hide them until they're expensive.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/lean-startup.jpg"
     },
     {
       "id": "thinking-in-bets",
@@ -797,7 +814,8 @@
           "body": "Find people who reward accuracy over agreement. Most groups quietly pay you to keep the opinion you already have.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/thinking-in-bets.jpg"
     },
     {
       "id": "power-of-habit",
@@ -841,7 +859,8 @@
           "body": "Under stress the old routine returns unless the person believes change is possible — and belief is usually something a group supplies.",
           "seconds": 12
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/power-of-habit.jpg"
     },
     {
       "id": "breath",
@@ -885,7 +904,8 @@
           "body": "Soft diets and slumped posture narrow the airway over years. How you breathe is partly built by how you live.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/breath.jpg"
     },
     {
       "id": "how-to-win-friends",
@@ -929,7 +949,8 @@
           "body": "Saying you were wrong, quickly and without hedging, ends the argument that criticism would have started.",
           "seconds": 10
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/how-to-win-friends.jpg"
     },
     {
       "id": "antifragile",
@@ -973,7 +994,8 @@
           "body": "Systems that absorb frequent small failures rarely suffer one enormous one. Suppressing every wobble only stores the damage up.",
           "seconds": 12
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/antifragile.jpg"
     },
     {
       "id": "make-it-stick",
@@ -1017,7 +1039,8 @@
           "body": "Ease of reading gets mistaken for mastery. If the material feels effortless, you're probably not learning much from it.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/make-it-stick.jpg"
     },
     {
       "id": "factfulness",
@@ -1061,7 +1084,8 @@
           "body": "Before reacting to a trend, ask for the figure, the comparison, and the time frame. Most alarm doesn't survive all three.",
           "seconds": 12
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/factfulness.jpg"
     },
     {
       "id": "steal-like-an-artist",
@@ -1105,7 +1129,8 @@
           "body": "A stable, unremarkable routine funds interesting work. Chaos is expensive and delivers less than it promises.",
           "seconds": 11
         }
-      ]
+      ],
+      "cover": "asset:assets/covers/steal-like-an-artist.jpg"
     }
   ]
 }

@@ -110,11 +110,32 @@ Future<FakeAudioPlayer> pumpApp(
 }
 
 /// Writes the current frame to `test/preview/output/<name>.png`.
-Future<void> capture(WidgetTester tester, String name) {
-  return expectLater(
+///
+/// Asset images decode off the test's fake-async clock, so any cover still
+/// loading when the frame is taken paints nothing — the preview would show an
+/// empty card and misrepresent the design it exists to show. Precaching first
+/// is what makes these images honest.
+Future<void> capture(WidgetTester tester, String name) async {
+  await precacheCovers(tester);
+  await tester.pumpAndSettle();
+
+  await expectLater(
     find.byType(MaterialApp),
     matchesGoldenFile('output/$name.png'),
   );
+}
+
+/// Decodes every cover currently mounted in the tree.
+Future<void> precacheCovers(WidgetTester tester) async {
+  final images = tester.widgetList<Image>(find.byType(Image)).toList();
+  if (images.isEmpty) return;
+
+  final context = tester.element(find.byType(MaterialApp));
+  await tester.runAsync(() async {
+    for (final image in images) {
+      await precacheImage(image.image, context);
+    }
+  });
 }
 
 /// Swipes the feed up [times] cards.
