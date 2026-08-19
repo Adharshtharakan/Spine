@@ -59,7 +59,7 @@ does not.
 **Tests**
 
 ```bash
-flutter test        # 122 tests: catalogue, feed composition, playback, persistence, UI
+flutter test        # 128 tests: catalogue, feed composition, playback, persistence, UI
 flutter analyze
 ```
 
@@ -199,9 +199,13 @@ renders as one `Text.rich` of per-sentence spans rather than a widget each, so
 the prose still flows as a paragraph and the wrapping is unaffected — see
 `Sentences`, which splits on terminal punctuation. Highlights store the sentence
 *text*, not an offset: an offset silently points at the wrong words the moment
-an idea is edited. Sharing an idea that has a highlight puts the highlighted
-line on the story card instead of the idea's title, and the card's type scales
-down as the line lengthens, since a sentence runs far longer than a title.
+an idea is edited. Any number of lines can be kept from one idea; sharing puts
+*all* of them on the story card instead of the idea's title, joined in the order
+they are written rather than the order they were tapped — tap order produces a
+sentence salad. A stored line the idea no longer contains, because it was edited
+since, is dropped rather than shared out of context. The card's type steps down
+as the passage lengthens: a title runs to about 29 characters, three kept
+sentences can pass 300.
 
 **Streak repair.** Losing a long streak to one missed day is where people quit,
 so a streak broken by *exactly* one day is offered back, once per calendar

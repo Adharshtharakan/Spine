@@ -77,4 +77,47 @@ void main() {
       );
     });
   }
+
+  testWidgets('story card — three highlighted sentences', (tester) async {
+    // The worst realistic case for the headline: a reader keeping most of an
+    // idea. If the type doesn't step down far enough this is where it spills.
+    tester.view.physicalSize = StoryCard.size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    const passage =
+        'Lasting change starts with who you decide to become, not the result '
+        "you're chasing. Every small habit is a vote for a certain kind of "
+        'person. The goal is not to run a marathon, it is to become a runner.';
+
+    final card = MediaQuery(
+      data: const MediaQueryData(),
+      child: StoryCard(
+        idea: shortIdea,
+        book: book,
+        template: StoryTemplates.all.first,
+        headline: passage,
+      ),
+    );
+
+    await tester.pumpWidget(card);
+    await tester.runAsync(() async {
+      for (final asset in [
+        StoryTemplates.all.first.backgroundAsset,
+        StoryCard.bookmarkAsset,
+      ]) {
+        await precacheImage(
+          AssetImage(asset),
+          tester.element(find.byType(StoryCard)),
+        );
+      }
+    });
+    await tester.pumpWidget(card);
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(StoryCard),
+      matchesGoldenFile('output/story_card_passage.png'),
+    );
+  });
 }

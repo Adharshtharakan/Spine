@@ -47,6 +47,28 @@ abstract final class Sentences {
     return List.unmodifiable(sentences);
   }
 
+  /// The kept lines of [body], in the order they are written rather than the
+  /// order they were tapped.
+  ///
+  /// Two things fall out of this. Highlights read as continuous prose when
+  /// several are shared together — tap order would produce a sentence salad.
+  /// And a stored line that no longer appears in the body, because the idea was
+  /// edited since, is dropped rather than shared out of context.
+  static List<String> inReadingOrder(String body, Iterable<String> kept) {
+    if (kept.isEmpty) return const [];
+    final wanted = kept.toSet();
+    return [
+      for (final sentence in of(body))
+        if (wanted.contains(sentence)) sentence,
+    ];
+  }
+
+  /// The kept lines as one passage, or null when nothing is kept.
+  static String? passage(String body, Iterable<String> kept) {
+    final ordered = inReadingOrder(body, kept);
+    return ordered.isEmpty ? null : ordered.join(' ');
+  }
+
   static const _terminators = {'.', '!', '?'};
   static const _trailing = {'"', '”', "'", '’', ')', ']'};
 }

@@ -45,6 +45,54 @@ void main() {
     });
   });
 
+  group('several kept lines share as one passage', () {
+    const body = 'First thought. Second thought. Third thought.';
+
+    test('reads in written order, not the order they were tapped', () {
+      // Tapped back to front — the passage must not come out reversed.
+      final passage = Sentences.passage(body, [
+        'Third thought.',
+        'First thought.',
+      ]);
+
+      expect(passage, 'First thought. Third thought.');
+    });
+
+    test('keeps all three when all three are kept', () {
+      expect(
+        Sentences.passage(body, [
+          'Second thought.',
+          'Third thought.',
+          'First thought.',
+        ]),
+        body,
+      );
+    });
+
+    test('a single line still shares on its own', () {
+      expect(Sentences.passage(body, ['Second thought.']), 'Second thought.');
+    });
+
+    test('nothing kept shares nothing', () {
+      expect(Sentences.passage(body, const []), isNull);
+    });
+
+    test('a line the idea no longer contains is dropped', () {
+      // Ideas get edited; a stored highlight that no longer appears would
+      // otherwise be shared out of context.
+      final passage = Sentences.passage(body, [
+        'First thought.',
+        'A line from an older draft.',
+      ]);
+
+      expect(passage, 'First thought.');
+    });
+
+    test('every line gone leaves nothing rather than an empty string', () {
+      expect(Sentences.passage(body, ['Nothing that matches.']), isNull);
+    });
+  });
+
   group('BookProgress highlights', () {
     test('survive a round trip through JSON', () {
       const progress = BookProgress(

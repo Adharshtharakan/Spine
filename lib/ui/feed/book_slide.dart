@@ -7,6 +7,7 @@ import '../../data/models/book.dart';
 import '../../data/models/book_progress.dart';
 import '../../data/models/reading_mode.dart';
 import '../../services/audio/playback_snapshot.dart';
+import '../../services/reading/sentences.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
 import 'cover_backdrop.dart';
@@ -360,10 +361,13 @@ class _Body extends StatelessWidget {
                     context,
                     book: book,
                     idea: idea,
-                    // A highlight is the reader's own choice of what mattered,
-                    // so it beats the idea's title on the card. The most recent
-                    // one wins when there are several.
-                    highlight: progress.highlightsFor(idea.id).lastOrNull,
+                    // Highlights are the reader's own choice of what mattered,
+                    // so they beat the idea's title on the card — all of them,
+                    // in the order they are written.
+                    highlight: Sentences.passage(
+                      idea.body,
+                      progress.highlightsFor(idea.id),
+                    ),
                   ),
                   canGoBack: ideaIndex > 0,
                   canGoForward: true,
@@ -477,11 +481,13 @@ class _ListenFooter extends StatelessWidget {
           context,
           book: book,
           idea: idea,
-          highlight: context
-              .read<ProgressController>()
-              .of(book.id)
-              .highlightsFor(idea.id)
-              .lastOrNull,
+          highlight: Sentences.passage(
+            idea.body,
+            context
+                .read<ProgressController>()
+                .of(book.id)
+                .highlightsFor(idea.id),
+          ),
         ),
         onTogglePlay: () =>
             context.read<PlaybackController>().toggle(book, ideaIndex),

@@ -58,15 +58,16 @@ class StoryCard extends StatelessWidget {
 
   /// The headline shrinks as it lengthens.
   ///
-  /// An idea title runs to about 29 characters; a highlighted sentence can run
-  /// to 200. One size cannot serve both — at 98px a sentence overflows the card
-  /// entirely, and at sentence size a title looks timid.
+  /// An idea title runs to about 29 characters; several highlighted sentences
+  /// together can run past 300. One size cannot serve both — at 98px a passage
+  /// overflows the card entirely, and at passage size a title looks timid.
   static double _titleSize(String text) {
     if (text.length <= 34) return 98;
     if (text.length <= 60) return 76;
     if (text.length <= 100) return 60;
     if (text.length <= 150) return 48;
-    return 40;
+    if (text.length <= 230) return 40;
+    return 34;
   }
 
   @override
