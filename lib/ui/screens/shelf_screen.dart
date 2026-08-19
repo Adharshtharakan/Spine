@@ -78,6 +78,33 @@ class _ShelfScreenState extends State<ShelfScreen> {
   static const _lookAhead = 4;
   static const _lookBehind = 1;
 
+  /// The book to offer a return to, or null when there isn't a useful one.
+  ///
+  /// Deliberately narrow: a book that was opened but not started has no place
+  /// to return to, a finished one has nothing left, and offering today's own
+  /// book duplicates the source card directly beneath it.
+  ResumePoint? _resumePoint(List<FeedItem> items, {required String exclude}) {
+    final progressController = context.read<ProgressController>();
+    final bookId = progressController.lastBookId;
+    if (bookId == null || bookId == exclude) return null;
+
+    final match = items
+        .whereType<BookFeedItem>()
+        .where((item) => item.book.id == bookId)
+        .firstOrNull;
+    if (match == null) return null;
+
+    final progress = progressController.of(bookId);
+    if (!progress.isStarted) return null;
+    if (progress.isFinished(match.book.ideaCount)) return null;
+
+    return ResumePoint(
+      book: match.book,
+      ideaIndex: progress.ideaIndex,
+      completed: progress.completedIdeas.length,
+    );
+  }
+
   void _warmAds(int index, List<FeedItem> items) {
     final preloader = context.read<NativeAdPreloader?>();
     if (preloader == null) return;
@@ -202,11 +229,17 @@ class _ShelfScreenState extends State<ShelfScreen> {
               DailyIdeaFeedItem() => TodaySlide(
                 item: item,
                 onOpenBook: () => _goToBook(item.book.id, items),
+                resume: _resumePoint(items, exclude: item.book.id),
+                onResume: () {
+                  final point = _resumePoint(items, exclude: item.book.id);
+                  if (point != null) _goToBook(point.book.id, items);
+                },
               ),
               ReviewFeedItem() => ReviewSlide(
                 item: item,
-                onReviewed: () =>
-                    context.read<ReviewController>().markReviewed(item.idea.id),
+                onReviewed: (remembered) => context
+                    .read<ReviewController>()
+                    .markReviewed(item.idea.id, remembered: remembered),
                 onOpenBook: () => _goToBook(item.book.id, items),
               ),
               AdFeedItem() => AdSlide(

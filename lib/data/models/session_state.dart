@@ -6,6 +6,8 @@ class SessionState {
     this.streak = 0,
     this.lastActiveDay,
     this.dailyIdeaHour,
+    this.brokenStreak = 0,
+    this.lastRepairMonth,
   });
 
   /// The book the reader was last on. Stored by id rather than by feed position
@@ -25,7 +27,42 @@ class SessionState {
   /// chosen, never on first launch.
   final int? dailyIdeaHour;
 
+  /// The streak that was lost to a single missed day, held so it can be
+  /// offered back. Zero when there is nothing to repair.
+  ///
+  /// Only a one-day gap is repairable. Someone who missed a week didn't have
+  /// the habit interrupted, they stopped — handing back a 40-day streak there
+  /// would make the number mean nothing.
+  final int brokenStreak;
+
+  /// `yyyy-mm` of the last repair, which is what limits it to one a month.
+  final String? lastRepairMonth;
+
   bool get wantsDailyIdea => dailyIdeaHour != null;
+
+  static String monthKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}';
+
+  /// Whether a repair is on the table right now.
+  bool canRepair(DateTime now) =>
+      brokenStreak > 0 && lastRepairMonth != monthKey(now);
+
+  /// Restores the broken streak and counts today toward it.
+  SessionState repair(DateTime now) {
+    if (!canRepair(now)) return this;
+    return SessionState(
+      lastBookId: lastBookId,
+      streak: brokenStreak + 1,
+      lastActiveDay: dayKey(now),
+      dailyIdeaHour: dailyIdeaHour,
+      brokenStreak: 0,
+      lastRepairMonth: monthKey(now),
+    );
+  }
+
+  /// Drops the offer without using it up — for a reader who says no.
+  SessionState declineRepair() => copyWith(clearBrokenStreak: true);
 
   SessionState copyWith({
     String? lastBookId,
@@ -33,6 +70,9 @@ class SessionState {
     String? lastActiveDay,
     int? dailyIdeaHour,
     bool clearDailyIdeaHour = false,
+    int? brokenStreak,
+    bool clearBrokenStreak = false,
+    String? lastRepairMonth,
   }) {
     return SessionState(
       lastBookId: lastBookId ?? this.lastBookId,
@@ -41,6 +81,8 @@ class SessionState {
       dailyIdeaHour: clearDailyIdeaHour
           ? null
           : (dailyIdeaHour ?? this.dailyIdeaHour),
+      brokenStreak: clearBrokenStreak ? 0 : (brokenStreak ?? this.brokenStreak),
+      lastRepairMonth: lastRepairMonth ?? this.lastRepairMonth,
     );
   }
 
@@ -49,6 +91,8 @@ class SessionState {
     'streak': streak,
     'lastActiveDay': lastActiveDay,
     'dailyIdeaHour': dailyIdeaHour,
+    'brokenStreak': brokenStreak,
+    'lastRepairMonth': lastRepairMonth,
   };
 
   factory SessionState.fromJson(Map<String, dynamic> json) {
@@ -57,6 +101,8 @@ class SessionState {
       streak: json['streak'] as int? ?? 0,
       lastActiveDay: json['lastActiveDay'] as String?,
       dailyIdeaHour: json['dailyIdeaHour'] as int?,
+      brokenStreak: json['brokenStreak'] as int? ?? 0,
+      lastRepairMonth: json['lastRepairMonth'] as String?,
     );
   }
 
@@ -72,10 +118,23 @@ class SessionState {
     if (lastActiveDay == key) {
       return streak == 0 ? copyWith(streak: 1) : this;
     }
+
     final yesterday = dayKey(today.subtract(const Duration(days: 1)));
+    if (lastActiveDay == yesterday) {
+      return copyWith(streak: streak + 1, lastActiveDay: key);
+    }
+
+    // Exactly one day missed: the streak still resets, but what was lost is
+    // remembered so it can be offered back once. Anything longer is a real
+    // stop, and is not repairable at any price.
+    final dayBefore = dayKey(today.subtract(const Duration(days: 2)));
+    final missedOneDay = lastActiveDay == dayBefore && streak >= 2;
+
     return copyWith(
-      streak: lastActiveDay == yesterday ? streak + 1 : 1,
+      streak: 1,
       lastActiveDay: key,
+      brokenStreak: missedOneDay ? streak : 0,
+      clearBrokenStreak: !missedOneDay,
     );
   }
 }

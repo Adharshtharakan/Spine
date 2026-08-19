@@ -17,11 +17,15 @@ class StoryCard extends StatelessWidget {
     required this.idea,
     required this.book,
     required this.template,
+    this.headline,
   });
 
   final Idea idea;
   final Book book;
   final StoryTemplate template;
+
+  /// Overrides the idea's title — used for a line the reader highlighted.
+  final String? headline;
 
   /// Instagram/Facebook Stories are 1080x1920 (9:16) — the export pipeline
   /// captures at pixelRatio 1 against this exact logical size, so this
@@ -52,9 +56,24 @@ class StoryCard extends StatelessWidget {
     ]);
   }
 
+  /// The headline shrinks as it lengthens.
+  ///
+  /// An idea title runs to about 29 characters; a highlighted sentence can run
+  /// to 200. One size cannot serve both — at 98px a sentence overflows the card
+  /// entirely, and at sentence size a title looks timid.
+  static double _titleSize(String text) {
+    if (text.length <= 34) return 98;
+    if (text.length <= 60) return 76;
+    if (text.length <= 100) return 60;
+    if (text.length <= 150) return 48;
+    return 40;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final split = SplitTitle.of(idea.title);
+    final text = headline ?? idea.title;
+    final split = SplitTitle.of(text);
+    final titleSize = _titleSize(text);
 
     // Halo behind the title, in the opposite polarity to the text itself.
     // The background is a photograph, so a word can land on anything; this is
@@ -103,6 +122,8 @@ class StoryCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text.rich(
+                      maxLines: 8,
+                      overflow: TextOverflow.ellipsis,
                       TextSpan(
                         children: [
                           TextSpan(
@@ -110,7 +131,7 @@ class StoryCard extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: 'Fraunces',
                               fontWeight: FontWeight.w800,
-                              fontSize: 98,
+                              fontSize: titleSize,
                               height: 1.12,
                               letterSpacing: -1,
                               color: template.mainTitleColor,
@@ -122,7 +143,7 @@ class StoryCard extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: 'Fraunces',
                               fontWeight: FontWeight.w800,
-                              fontSize: 98,
+                              fontSize: titleSize,
                               height: 1.12,
                               color: template.terminalDotColor,
                               shadows: halo,

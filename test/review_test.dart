@@ -108,5 +108,36 @@ void main() {
 
       expect(controller.isQueued('a-1'), isFalse);
     });
+
+    test('forgetting an idea sends it back to the start', () {
+      controller.schedule(ideaId: 'atomic-habits-1', bookId: 'atomic-habits');
+
+      // Carry it out to a long interval first, so a reset is visible.
+      controller.markReviewed('atomic-habits-1');
+      controller.markReviewed('atomic-habits-1');
+      final learned = controller.due(limit: 5);
+      expect(learned, isEmpty, reason: 'not due yet at stage 2');
+
+      controller.markReviewed('atomic-habits-1', remembered: false);
+
+      // Back at stage 0, which is two days out rather than a fortnight.
+      now = now.add(const Duration(days: 3));
+      expect(
+        controller.due(limit: 5).map((item) => item.ideaId),
+        ['atomic-habits-1'],
+      );
+    });
+
+    test('remembering keeps pushing an idea further out', () {
+      controller.schedule(ideaId: 'atomic-habits-2', bookId: 'atomic-habits');
+      controller.markReviewed('atomic-habits-2', remembered: true);
+
+      // Stage 1 is six days; three is not enough to bring it back.
+      now = now.add(const Duration(days: 3));
+      expect(controller.due(limit: 5), isEmpty);
+
+      now = now.add(const Duration(days: 4));
+      expect(controller.due(limit: 5), hasLength(1));
+    });
   });
 }

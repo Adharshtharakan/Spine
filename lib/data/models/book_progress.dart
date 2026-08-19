@@ -13,6 +13,7 @@ class BookProgress {
     this.resumeAt = Duration.zero,
     this.completedIdeas = const <int>{},
     this.savedIdeaIds = const <String>{},
+    this.highlights = const <String, List<String>>{},
   });
 
   final String bookId;
@@ -40,7 +41,38 @@ class BookProgress {
   /// shipped as indices) does not.
   final Set<String> savedIdeaIds;
 
+  /// Lines kept out of an idea, by idea id.
+  ///
+  /// The sentence text is stored rather than an offset: an offset silently
+  /// points at the wrong words the moment an idea is edited, where the text
+  /// still shows what the reader actually kept. It is also what the Saved
+  /// shelf and a story card need, so nothing has to re-derive it.
+  final Map<String, List<String>> highlights;
+
+  /// `mapEquals` compares the lists by identity, and two equal lists are never
+  /// identical — so it reports every restored copy as different from the one it
+  /// was built from. This walks into them.
+  static bool _sameHighlights(
+    Map<String, List<String>> a,
+    Map<String, List<String>> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!listEquals(entry.value, b[entry.key])) return false;
+    }
+    return true;
+  }
+
   bool isIdeaSaved(String ideaId) => savedIdeaIds.contains(ideaId);
+
+  List<String> highlightsFor(String ideaId) =>
+      highlights[ideaId] ?? const <String>[];
+
+  bool isHighlighted(String ideaId, String line) =>
+      highlightsFor(ideaId).contains(line);
+
+  int get highlightCount =>
+      highlights.values.fold(0, (sum, lines) => sum + lines.length);
 
   bool isFinished(int totalIdeas) =>
       totalIdeas > 0 && completedIdeas.length >= totalIdeas;
@@ -59,6 +91,7 @@ class BookProgress {
     Duration? resumeAt,
     Set<int>? completedIdeas,
     Set<String>? savedIdeaIds,
+    Map<String, List<String>>? highlights,
   }) {
     return BookProgress(
       bookId: bookId,
@@ -69,6 +102,7 @@ class BookProgress {
       resumeAt: resumeAt ?? this.resumeAt,
       completedIdeas: completedIdeas ?? this.completedIdeas,
       savedIdeaIds: savedIdeaIds ?? this.savedIdeaIds,
+      highlights: highlights ?? this.highlights,
     );
   }
 
@@ -85,7 +119,8 @@ class BookProgress {
           other.saved == saved &&
           other.notifyOnWatch == notifyOnWatch &&
           setEquals(other.completedIdeas, completedIdeas) &&
-          setEquals(other.savedIdeaIds, savedIdeaIds);
+          setEquals(other.savedIdeaIds, savedIdeaIds) &&
+          _sameHighlights(other.highlights, highlights);
 
   @override
   int get hashCode => Object.hash(
@@ -96,6 +131,7 @@ class BookProgress {
     notifyOnWatch,
     completedIdeas.length,
     savedIdeaIds.length,
+    highlightCount,
   );
 
   Map<String, dynamic> toJson() => {
@@ -107,6 +143,7 @@ class BookProgress {
     'resumeMs': resumeAt.inMilliseconds,
     'completed': completedIdeas.toList()..sort(),
     'savedIdeas': savedIdeaIds.toList()..sort(),
+    if (highlights.isNotEmpty) 'highlights': highlights,
   };
 
   factory BookProgress.fromJson(Map<String, dynamic> json) {
@@ -120,6 +157,13 @@ class BookProgress {
       completedIdeas: {
         for (final value in (json['completed'] as List<dynamic>? ?? const []))
           value as int,
+      },
+      highlights: {
+        for (final entry
+            in (json['highlights'] as Map<dynamic, dynamic>? ?? const {}).entries)
+          entry.key as String: [
+            for (final line in entry.value as List<dynamic>) line as String,
+          ],
       },
       savedIdeaIds: {
         for (final value in (json['savedIdeas'] as List<dynamic>? ?? const []))

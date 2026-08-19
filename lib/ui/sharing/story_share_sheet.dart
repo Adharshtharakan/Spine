@@ -20,20 +20,30 @@ Future<void> showStoryShareSheet(
   BuildContext context, {
   required Book book,
   required Idea idea,
+
+  /// A line the reader kept. When present it becomes the card's headline —
+  /// their own choice of what mattered beats the idea's title.
+  String? highlight,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (sheetContext) => _StoryShareSheet(book: book, idea: idea),
+    builder: (sheetContext) =>
+        _StoryShareSheet(book: book, idea: idea, highlight: highlight),
   );
 }
 
 class _StoryShareSheet extends StatefulWidget {
-  const _StoryShareSheet({required this.book, required this.idea});
+  const _StoryShareSheet({
+    required this.book,
+    required this.idea,
+    this.highlight,
+  });
 
   final Book book;
   final Idea idea;
+  final String? highlight;
 
   @override
   State<_StoryShareSheet> createState() => _StoryShareSheetState();
@@ -56,7 +66,7 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final text =
-        '“${widget.idea.title}” — ${widget.book.title} '
+        '“${widget.highlight ?? widget.idea.title}” — ${widget.book.title} '
         'by ${widget.book.author}, on Spine';
 
     await Clipboard.setData(ClipboardData(text: text));
@@ -108,7 +118,12 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
       final file = await renderer.capture(
         context: context,
         fileName: 'spine-${widget.idea.id}.png',
-        card: StoryCard(idea: widget.idea, book: widget.book, template: template),
+        card: StoryCard(
+          idea: widget.idea,
+          book: widget.book,
+          template: template,
+          headline: widget.highlight,
+        ),
       );
       await action(renderer, service, file);
     } catch (error) {

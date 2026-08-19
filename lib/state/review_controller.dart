@@ -58,13 +58,18 @@ class ReviewController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The reader has seen this one again: push it out to the next interval, or
-  /// retire it if it has been through them all.
-  void markReviewed(String ideaId) {
+  /// The reader has seen this one again.
+  ///
+  /// [remembered] is what makes this spaced repetition rather than a timer:
+  /// recalling an idea pushes it out to the next interval, failing to recall it
+  /// sends it back to the start so it returns in days rather than months. An
+  /// idea you have just proved you forgot is the last one that should be
+  /// treated as learned.
+  void markReviewed(String ideaId, {bool remembered = true}) {
     final item = _items[ideaId];
     if (item == null) return;
 
-    final nextStage = item.stage + 1;
+    final nextStage = remembered ? item.stage + 1 : 0;
     final dueAt = ReviewSchedule.nextDue(nextStage, _clock());
 
     if (dueAt == null) {

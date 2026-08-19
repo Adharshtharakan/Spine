@@ -471,4 +471,29 @@ void main() {
     await swipeToShelf(tester);
     expect(find.text('First Book'), findsOneWidget);
   });
+
+  testWidgets('long-pressing a sentence keeps it, and again drops it', (
+    tester,
+  ) async {
+    final store = InMemoryProgressStore();
+    await pumpSpine(tester, store: store);
+    await swipeToShelf(tester);
+
+    // The body renders as one Text.rich of sentence spans, so the gesture goes
+    // to the paragraph and the recogniser on the span decides what was hit.
+    await tester.longPress(find.textContaining('Body of idea 1'));
+    await tester.pumpAndSettle();
+    // Writes are debounced before they reach the store.
+    await tester.pump(const Duration(seconds: 1));
+
+    final saved = await store.loadAll();
+    expect(saved['one']?.highlightsFor('one-1'), ['Body of idea 1.']);
+
+    await tester.longPress(find.textContaining('Body of idea 1'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+
+    final after = await store.loadAll();
+    expect(after['one']?.highlightsFor('one-1') ?? const [], isEmpty);
+  });
 }

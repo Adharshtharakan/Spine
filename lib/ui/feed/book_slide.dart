@@ -337,6 +337,10 @@ class _Body extends StatelessWidget {
                       onToggleSave: () => context
                           .read<ProgressController>()
                           .toggleSavedIdea(book.id, idea.id),
+                      highlights: progress.highlightsFor(idea.id),
+                      onToggleHighlight: (line) => context
+                          .read<ProgressController>()
+                          .toggleHighlight(book.id, idea.id, line),
                     ),
                   ),
                 ),
@@ -352,8 +356,15 @@ class _Body extends StatelessWidget {
               : ReadControls(
                   accent: book.spineColor,
                   compact: compact,
-                  onShare: () =>
-                      showStoryShareSheet(context, book: book, idea: idea),
+                  onShare: () => showStoryShareSheet(
+                    context,
+                    book: book,
+                    idea: idea,
+                    // A highlight is the reader's own choice of what mattered,
+                    // so it beats the idea's title on the card. The most recent
+                    // one wins when there are several.
+                    highlight: progress.highlightsFor(idea.id).lastOrNull,
+                  ),
                   canGoBack: ideaIndex > 0,
                   canGoForward: true,
                   // The last idea used to be a dead end. Now it opens onto the
@@ -462,7 +473,16 @@ class _ListenFooter extends StatelessWidget {
         accent: book.spineColor,
         snapshot: snapshot,
         compact: compact,
-        onShare: () => showStoryShareSheet(context, book: book, idea: idea),
+        onShare: () => showStoryShareSheet(
+          context,
+          book: book,
+          idea: idea,
+          highlight: context
+              .read<ProgressController>()
+              .of(book.id)
+              .highlightsFor(idea.id)
+              .lastOrNull,
+        ),
         onTogglePlay: () =>
             context.read<PlaybackController>().toggle(book, ideaIndex),
         onSeekFraction: (fraction) =>

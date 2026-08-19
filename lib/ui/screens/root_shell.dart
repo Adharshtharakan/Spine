@@ -7,6 +7,7 @@ import '../../state/progress_controller.dart';
 import '../../state/shell_controller.dart';
 import '../widgets/spine_bottom_nav.dart';
 import '../widgets/spine_top_bar.dart';
+import '../widgets/streak_repair_banner.dart';
 import 'profile_screen.dart';
 import 'saved_screen.dart';
 import 'search_screen.dart';
@@ -89,11 +90,20 @@ class _RootShellState extends State<RootShell> with WidgetsBindingObserver {
               right: 0,
               child: SafeArea(
                 bottom: false,
-                child: SpineTopBar(
-                  streak: streak,
-                  onSearchTap: shell.tabIndex == ShellController.searchTab
-                      ? null
-                      : () => shell.selectTab(ShellController.searchTab),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SpineTopBar(
+                      streak: streak,
+                      onSearchTap: shell.tabIndex == ShellController.searchTab
+                          ? null
+                          : () => shell.selectTab(ShellController.searchTab),
+                    ),
+                    // Under the masthead rather than inside a tab: a lost
+                    // streak isn't about the shelf, and it should be the first
+                    // thing seen on the launch that follows the missed day.
+                    const StreakRepairBanner(),
+                  ],
                 ),
               ),
             ),

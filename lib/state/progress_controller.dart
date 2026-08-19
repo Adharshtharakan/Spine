@@ -31,6 +31,34 @@ class ProgressController extends ChangeNotifier {
   bool get isLoaded => _loaded;
   String? get lastBookId => _session.lastBookId;
   int get streak => _session.streak;
+
+  /// The streak lost to a single missed day, when one is still on offer.
+  int get repairableStreak =>
+      _session.canRepair(_now()) ? _session.brokenStreak : 0;
+
+  DateTime Function() _now = DateTime.now;
+
+  /// Test seam — the repair offer is entirely date-driven.
+  @visibleForTesting
+  set clock(DateTime Function() value) => _now = value;
+
+  /// Takes the offer: the lost streak comes back and today counts toward it.
+  void repairStreak() {
+    final next = _session.repair(_now());
+    if (identical(next, _session)) return;
+    _session = next;
+    unawaited(_store.saveSession(_session));
+    notifyListeners();
+  }
+
+  /// Turns it down. The offer goes away without being spent, so a reader who
+  /// dismisses it keeps the month's repair for a lapse they care about.
+  void declineStreakRepair() {
+    if (_session.brokenStreak == 0) return;
+    _session = _session.declineRepair();
+    unawaited(_store.saveSession(_session));
+    notifyListeners();
+  }
   int? get dailyIdeaHour => _session.dailyIdeaHour;
 
   /// Books the reader has saved. Order follows the store, which is enough for
@@ -40,7 +68,7 @@ class ProgressController extends ChangeNotifier {
 
   Future<void> load({DateTime? now}) async {
     _entries.addAll(await _store.loadAll());
-    _session = (await _store.loadSession()).touch(now ?? DateTime.now());
+    _session = (await _store.loadSession()).touch(now ?? _now());
     unawaited(_store.saveSession(_session));
     _loaded = true;
     notifyListeners();
@@ -112,6 +140,34 @@ class ProgressController extends ChangeNotifier {
     _write(current.copyWith(savedIdeaIds: next));
     return added;
   }
+
+  /// Keeps or drops one line of an idea. Returns whether it is now kept.
+  bool toggleHighlight(String bookId, String ideaId, String line) {
+    final current = of(bookId);
+    final lines = [...current.highlightsFor(ideaId)];
+    final kept = !lines.remove(line);
+    if (kept) lines.add(line);
+
+    final next = {...current.highlights};
+    // An idea with no lines left is removed rather than left as an empty list,
+    // so the stored shape matches a book that was never highlighted at all.
+    if (lines.isEmpty) {
+      next.remove(ideaId);
+    } else {
+      next[ideaId] = lines;
+    }
+
+    _write(current.copyWith(highlights: next));
+    return kept;
+  }
+
+  /// Every highlighted line across the library, newest book first is not
+  /// meaningful here — order follows the store, which is enough at this size.
+  Iterable<(String bookId, String ideaId, String line)> get highlights => [
+    for (final entry in _entries.values)
+      for (final idea in entry.highlights.entries)
+        for (final line in idea.value) (entry.bookId, idea.key, line),
+  ];
 
   /// Every saved idea across the library, as (bookId, ideaId) pairs.
   Iterable<(String, String)> get savedIdeas => [

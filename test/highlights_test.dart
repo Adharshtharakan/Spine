@@ -1,0 +1,155 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:spine/data/models/book_progress.dart';
+import 'package:spine/data/models/session_state.dart';
+import 'package:spine/services/reading/sentences.dart';
+
+void main() {
+  group('Sentences', () {
+    test('splits prose on sentence endings', () {
+      final result = Sentences.of(
+        'Lasting change starts with who you become. '
+        'Every small habit is a vote.',
+      );
+
+      expect(result, [
+        'Lasting change starts with who you become.',
+        'Every small habit is a vote.',
+      ]);
+    });
+
+    test('keeps a trailing fragment that never terminates', () {
+      expect(Sentences.of('No full stop here'), ['No full stop here']);
+    });
+
+    test('keeps closing punctuation with its own sentence', () {
+      expect(Sentences.of('He said "stop." Then he left.'), [
+        'He said "stop."',
+        'Then he left.',
+      ]);
+    });
+
+    test('handles questions and exclamations', () {
+      expect(Sentences.of('Why? Because it works!'), [
+        'Why?',
+        'Because it works!',
+      ]);
+    });
+
+    test('an empty body splits to nothing', () {
+      expect(Sentences.of('   '), isEmpty);
+    });
+
+    test('rejoining the pieces reproduces the prose', () {
+      const body = 'One thing. Then another. And a third.';
+      expect(Sentences.of(body).join(' '), body);
+    });
+  });
+
+  group('BookProgress highlights', () {
+    test('survive a round trip through JSON', () {
+      const progress = BookProgress(
+        bookId: 'atomic-habits',
+        highlights: {
+          'atomic-habits-1': ['Every small habit is a vote.'],
+        },
+      );
+
+      final restored = BookProgress.fromJson(progress.toJson());
+      expect(restored.highlightsFor('atomic-habits-1'), [
+        'Every small habit is a vote.',
+      ]);
+      expect(restored, progress);
+    });
+
+    test('a book with no highlights stays absent from its JSON', () {
+      const progress = BookProgress(bookId: 'atomic-habits');
+      expect(progress.toJson().containsKey('highlights'), isFalse);
+      expect(BookProgress.fromJson(progress.toJson()).highlights, isEmpty);
+    });
+  });
+
+  group('streak repair', () {
+    // The dates matter more than anything else here, so they're explicit.
+    final monday = DateTime(2026, 3, 2);
+    final tuesday = DateTime(2026, 3, 3);
+    final wednesday = DateTime(2026, 3, 4);
+    final nextWeek = DateTime(2026, 3, 9);
+
+    SessionState onDay(int streak, DateTime day) => SessionState(
+      streak: streak,
+      lastActiveDay: SessionState.dayKey(day),
+    );
+
+    test('missing exactly one day offers the streak back', () {
+      final state = onDay(12, monday).touch(wednesday);
+
+      expect(state.streak, 1, reason: 'the streak still breaks');
+      expect(state.brokenStreak, 12);
+      expect(state.canRepair(wednesday), isTrue);
+    });
+
+    test('a longer lapse is not repairable at all', () {
+      final state = onDay(40, monday).touch(nextWeek);
+
+      expect(state.streak, 1);
+      expect(state.brokenStreak, 0);
+      expect(state.canRepair(nextWeek), isFalse);
+    });
+
+    test('an unbroken run never offers a repair', () {
+      final state = onDay(3, monday).touch(tuesday);
+
+      expect(state.streak, 4);
+      expect(state.brokenStreak, 0);
+    });
+
+    test('repairing restores the streak and counts today', () {
+      final broken = onDay(12, monday).touch(wednesday);
+      final repaired = broken.repair(wednesday);
+
+      expect(repaired.streak, 13);
+      expect(repaired.brokenStreak, 0);
+      expect(repaired.lastActiveDay, SessionState.dayKey(wednesday));
+    });
+
+    test('only one repair per calendar month', () {
+      final repaired = onDay(12, monday).touch(wednesday).repair(wednesday);
+
+      // A second lapse in the same month.
+      final brokenAgain = repaired
+          .copyWith(
+            streak: 6,
+            lastActiveDay: SessionState.dayKey(DateTime(2026, 3, 20)),
+          )
+          .touch(DateTime(2026, 3, 22));
+
+      expect(brokenAgain.brokenStreak, 6, reason: 'the loss is still recorded');
+      expect(
+        brokenAgain.canRepair(DateTime(2026, 3, 22)),
+        isFalse,
+        reason: 'but March has been spent',
+      );
+      expect(brokenAgain.canRepair(DateTime(2026, 4, 2)), isTrue);
+    });
+
+    test('declining spends nothing', () {
+      final broken = onDay(12, monday).touch(wednesday);
+      final declined = broken.declineRepair();
+
+      expect(declined.brokenStreak, 0, reason: 'the offer is gone');
+      expect(
+        declined.lastRepairMonth,
+        isNull,
+        reason: "but the month's repair was not used",
+      );
+    });
+
+    test('survives a round trip through JSON', () {
+      final broken = onDay(12, monday).touch(wednesday);
+      final restored = SessionState.fromJson(broken.toJson());
+
+      expect(restored.brokenStreak, 12);
+      expect(restored.canRepair(wednesday), isTrue);
+    });
+  });
+}

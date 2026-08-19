@@ -59,7 +59,7 @@ does not.
 **Tests**
 
 ```bash
-flutter test        # 100 tests: catalogue, feed composition, playback, persistence, UI
+flutter test        # 122 tests: catalogue, feed composition, playback, persistence, UI
 flutter analyze
 ```
 
@@ -186,13 +186,41 @@ implementation and swapping it in `app.dart`. No screen changes.
 
 ## Learning
 
-Reading something once is exposure, not learning. Four features exist to close
+Reading something once is exposure, not learning. Several features exist to close
 that gap, and they lean on each other:
 
 **Ideas are marked read.** Read mode has no natural completion event the way
 audio does, so a card banks an idea once it has held the screen for three
 seconds — long enough that a fast scroll past doesn't count, short enough that
 actually reading always does. Everything below depends on this being true.
+
+**Highlights.** Long-pressing a sentence in an idea keeps that line. The body
+renders as one `Text.rich` of per-sentence spans rather than a widget each, so
+the prose still flows as a paragraph and the wrapping is unaffected — see
+`Sentences`, which splits on terminal punctuation. Highlights store the sentence
+*text*, not an offset: an offset silently points at the wrong words the moment
+an idea is edited. Sharing an idea that has a highlight puts the highlighted
+line on the story card instead of the idea's title, and the card's type scales
+down as the line lengthens, since a sentence runs far longer than a title.
+
+**Streak repair.** Losing a long streak to one missed day is where people quit,
+so a streak broken by *exactly* one day is offered back, once per calendar
+month. A longer lapse is never repairable — someone who missed a week didn't
+have the habit interrupted, they stopped, and handing the number back there
+would make it meaningless. Declining costs nothing: the month's repair stays
+available for a lapse the reader actually minds.
+
+**Recall, not just resurfacing.** The review card shows an idea's title with the
+body hidden and asks whether it was remembered *before* revealing it — asking
+afterwards gets "yes" every time, because once you have read it you cannot tell
+whether you knew it. Remembering pushes the idea to the next interval;
+forgetting sends it back to stage zero, so it returns in days rather than
+months.
+
+**Pick up where you left off.** Today's pick is borrowed from across the whole
+library, so it is rarely the book someone is actually working through. The
+Today card carries a resume row for the last book opened — but only one that was
+genuinely started, isn't finished, and isn't today's own book.
 
 **Saved ideas.** The bookmark on a book keeps the whole book; the one beside an
 idea keeps that line. Saved ideas are stored by idea id rather than position, so

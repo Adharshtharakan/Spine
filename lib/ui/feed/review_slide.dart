@@ -23,9 +23,10 @@ class ReviewSlide extends StatefulWidget {
 
   final ReviewFeedItem item;
 
-  /// Called once the reader has seen the answer — the only signal the schedule
-  /// takes.
-  final VoidCallback onReviewed;
+  /// Called with whether the reader recalled the idea before revealing it.
+  /// Remembering pushes the idea out to the next interval; forgetting sends it
+  /// back to the start.
+  final ValueChanged<bool> onReviewed;
 
   final VoidCallback onOpenBook;
 
@@ -35,11 +36,18 @@ class ReviewSlide extends StatefulWidget {
 
 class _ReviewSlideState extends State<ReviewSlide> {
   bool _revealed = false;
+  bool? _remembered;
 
-  void _reveal() {
+  /// The answer is taken *before* the body is shown. Asking afterwards gets
+  /// "yes" every time — once you have read it, you cannot tell whether you knew
+  /// it, and the schedule would be built on a number that means nothing.
+  void _answer(bool remembered) {
     if (_revealed) return;
-    setState(() => _revealed = true);
-    widget.onReviewed();
+    setState(() {
+      _remembered = remembered;
+      _revealed = true;
+    });
+    widget.onReviewed(remembered);
   }
 
   @override
@@ -78,9 +86,26 @@ class _ReviewSlideState extends State<ReviewSlide> {
                 body: idea.body,
                 revealed: _revealed,
                 accent: book.spineColor,
-                onReveal: _reveal,
+                onReveal: () => _answer(true),
                 compact: compact,
               ),
+              if (!_revealed) ...[
+                SizedBox(height: compact ? 14 : 20),
+                _Recall(
+                  accent: book.spineColor,
+                  onRemembered: () => _answer(true),
+                  onForgot: () => _answer(false),
+                ),
+              ],
+              if (_remembered == false) ...[
+                SizedBox(height: compact ? 10 : 14),
+                Text(
+                  'BACK IN A COUPLE OF DAYS',
+                  style: SpineText.labelSmall.copyWith(
+                    color: SpineColors.onInk(0.45),
+                  ),
+                ),
+              ],
               const Spacer(),
               if (_revealed)
                 TapScale(
@@ -172,6 +197,80 @@ class _Answer extends StatelessWidget {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// The two answers, taken before the idea is revealed.
+class _Recall extends StatelessWidget {
+  const _Recall({
+    required this.accent,
+    required this.onRemembered,
+    required this.onForgot,
+  });
+
+  final Color accent;
+  final VoidCallback onRemembered;
+  final VoidCallback onForgot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _RecallButton(
+            label: 'I remember',
+            onTap: onRemembered,
+            background: accent.withValues(alpha: 0.22),
+            foreground: SpineColors.parchment,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _RecallButton(
+            label: "I don't",
+            onTap: onForgot,
+            background: SpineColors.surface,
+            foreground: SpineColors.onInk(0.7),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecallButton extends StatelessWidget {
+  const _RecallButton({
+    required this.label,
+    required this.onTap,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return TapScale(
+      onTap: onTap,
+      semanticLabel: label,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: ExcludeSemantics(
+          child: Text(
+            label.toUpperCase(),
+            style: SpineText.labelMedium.copyWith(color: foreground),
+          ),
+        ),
+      ),
     );
   }
 }
