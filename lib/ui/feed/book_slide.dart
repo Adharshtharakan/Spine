@@ -328,13 +328,12 @@ class _Body extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Align(
-                    // Centred, not top-aligned. The type now fills most of the
-                    // card on its own, so what's left is a small remainder —
-                    // split above and below it reads as breathing room, where
-                    // pooling all of it under the text read as a dead zone.
-                    // A body long enough to overflow fills the box and this
-                    // becomes a no-op.
-                    alignment: Alignment.centerLeft,
+                    // Top-aligned. Centring was tried and reads worse: it
+                    // pushes the idea away from the mode toggle it belongs to
+                    // and leaves the card feeling distant. The larger type is
+                    // what closes the gap; the idea starts where the chrome
+                    // above it ends.
+                    alignment: Alignment.topLeft,
                     child: IdeaView(
                       idea: idea,
                       index: ideaIndex,
