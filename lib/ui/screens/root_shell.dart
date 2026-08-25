@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
 import '../../state/shell_controller.dart';
@@ -49,13 +50,14 @@ class _RootShellState extends State<RootShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final shell = context.watch<ShellController>();
     final streak = context.select<ProgressController, int>(
       (controller) => controller.streak,
     );
 
     return Scaffold(
-      backgroundColor: SpineColors.ink,
+      backgroundColor: palette.ground,
       body: DecoratedBox(
         decoration: const BoxDecoration(gradient: SpineColors.feedBackground),
         // The masthead floats over the feed rather than sitting on a bar above

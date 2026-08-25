@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/config/app_config.dart';
-import 'core/theme/spine_colors.dart';
+import 'core/theme/spine_palette.dart';
 import 'core/theme/spine_theme.dart';
 import 'data/repository/asset_book_repository.dart';
 import 'data/repository/book_repository.dart';
@@ -224,11 +225,25 @@ class _SpineAppState extends State<SpineApp> {
         ChangeNotifierProvider<PlaybackController>.value(value: _playback),
         ChangeNotifierProvider<ShellController>.value(value: _shell),
       ],
-      child: MaterialApp(
-        title: 'Spine',
-        debugShowCheckedModeBanner: false,
-        theme: SpineTheme.build(),
-        home: const _Bootstrap(),
+      child: Builder(
+        builder: (context) {
+          // Watched here rather than inside a screen: the mode owns the whole
+          // MaterialApp, so it has to be read above one.
+          final dark = context.select<ProgressController, bool>(
+            (controller) => controller.darkMode,
+          );
+          final palette = dark ? SpinePalette.dark : SpinePalette.light;
+
+          return MaterialApp(
+            title: 'Spine',
+            debugShowCheckedModeBanner: false,
+            theme: SpineTheme.build(SpinePalette.light),
+            darkTheme: SpineTheme.build(SpinePalette.dark),
+            themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+            home: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SpineTheme.overlayFor(palette),
+              child: const _Bootstrap(),
+            ),
         builder: (context, child) {
           // Spine's layout is tuned type; huge system text scales would break
           // the cards, so scaling is honoured within a range rather than
@@ -240,6 +255,8 @@ class _SpineAppState extends State<SpineApp> {
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: scale),
             child: child ?? const SizedBox.shrink(),
+          );
+            },
           );
         },
       ),
@@ -256,14 +273,15 @@ class _Bootstrap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final ready = context.select<ProgressController, bool>(
       (controller) => controller.isLoaded,
     );
 
     if (!ready) {
-      return const ColoredBox(
-        color: SpineColors.ink,
-        child: SizedBox.expand(),
+      return ColoredBox(
+        color: palette.ground,
+        child: const SizedBox.expand(),
       );
     }
     return const RootShell();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import 'tap_scale.dart';
 
@@ -28,6 +28,7 @@ class SpineTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 20, 14),
       child: Row(
@@ -43,14 +44,14 @@ class SpineTopBar extends StatelessWidget {
               child: Container(
                 width: 36,
                 height: 36,
-                decoration: const BoxDecoration(
-                  color: SpineColors.surface,
+                decoration: BoxDecoration(
+                  color: palette.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.search_rounded,
                   size: 18,
-                  color: SpineColors.onInk(0.6),
+                  color: palette.onGround(0.6),
                 ),
               ),
             ),
@@ -68,24 +69,25 @@ class _StreakCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: SpineColors.brass.withValues(alpha: 0.13),
+        color: palette.brass.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.local_fire_department_rounded,
             size: 13,
-            color: SpineColors.brass,
+            color: palette.brass,
           ),
           const SizedBox(width: 5),
           Text(
             '$streak',
-            style: SpineText.labelMedium.copyWith(color: SpineColors.brass),
+            style: SpineText.labelMedium.copyWith(color: palette.brass),
           ),
         ],
       ),

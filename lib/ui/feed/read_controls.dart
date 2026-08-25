@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../sharing/story_share_button.dart';
 import '../widgets/tap_scale.dart';
@@ -91,10 +91,11 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final tinted = accent != null && enabled;
     final foreground = enabled
-        ? (tinted ? SpineColors.parchment : SpineColors.onInk(0.72))
-        : SpineColors.onInk(0.3);
+        ? (tinted ? palette.text : palette.onGround(0.72))
+        : palette.onGround(0.3);
 
     final content = [
       Icon(icon, size: 15, color: foreground),
@@ -119,7 +120,7 @@ class _NavButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: tinted
               ? accent!.withValues(alpha: 0.26)
-              : SpineColors.surface,
+              : palette.surface,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(

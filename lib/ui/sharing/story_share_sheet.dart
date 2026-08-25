@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../../data/models/idea.dart';
@@ -63,6 +63,7 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
   /// Both the messenger and the navigator are resolved before the sheet pops,
   /// since this context dies with it.
   Future<void> _copyText(BuildContext context) async {
+    final palette = context.palette;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final text =
@@ -77,14 +78,14 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
       ..showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: SpineColors.inkCard,
+          backgroundColor: palette.groundRaised,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           content: Text(
             'Copied to clipboard',
-            style: SpineText.label.copyWith(color: SpineColors.parchment),
+            style: SpineText.label.copyWith(color: palette.text),
           ),
         ),
       );
@@ -136,12 +137,13 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
         decoration: BoxDecoration(
-          color: SpineColors.inkCard,
+          color: palette.groundRaised,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
@@ -150,7 +152,7 @@ class _StoryShareSheetState extends State<_StoryShareSheet> {
           children: [
             Text(
               'SHARE THIS IDEA',
-              style: SpineText.label.copyWith(color: SpineColors.onInk(0.5)),
+              style: SpineText.label.copyWith(color: palette.onGround(0.5)),
             ),
             const SizedBox(height: 16),
             _ShareRow(
@@ -199,6 +201,7 @@ class _ShareRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return TapScale(
       enabled: !busy,
       onTap: onTap,
@@ -207,7 +210,7 @@ class _ShareRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: SpineColors.onInk(0.75)),
+            Icon(icon, size: 20, color: palette.onGround(0.75)),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
@@ -216,12 +219,12 @@ class _ShareRow extends StatelessWidget {
               ),
             ),
             if (busy)
-              const SizedBox(
+              SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(SpineColors.brass),
+                  valueColor: AlwaysStoppedAnimation(palette.brass),
                 ),
               ),
           ],

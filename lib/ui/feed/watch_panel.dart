@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../widgets/spine_pill.dart';
@@ -92,6 +92,7 @@ class _NotifyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return TapScale(
       onTap: onTap,
       semanticLabel: notified
@@ -102,7 +103,7 @@ class _NotifyButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
         decoration: BoxDecoration(
           color: notified
-              ? SpineColors.surface
+              ? palette.surface
               : accent.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(26),
         ),
@@ -116,7 +117,7 @@ class _NotifyButton extends StatelessWidget {
             Text(
               notified ? "YOU'LL BE NOTIFIED" : 'NOTIFY ME',
               style: SpineText.labelMedium.copyWith(
-                color: notified ? accent : SpineColors.ink,
+                color: notified ? accent : palette.ground,
               ),
             ),
           ],

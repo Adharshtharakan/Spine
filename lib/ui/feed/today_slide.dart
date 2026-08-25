@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../../data/models/feed_item.dart';
@@ -101,6 +101,7 @@ class _Source extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return TapScale(
       scale: 0.98,
       onTap: onTap,
@@ -108,7 +109,7 @@ class _Source extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
         decoration: BoxDecoration(
-          color: SpineColors.surface,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -129,7 +130,7 @@ class _Source extends StatelessWidget {
                   Text(
                     'FROM',
                     style: SpineText.labelSmall.copyWith(
-                      color: SpineColors.onInk(0.4),
+                      color: palette.onGround(0.4),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -155,7 +156,7 @@ class _Source extends StatelessWidget {
             Icon(
               Icons.arrow_forward_rounded,
               size: 18,
-              color: SpineColors.onInk(0.5),
+              color: palette.onGround(0.5),
             ),
           ],
         ),
@@ -187,6 +188,7 @@ class _Resume extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final accent = point.book.spineColor;
 
     return TapScale(
@@ -228,7 +230,7 @@ class _Resume extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 '${point.completed}/${point.total}',
-                style: SpineText.label.copyWith(color: SpineColors.onInk(0.55)),
+                style: SpineText.label.copyWith(color: palette.onGround(0.55)),
               ),
             ],
           ),

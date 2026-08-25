@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
-import 'core/theme/spine_theme.dart';
 import 'services/audio/spine_audio_engine.dart';
 import 'services/persistence/review_store.dart';
 import 'services/persistence/shared_preferences_progress_store.dart';
@@ -19,7 +18,6 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  SystemChrome.setSystemUIOverlayStyle(SpineTheme.systemOverlay);
 
   final config = AppConfig.fromEnvironment();
 

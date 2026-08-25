@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../state/library_controller.dart';
 import '../widgets/book_row.dart';
@@ -27,6 +27,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final library = context.watch<LibraryController>();
     final results = library.search(_query);
 
@@ -37,7 +38,7 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
           child: Container(
             decoration: BoxDecoration(
-              color: SpineColors.surface,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(26),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -46,7 +47,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 Icon(
                   Icons.search_rounded,
                   size: 19,
-                  color: SpineColors.onInk(0.5),
+                  color: palette.onGround(0.5),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -54,9 +55,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     controller: _controller,
                     onChanged: (value) => setState(() => _query = value),
                     textInputAction: TextInputAction.search,
-                    cursorColor: SpineColors.brass,
+                    cursorColor: palette.brass,
                     style: SpineText.secondary.copyWith(
-                      color: SpineColors.parchment,
+                      color: palette.text,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
@@ -81,7 +82,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Icon(
                         Icons.close_rounded,
                         size: 17,
-                        color: SpineColors.onInk(0.5),
+                        color: palette.onGround(0.5),
                       ),
                     ),
                   ),
@@ -95,7 +96,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Text(
                     'NOTHING ON THE SHELF MATCHES',
                     style: SpineText.label.copyWith(
-                      color: SpineColors.onInk(0.4),
+                      color: palette.onGround(0.4),
                     ),
                   ),
                 )

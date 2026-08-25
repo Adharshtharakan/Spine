@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/feed_item.dart';
 import '../../services/ads/ad_creative.dart';
@@ -88,6 +88,8 @@ class _AdSlideState extends State<AdSlide> {
   }
 
   Widget _house(BuildContext context) {
+
+    final palette = context.palette;
     final creative = _creative;
     if (creative == null) return const _EmptyAdCard();
 
@@ -96,7 +98,7 @@ class _AdSlideState extends State<AdSlide> {
       children: [
         // Ads get the house neutral rather than a book's colour, so the feed
         // reads the interruption before the copy does.
-        const AmbientBackdrop(color: SpineColors.brassDim, intensity: 0.55),
+        AmbientBackdrop(color: palette.brassDim, intensity: 0.55),
         Padding(
           // Clears the floating masthead, exactly as a book card does.
           padding: EdgeInsets.fromLTRB(
@@ -112,15 +114,15 @@ class _AdSlideState extends State<AdSlide> {
                 children: [
                   SpinePill(
                     label: creative.isTest ? 'Test ad' : 'Sponsored',
-                    foreground: SpineColors.brass,
-                    background: SpineColors.brass.withValues(alpha: 0.14),
+                    foreground: palette.brass,
+                    background: palette.brass.withValues(alpha: 0.14),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       creative.sponsor.toUpperCase(),
                       style: SpineText.labelSmall.copyWith(
-                        color: SpineColors.onInk(0.4),
+                        color: palette.onGround(0.4),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -147,13 +149,13 @@ class _AdSlideState extends State<AdSlide> {
                       vertical: 14,
                     ),
                     decoration: BoxDecoration(
-                      color: SpineColors.surfaceRaised,
+                      color: palette.surfaceRaised,
                       borderRadius: BorderRadius.circular(26),
                     ),
                     child: Text(
                       creative.ctaLabel.toUpperCase(),
                       style: SpineText.labelMedium.copyWith(
-                        color: SpineColors.parchment,
+                        color: palette.text,
                       ),
                     ),
                   ),
@@ -166,13 +168,13 @@ class _AdSlideState extends State<AdSlide> {
                     Icon(
                       Icons.keyboard_arrow_up_rounded,
                       size: 18,
-                      color: SpineColors.onInk(0.3),
+                      color: palette.onGround(0.3),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'SWIPE FOR THE NEXT BOOK',
                       style: SpineText.labelSmall.copyWith(
-                        color: SpineColors.onInk(0.3),
+                        color: palette.onGround(0.3),
                       ),
                     ),
                   ],
@@ -191,13 +193,14 @@ class _EmptyAdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     // No inventory: a quiet interstitial rather than a hole in the feed.
     return Center(
       child: Text(
         'SPINE',
         style: SpineText.wordmark.copyWith(
           fontSize: 15,
-          color: SpineColors.onInk(0.25),
+          color: palette.onGround(0.25),
         ),
       ),
     );

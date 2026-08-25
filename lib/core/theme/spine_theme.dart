@@ -5,30 +5,38 @@ import 'package:flutter/services.dart';
 // others don't, and removing it breaks the build there. Keep it.
 // ignore: unnecessary_import
 import 'package:flutter/cupertino.dart';
-import 'spine_colors.dart';
+import 'spine_palette.dart';
 import 'spine_text.dart';
 
 abstract final class SpineTheme {
-  /// Spine is a single-mode, dark editorial surface by design — there is no
-  /// light theme, the same way a cinema doesn't have one.
-  static ThemeData build() {
-    final base = ThemeData.dark(useMaterial3: true);
+  /// Builds the theme for one palette.
+  ///
+  /// The palette rides along as a [ThemeExtension] so every widget can reach
+  /// the mode it is being read in through `context.palette`, rather than the
+  /// colours being compile-time constants as they were when Spine was dark
+  /// only.
+  static ThemeData build(SpinePalette palette) {
+    final base = palette.isDark
+        ? ThemeData.dark(useMaterial3: true)
+        : ThemeData.light(useMaterial3: true);
 
     return base.copyWith(
-      scaffoldBackgroundColor: SpineColors.ink,
+      extensions: [palette],
+      brightness: palette.brightness,
+      scaffoldBackgroundColor: palette.ground,
       colorScheme: base.colorScheme.copyWith(
-        primary: SpineColors.brass,
-        surface: SpineColors.ink,
-        onSurface: SpineColors.parchment,
+        primary: palette.brass,
+        surface: palette.ground,
+        onSurface: palette.text,
       ),
       textTheme: base.textTheme.apply(
         fontFamily: SpineText.sans,
-        bodyColor: SpineColors.parchment,
-        displayColor: SpineColors.parchment,
+        bodyColor: palette.text,
+        displayColor: palette.text,
       ),
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
-      dividerColor: SpineColors.line,
+      dividerColor: palette.line,
       // The feed owns the whole screen; a stretch/glow overscroll would fight
       // the snap. Slides get a subtle scale-press instead.
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -40,11 +48,17 @@ abstract final class SpineTheme {
     );
   }
 
-  static const systemOverlay = SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: SpineColors.ink,
-    systemNavigationBarIconBrightness: Brightness.light,
-  );
+  /// The status and navigation bars have to invert with the page, or the
+  /// clock and the battery disappear into it.
+  static SystemUiOverlayStyle overlayFor(SpinePalette palette) {
+    final icons = palette.isDark ? Brightness.light : Brightness.dark;
+    return SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: icons,
+      // iOS reads the *bar's* brightness, which is the opposite of its icons'.
+      statusBarBrightness: palette.brightness,
+      systemNavigationBarColor: palette.ground,
+      systemNavigationBarIconBrightness: icons,
+    );
+  }
 }

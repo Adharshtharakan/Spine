@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../widgets/tap_scale.dart';
@@ -31,6 +31,7 @@ class BookRecap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -53,7 +54,7 @@ class BookRecap extends StatelessWidget {
               : 'The five ideas together, rather than one at a time.',
           style: SpineText.ideaBody.copyWith(
             fontSize: compact ? 13.5 : 14.5,
-            color: SpineColors.onInk(0.5),
+            color: palette.onGround(0.5),
           ),
         ),
         SizedBox(height: compact ? 16 : 22),
@@ -92,7 +93,7 @@ class BookRecap extends StatelessWidget {
                           idea.body,
                           style: SpineText.ideaBody.copyWith(
                             fontSize: compact ? 13.5 : 14.5,
-                            color: SpineColors.onInk(0.6),
+                            color: palette.onGround(0.6),
                           ),
                         ),
                       ],
@@ -110,7 +111,7 @@ class BookRecap extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
             decoration: BoxDecoration(
-              color: SpineColors.surface,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(24),
             ),
             child: Row(
@@ -119,13 +120,13 @@ class BookRecap extends StatelessWidget {
                 Icon(
                   Icons.arrow_back_rounded,
                   size: 15,
-                  color: SpineColors.onInk(0.72),
+                  color: palette.onGround(0.72),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'BACK',
                   style: SpineText.labelMedium.copyWith(
-                    color: SpineColors.onInk(0.72),
+                    color: palette.onGround(0.72),
                   ),
                 ),
               ],

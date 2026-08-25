@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 
 /// Spine's signature element: the vertical bookmark ribbon.
 ///
@@ -94,6 +94,7 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Semantics(
       button: true,
       selected: isCurrent,
@@ -110,7 +111,7 @@ class _Segment extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(width),
             child: ColoredBox(
-              color: SpineColors.onInk(isCurrent ? 0.16 : 0.09),
+              color: palette.onGround(isCurrent ? 0.16 : 0.09),
               // Linear and short: the ribbon reads as a level filling, not as
               // an animation playing.
               child: TweenAnimationBuilder<double>(

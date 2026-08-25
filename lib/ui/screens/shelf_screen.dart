@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/feed_item.dart';
 import '../../services/ads/ad_provider.dart';
@@ -263,10 +263,11 @@ class _FeedMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Center(
       child: Text(
         text,
-        style: SpineText.label.copyWith(color: SpineColors.parchmentDim),
+        style: SpineText.label.copyWith(color: palette.textDim),
       ),
     );
   }

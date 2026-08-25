@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../widgets/spine_top_bar.dart';
 
@@ -26,8 +26,9 @@ class ReelAdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return ColoredBox(
-      color: SpineColors.ink,
+      color: palette.ground,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -61,16 +62,17 @@ class SponsoredBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: SpineColors.brass.withValues(alpha: 0.92),
+        color: palette.brass.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         'SPONSORED',
         style: SpineText.labelSmall.copyWith(
-          color: SpineColors.ink,
+          color: palette.ground,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -83,16 +85,17 @@ class _EdgeShade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            SpineColors.ink.withValues(alpha: 0.55),
-            SpineColors.ink.withValues(alpha: 0),
-            SpineColors.ink.withValues(alpha: 0),
-            SpineColors.ink.withValues(alpha: 0.35),
+            palette.ground.withValues(alpha: 0.55),
+            palette.ground.withValues(alpha: 0),
+            palette.ground.withValues(alpha: 0),
+            palette.ground.withValues(alpha: 0.35),
           ],
           stops: const [0, 0.22, 0.72, 1],
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import 'tap_scale.dart';
 
@@ -65,7 +65,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? SpineColors.parchment : SpineColors.onInk(0.34);
+    final palette = context.palette;
+    final color = active ? palette.text : palette.onGround(0.34);
 
     return TapScale(
       onTap: onTap,
@@ -84,7 +85,7 @@ class _NavItem extends StatelessWidget {
               child: Text(
                 tab.label.toUpperCase(),
                 style: SpineText.labelSmall.copyWith(
-                  color: SpineColors.onInk(0.55),
+                  color: palette.onGround(0.55),
                 ),
               ),
             ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../data/models/book.dart';
 import '../../data/models/idea.dart';
 import '../../data/models/story_template.dart';
@@ -243,6 +243,7 @@ class _Background extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Image.asset(
       template.backgroundAsset,
       fit: BoxFit.cover,
@@ -255,7 +256,7 @@ class _Background extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [template.mainTitleColor.withValues(alpha: 0.4), SpineColors.ink],
+            colors: [template.mainTitleColor.withValues(alpha: 0.4), palette.ground],
           ),
         ),
       ),
@@ -276,7 +277,8 @@ class _Scrim extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final veil = template.lightText ? Colors.black : SpineColors.parchment;
+    final palette = context.palette;
+    final veil = template.lightText ? Colors.black : palette.text;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -301,6 +303,7 @@ class _Wordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Center(
       child: Text(
         'S P I N E',
@@ -309,7 +312,7 @@ class _Wordmark extends StatelessWidget {
           fontWeight: FontWeight.w500,
           fontSize: 30,
           letterSpacing: 6,
-          color: template.lightText ? Colors.white : SpineColors.ink,
+          color: template.lightText ? Colors.white : palette.ground,
           shadows: [
             Shadow(
               color: template.lightText
@@ -385,11 +388,12 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     // Sits on the scrim, so it takes its polarity from the same place the
     // scrim does rather than assuming a dark card.
     final colour = template.lightText
         ? Colors.white.withValues(alpha: 0.78)
-        : SpineColors.ink.withValues(alpha: 0.72);
+        : palette.ground.withValues(alpha: 0.72);
 
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../widgets/tap_scale.dart';
 
 /// The share control, sized to sit in the footer band above the bottom nav.
@@ -19,6 +19,7 @@ class StoryShareButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final size = compact ? 46.0 : 52.0;
 
     return TapScale(
@@ -27,14 +28,14 @@ class StoryShareButton extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: const BoxDecoration(
-          color: SpineColors.surfaceRaised,
+        decoration: BoxDecoration(
+          color: palette.surfaceRaised,
           shape: BoxShape.circle,
         ),
         child: Icon(
           Icons.ios_share_rounded,
           size: compact ? 20 : 22,
-          color: SpineColors.onInk(0.75),
+          color: palette.onGround(0.75),
         ),
       ),
     );

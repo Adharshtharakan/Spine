@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/feed_item.dart';
 import '../widgets/spine_pill.dart';
@@ -52,6 +52,7 @@ class _ReviewSlideState extends State<ReviewSlide> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final book = widget.item.book;
     final idea = widget.item.idea;
     final compact = MediaQuery.sizeOf(context).height < 760;
@@ -74,7 +75,7 @@ class _ReviewSlideState extends State<ReviewSlide> {
               const Spacer(),
               Text(
                 'From ${book.title}',
-                style: SpineText.label.copyWith(color: SpineColors.onInk(0.45)),
+                style: SpineText.label.copyWith(color: palette.onGround(0.45)),
               ),
               SizedBox(height: compact ? 12 : 16),
               Text(
@@ -102,7 +103,7 @@ class _ReviewSlideState extends State<ReviewSlide> {
                 Text(
                   'BACK IN A COUPLE OF DAYS',
                   style: SpineText.labelSmall.copyWith(
-                    color: SpineColors.onInk(0.45),
+                    color: palette.onGround(0.45),
                   ),
                 ),
               ],
@@ -117,14 +118,14 @@ class _ReviewSlideState extends State<ReviewSlide> {
                       Text(
                         'BACK TO THE BOOK',
                         style: SpineText.labelMedium.copyWith(
-                          color: SpineColors.onInk(0.6),
+                          color: palette.onGround(0.6),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Icon(
                         Icons.arrow_forward_rounded,
                         size: 16,
-                        color: SpineColors.onInk(0.6),
+                        color: palette.onGround(0.6),
                       ),
                     ],
                   ),
@@ -155,6 +156,7 @@ class _Answer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return AnimatedSize(
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
@@ -171,7 +173,7 @@ class _Answer extends StatelessWidget {
                   'What was this one about?',
                   style: SpineText.ideaBody.copyWith(
                     fontSize: compact ? 15 : 16,
-                    color: SpineColors.onInk(0.45),
+                    color: palette.onGround(0.45),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -190,7 +192,7 @@ class _Answer extends StatelessWidget {
                     child: Text(
                       'SHOW ME',
                       style: SpineText.labelMedium.copyWith(
-                        color: SpineColors.parchment,
+                        color: palette.text,
                       ),
                     ),
                   ),
@@ -215,6 +217,7 @@ class _Recall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Row(
       children: [
         Expanded(
@@ -222,7 +225,7 @@ class _Recall extends StatelessWidget {
             label: 'I remember',
             onTap: onRemembered,
             background: accent.withValues(alpha: 0.22),
-            foreground: SpineColors.parchment,
+            foreground: palette.text,
           ),
         ),
         const SizedBox(width: 12),
@@ -230,8 +233,8 @@ class _Recall extends StatelessWidget {
           child: _RecallButton(
             label: "I don't",
             onTap: onForgot,
-            background: SpineColors.surface,
-            foreground: SpineColors.onInk(0.7),
+            background: palette.surface,
+            foreground: palette.onGround(0.7),
           ),
         ),
       ],

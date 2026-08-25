@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import 'spine_colors.dart';
 
 /// Spine's three typefaces, mirroring the prototype:
 ///   Fraunces  — titles and idea headings (editorial serif)
 ///   Inter     — body copy
 ///   IBM Plex  — labels, metadata, chips (the "library card" voice)
 abstract final class SpineText {
+  // These carry weight, size, spacing and family — never colour. Spine has two
+  // modes, and a colour baked into a const style cannot follow the one being
+  // read. Colour arrives from the theme's textTheme, or from the call site
+  // where it needs to differ.
+
   static const serif = 'Fraunces';
   static const sans = 'Inter';
   static const mono = 'IBMPlexMono';
@@ -21,7 +25,6 @@ abstract final class SpineText {
     fontSize: 38,
     height: 1.04,
     letterSpacing: -0.8,
-    color: SpineColors.parchment,
   );
 
   /// The "Spine" wordmark — set wide, the way a masthead is.
@@ -30,7 +33,6 @@ abstract final class SpineText {
     fontWeight: FontWeight.w500,
     fontSize: 19,
     letterSpacing: 3.4,
-    color: SpineColors.parchment,
   );
 
   /// Idea heading.
@@ -40,7 +42,6 @@ abstract final class SpineText {
     fontSize: 25,
     height: 1.18,
     letterSpacing: -0.3,
-    color: SpineColors.parchment,
   );
 
   /// Section heading on the secondary tabs.
@@ -48,32 +49,28 @@ abstract final class SpineText {
     fontFamily: serif,
     fontWeight: FontWeight.w600,
     fontSize: 17,
-    color: SpineColors.parchment,
   );
 
   // ---- Body ----------------------------------------------------------------
 
   /// Idea body copy.
-  static final ideaBody = TextStyle(
+  static const ideaBody = TextStyle(
     fontFamily: sans,
     fontSize: 15.5,
     height: 1.62,
     letterSpacing: 0.05,
-    color: SpineColors.onInk(0.7),
   );
 
-  static final author = TextStyle(
+  static const author = TextStyle(
     fontFamily: sans,
     fontWeight: FontWeight.w400,
     fontSize: 14.5,
-    color: SpineColors.onInk(0.5),
   );
 
-  static final secondary = TextStyle(
+  static const secondary = TextStyle(
     fontFamily: sans,
     fontSize: 13,
     height: 1.5,
-    color: SpineColors.onInk(0.7),
   );
 
   // ---- Mono labels ---------------------------------------------------------

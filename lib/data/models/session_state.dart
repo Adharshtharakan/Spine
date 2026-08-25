@@ -8,6 +8,7 @@ class SessionState {
     this.dailyIdeaHour,
     this.brokenStreak = 0,
     this.lastRepairMonth,
+    this.darkMode = true,
   });
 
   /// The book the reader was last on. Stored by id rather than by feed position
@@ -38,6 +39,11 @@ class SessionState {
   /// `yyyy-mm` of the last repair, which is what limits it to one a month.
   final String? lastRepairMonth;
 
+  /// Which mode the reader wants. Defaults to dark: Spine was dark-only until
+  /// this existed, so a reader upgrading keeps the app they already had rather
+  /// than being handed a different one on launch.
+  final bool darkMode;
+
   bool get wantsDailyIdea => dailyIdeaHour != null;
 
   static String monthKey(DateTime date) =>
@@ -58,6 +64,7 @@ class SessionState {
       dailyIdeaHour: dailyIdeaHour,
       brokenStreak: 0,
       lastRepairMonth: monthKey(now),
+      darkMode: darkMode,
     );
   }
 
@@ -73,6 +80,7 @@ class SessionState {
     int? brokenStreak,
     bool clearBrokenStreak = false,
     String? lastRepairMonth,
+    bool? darkMode,
   }) {
     return SessionState(
       lastBookId: lastBookId ?? this.lastBookId,
@@ -83,6 +91,7 @@ class SessionState {
           : (dailyIdeaHour ?? this.dailyIdeaHour),
       brokenStreak: clearBrokenStreak ? 0 : (brokenStreak ?? this.brokenStreak),
       lastRepairMonth: lastRepairMonth ?? this.lastRepairMonth,
+      darkMode: darkMode ?? this.darkMode,
     );
   }
 
@@ -93,6 +102,7 @@ class SessionState {
     'dailyIdeaHour': dailyIdeaHour,
     'brokenStreak': brokenStreak,
     'lastRepairMonth': lastRepairMonth,
+    'darkMode': darkMode,
   };
 
   factory SessionState.fromJson(Map<String, dynamic> json) {
@@ -103,6 +113,7 @@ class SessionState {
       dailyIdeaHour: json['dailyIdeaHour'] as int?,
       brokenStreak: json['brokenStreak'] as int? ?? 0,
       lastRepairMonth: json['lastRepairMonth'] as String?,
+      darkMode: json['darkMode'] as bool? ?? true,
     );
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/reading_mode.dart';
 import '../widgets/tap_scale.dart';
@@ -26,6 +26,7 @@ class ModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     const modes = ReadingMode.values;
     final index = modes.indexOf(mode);
 
@@ -33,7 +34,7 @@ class ModeToggle extends StatelessWidget {
       height: 44,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: SpineColors.surface,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(22),
       ),
       child: LayoutBuilder(
@@ -92,7 +93,8 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? SpineColors.parchment : SpineColors.onInk(0.45);
+    final palette = context.palette;
+    final color = selected ? palette.text : palette.onGround(0.45);
 
     return TapScale(
       onTap: onTap,

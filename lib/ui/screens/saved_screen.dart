@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../../data/models/idea.dart';
@@ -18,6 +18,7 @@ class SavedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final library = context.watch<LibraryController>();
     final progress = context.watch<ProgressController>();
 
@@ -54,12 +55,12 @@ class SavedScreen extends StatelessWidget {
                 semanticLabel: 'Remove ${book.title} from saved',
                 onTap: () =>
                     context.read<ProgressController>().toggleSaved(book.id),
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
                   child: Icon(
                     Icons.bookmark_rounded,
                     size: 19,
-                    color: SpineColors.brass,
+                    color: palette.brass,
                   ),
                 ),
               ),
@@ -77,11 +78,12 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, top: 4),
       child: Text(
         text.toUpperCase(),
-        style: SpineText.label.copyWith(color: SpineColors.onInk(0.4)),
+        style: SpineText.label.copyWith(color: palette.onGround(0.4)),
       ),
     );
   }
@@ -96,6 +98,7 @@ class _SavedIdeaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TapScale(
@@ -105,7 +108,7 @@ class _SavedIdeaRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
           decoration: BoxDecoration(
-            color: SpineColors.surface,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Row(
@@ -135,7 +138,7 @@ class _SavedIdeaRow extends StatelessWidget {
                       idea.body,
                       style: SpineText.ideaBody.copyWith(
                         fontSize: 13.5,
-                        color: SpineColors.onInk(0.55),
+                        color: palette.onGround(0.55),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -144,7 +147,7 @@ class _SavedIdeaRow extends StatelessWidget {
                     Text(
                       book.title.toUpperCase(),
                       style: SpineText.labelSmall.copyWith(
-                        color: SpineColors.onInk(0.35),
+                        color: palette.onGround(0.35),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -157,12 +160,12 @@ class _SavedIdeaRow extends StatelessWidget {
                 onTap: () => context
                     .read<ProgressController>()
                     .toggleSavedIdea(book.id, idea.id),
-                child: const Padding(
-                  padding: EdgeInsets.all(6),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
                   child: Icon(
                     Icons.bookmark_added_rounded,
                     size: 18,
-                    color: SpineColors.brass,
+                    color: palette.brass,
                   ),
                 ),
               ),
@@ -179,6 +182,7 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 36),
       child: Center(
@@ -188,7 +192,7 @@ class _Empty extends StatelessWidget {
             Icon(
               Icons.bookmark_border_rounded,
               size: 30,
-              color: SpineColors.onInk(0.32),
+              color: palette.onGround(0.32),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -197,7 +201,7 @@ class _Empty extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
-            Text(
+            const Text(
               'Keep a whole book with the bookmark on its cover, or a single '
               'idea with the one beside it.',
               style: SpineText.ideaBody,

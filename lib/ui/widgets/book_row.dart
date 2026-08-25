@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../../state/progress_controller.dart';
@@ -20,6 +20,7 @@ class BookRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final progress = context.select<ProgressController, double>(
       (controller) => controller.of(book.id).completionOf(book.ideaCount),
     );
@@ -42,7 +43,7 @@ class BookRow extends StatelessWidget {
                   Text(
                     book.genre.toUpperCase(),
                     style: SpineText.labelSmall.copyWith(
-                      color: SpineColors.onInk(0.34),
+                      color: palette.onGround(0.34),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -80,6 +81,7 @@ class _SpineSlice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       width: 44,
       height: 62,
@@ -103,7 +105,7 @@ class _SpineSlice extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: ColoredBox(
-                color: SpineColors.onInk(0.14),
+                color: palette.onGround(0.14),
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: FractionallySizedBox(

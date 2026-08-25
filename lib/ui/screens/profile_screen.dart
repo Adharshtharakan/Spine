@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/app_config.dart';
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../services/notifications/daily_idea_notifier.dart';
 import '../../state/library_controller.dart';
@@ -17,6 +17,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final progress = context.watch<ProgressController>();
     final library = context.watch<LibraryController>();
     final config = context.read<AppConfig>();
@@ -35,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: SpineColors.brass.withValues(alpha: 0.14),
+                color: palette.brass.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -43,7 +44,7 @@ class ProfileScreen extends StatelessWidget {
                 'S',
                 style: SpineText.bookTitle.copyWith(
                   fontSize: 24,
-                  color: SpineColors.brass,
+                  color: palette.brass,
                 ),
               ),
             ),
@@ -59,7 +60,7 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${progress.streak} DAY STREAK',
-                    style: SpineText.label.copyWith(color: SpineColors.brass),
+                    style: SpineText.label.copyWith(color: palette.brass),
                   ),
                 ],
               ),
@@ -87,6 +88,8 @@ class ProfileScreen extends StatelessWidget {
           value: '${library.books.length} books · $totalIdeas ideas',
         ),
         const SizedBox(height: 10),
+        const _AppearanceSetting(),
+        const SizedBox(height: 10),
         _Block(
           label: 'About',
           value: config.isProd ? 'Spine' : 'Spine · ${config.environment}',
@@ -104,11 +107,12 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
         decoration: BoxDecoration(
-          color: SpineColors.surface,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -119,7 +123,7 @@ class _Stat extends StatelessWidget {
             Text(
               label.toUpperCase(),
               style: SpineText.labelSmall.copyWith(
-                color: SpineColors.onInk(0.42),
+                color: palette.onGround(0.42),
               ),
             ),
           ],
@@ -137,11 +141,12 @@ class _Block extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
       decoration: BoxDecoration(
-        color: SpineColors.surface,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -150,7 +155,7 @@ class _Block extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: SpineText.labelSmall.copyWith(
-              color: SpineColors.onInk(0.42),
+              color: palette.onGround(0.42),
             ),
           ),
           const SizedBox(height: 8),
@@ -176,6 +181,8 @@ class _DailyIdeaSetting extends StatelessWidget {
   ];
 
   Future<void> _choose(BuildContext context, int? hour) async {
+
+    final palette = context.palette;
     final progress = context.read<ProgressController>();
 
     if (hour != null && progress.dailyIdeaHour == null) {
@@ -187,10 +194,10 @@ class _DailyIdeaSetting extends StatelessWidget {
           ..showSnackBar(
             SnackBar(
               behavior: SnackBarBehavior.floating,
-              backgroundColor: SpineColors.inkCard,
+              backgroundColor: palette.groundRaised,
               content: Text(
                 'Notifications are off in system settings',
-                style: SpineText.label.copyWith(color: SpineColors.parchment),
+                style: SpineText.label.copyWith(color: palette.text),
               ),
             ),
           );
@@ -203,6 +210,7 @@ class _DailyIdeaSetting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final selected = context.select<ProgressController, int?>(
       (controller) => controller.dailyIdeaHour,
     );
@@ -211,7 +219,7 @@ class _DailyIdeaSetting extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
       decoration: BoxDecoration(
-        color: SpineColors.surface,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -220,7 +228,7 @@ class _DailyIdeaSetting extends StatelessWidget {
           Text(
             'THE DAY\'S IDEA',
             style: SpineText.labelSmall.copyWith(
-              color: SpineColors.onInk(0.42),
+              color: palette.onGround(0.42),
             ),
           ),
           const SizedBox(height: 8),
@@ -264,6 +272,7 @@ class _TimeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return TapScale(
       onTap: onTap,
       semanticLabel: '$label notification',
@@ -272,14 +281,121 @@ class _TimeChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: active
-              ? SpineColors.brass.withValues(alpha: 0.2)
-              : SpineColors.surfaceRaised,
+              ? palette.brass.withValues(alpha: 0.2)
+              : palette.surfaceRaised,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label.toUpperCase(),
           style: SpineText.labelSmall.copyWith(
-            color: active ? SpineColors.brass : SpineColors.onInk(0.55),
+            color: active ? palette.brass : palette.onGround(0.55),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Light or dark, kept per reader.
+///
+/// A segmented control rather than a switch: "dark mode: on" leaves a reader
+/// guessing what off looks like, where two named options say it outright.
+class _AppearanceSetting extends StatelessWidget {
+  const _AppearanceSetting();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final dark = context.select<ProgressController, bool>(
+      (controller) => controller.darkMode,
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'APPEARANCE',
+            style: SpineText.label.copyWith(color: palette.onGround(0.45)),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _ModeChip(
+                  label: 'Paper',
+                  icon: Icons.light_mode_outlined,
+                  selected: !dark,
+                  onTap: () =>
+                      context.read<ProgressController>().setDarkMode(false),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ModeChip(
+                  label: 'Ink',
+                  icon: Icons.dark_mode_outlined,
+                  selected: dark,
+                  onTap: () =>
+                      context.read<ProgressController>().setDarkMode(true),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final foreground = selected ? palette.brass : palette.onGround(0.55);
+
+    return TapScale(
+      onTap: onTap,
+      semanticLabel: '$label mode',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? palette.brass.withValues(alpha: 0.16)
+              : palette.surfaceRaised,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: ExcludeSemantics(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: foreground),
+              const SizedBox(width: 8),
+              Text(
+                label.toUpperCase(),
+                style: SpineText.labelMedium.copyWith(color: foreground),
+              ),
+            ],
           ),
         ),
       ),

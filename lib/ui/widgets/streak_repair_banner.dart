@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../state/progress_controller.dart';
 import 'tap_scale.dart';
@@ -20,6 +20,7 @@ class StreakRepairBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final streak = context.select<ProgressController, int>(
       (controller) => controller.repairableStreak,
     );
@@ -32,9 +33,9 @@ class StreakRepairBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         decoration: BoxDecoration(
-          color: SpineColors.inkCard,
+          color: palette.groundRaised,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: SpineColors.brass.withValues(alpha: 0.35)),
+          border: Border.all(color: palette.brass.withValues(alpha: 0.35)),
         ),
         child: Row(
           children: [
@@ -47,7 +48,7 @@ class StreakRepairBanner extends StatelessWidget {
                   Text(
                     'YOUR $streak-DAY STREAK',
                     style: SpineText.labelSmall.copyWith(
-                      color: SpineColors.brass,
+                      color: palette.brass,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -66,7 +67,7 @@ class StreakRepairBanner extends StatelessWidget {
                 child: Text(
                   'NO',
                   style: SpineText.labelSmall.copyWith(
-                    color: SpineColors.onInk(0.45),
+                    color: palette.onGround(0.45),
                   ),
                 ),
               ),
@@ -81,12 +82,12 @@ class StreakRepairBanner extends StatelessWidget {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: SpineColors.brass,
+                  color: palette.brass,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   'RESTORE',
-                  style: SpineText.labelSmall.copyWith(color: SpineColors.ink),
+                  style: SpineText.labelSmall.copyWith(color: palette.ground),
                 ),
               ),
             ),

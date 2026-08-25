@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/idea.dart';
 import '../../services/reading/sentences.dart';
@@ -124,6 +124,7 @@ class _IdeaText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     // Scrolls only when the copy genuinely overflows — otherwise the vertical
     // drag belongs to the feed, not to this box.
     return SingleChildScrollView(
@@ -138,7 +139,7 @@ class _IdeaText extends StatelessWidget {
                 child: Text(
                   'IDEA ${index + 1} OF $total',
                   style: SpineText.label.copyWith(
-                    color: SpineColors.onInk(0.4),
+                    color: palette.onGround(0.4),
                   ),
                 ),
               ),
@@ -155,8 +156,8 @@ class _IdeaText extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: saved
-                        ? SpineColors.brass.withValues(alpha: 0.18)
-                        : SpineColors.surfaceRaised,
+                        ? palette.brass.withValues(alpha: 0.18)
+                        : palette.surfaceRaised,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   // The caps label is decoration; the button's name comes from
@@ -172,16 +173,16 @@ class _IdeaText extends StatelessWidget {
                               : Icons.bookmark_border_rounded,
                           size: 15,
                           color: saved
-                              ? SpineColors.brass
-                              : SpineColors.onInk(0.65),
+                              ? palette.brass
+                              : palette.onGround(0.65),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           saved ? 'SAVED' : 'SAVE',
                           style: SpineText.labelSmall.copyWith(
                             color: saved
-                                ? SpineColors.brass
-                                : SpineColors.onInk(0.65),
+                                ? palette.brass
+                                : palette.onGround(0.65),
                           ),
                         ),
                       ],
@@ -258,6 +259,7 @@ class _BodyState extends State<_Body> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final sentences = Sentences.of(widget.body);
     final style = SpineText.ideaBody.copyWith(fontSize: widget.fontSize);
 
@@ -266,22 +268,26 @@ class _BodyState extends State<_Body> {
         children: [
           for (var i = 0; i < sentences.length; i++) ...[
             if (i > 0) const TextSpan(text: ' '),
-            _sentenceSpan(sentences[i], style),
+            _sentenceSpan(palette, sentences[i], style),
           ],
         ],
       ),
     );
   }
 
-  TextSpan _sentenceSpan(String sentence, TextStyle style) {
+  TextSpan _sentenceSpan(
+    SpinePalette palette,
+    String sentence,
+    TextStyle style,
+  ) {
     final kept = widget.highlights.contains(sentence);
 
     return TextSpan(
       text: sentence,
       style: kept
           ? style.copyWith(
-              color: SpineColors.parchment,
-              backgroundColor: SpineColors.brass.withValues(alpha: 0.22),
+              color: palette.text,
+              backgroundColor: palette.brass.withValues(alpha: 0.22),
             )
           : style,
       recognizer: _recogniserFor(sentence),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../data/models/book.dart';
 import '../widgets/tap_scale.dart';
@@ -26,6 +26,7 @@ class BookHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -41,7 +42,7 @@ class BookHeader extends StatelessWidget {
                     if (book.durationLabel.isNotEmpty) book.durationLabel,
                   ].join('   ·   '),
                   style: SpineText.label.copyWith(
-                    color: SpineColors.onInk(0.55),
+                    color: palette.onGround(0.55),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -78,6 +79,7 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return TapScale(
       onTap: onTap,
       semanticLabel: saved ? 'Remove from saved' : 'Save book',
@@ -86,13 +88,13 @@ class _SaveButton extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: saved ? SpineColors.surfaceRaised : SpineColors.surface,
+          color: saved ? palette.surfaceRaised : palette.surface,
           shape: BoxShape.circle,
         ),
         child: Icon(
           saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
           size: 19,
-          color: saved ? SpineColors.brass : SpineColors.onInk(0.62),
+          color: saved ? palette.brass : palette.onGround(0.62),
         ),
       ),
     );

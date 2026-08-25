@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 
 /// The rounded, mono-type chip used for status markers.
@@ -12,8 +12,8 @@ class SpinePill extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.foreground = SpineColors.parchmentDim,
-    this.background = SpineColors.surface,
+    this.foreground,
+    this.background,
     this.dense = false,
   });
 
@@ -29,28 +29,34 @@ class SpinePill extends StatelessWidget {
 
   final String label;
   final IconData? icon;
-  final Color foreground;
-  final Color background;
+  /// Null falls back to the palette's own label and surface colours, resolved
+  /// at build so the pill follows the mode being read.
+  final Color? foreground;
+  final Color? background;
   final bool dense;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final fg = foreground ?? palette.textDim;
+    final bg = background ?? palette.surface;
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: dense ? 9 : 11, vertical: 6),
       decoration: BoxDecoration(
-        color: background,
+        color: bg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 11, color: foreground),
+            Icon(icon, size: 11, color: fg),
             const SizedBox(width: 6),
           ],
           Text(
             label.toUpperCase(),
-            style: SpineText.label.copyWith(color: foreground),
+            style: SpineText.label.copyWith(color: fg),
           ),
         ],
       ),

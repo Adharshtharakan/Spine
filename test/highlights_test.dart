@@ -200,4 +200,27 @@ void main() {
       expect(restored.canRepair(wednesday), isTrue);
     });
   });
+
+  group('appearance', () {
+    test('defaults to dark, so an upgrade keeps the app people had', () {
+      expect(const SessionState().darkMode, isTrue);
+    });
+
+    test('the choice survives a round trip', () {
+      const chosen = SessionState(darkMode: false);
+      expect(SessionState.fromJson(chosen.toJson()).darkMode, isFalse);
+    });
+
+    test('repairing a streak does not silently flip the mode', () {
+      // repair() rebuilds the whole object rather than copying, so every
+      // unrelated preference has to be carried across by hand.
+      final broken = const SessionState(
+        darkMode: false,
+        streak: 9,
+        lastActiveDay: '2026-03-02',
+      ).touch(DateTime(2026, 3, 4));
+
+      expect(broken.repair(DateTime(2026, 3, 4)).darkMode, isFalse);
+    });
+  });
 }

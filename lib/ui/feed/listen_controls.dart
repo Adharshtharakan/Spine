@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 import '../../core/theme/spine_text.dart';
 import '../../services/audio/playback_snapshot.dart';
 import '../sharing/story_share_button.dart';
@@ -34,6 +34,7 @@ class ListenControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -54,7 +55,7 @@ class ListenControls extends StatelessWidget {
                     Text(
                       _clock(snapshot.position),
                       style: SpineText.label.copyWith(
-                        color: SpineColors.onInk(0.62),
+                        color: palette.onGround(0.62),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -62,7 +63,7 @@ class ListenControls extends StatelessWidget {
                       Text(
                         'PREVIEW',
                         style: SpineText.labelSmall.copyWith(
-                          color: SpineColors.brassDim,
+                          color: palette.brassDim,
                         ),
                       ),
                   ],
@@ -71,7 +72,7 @@ class ListenControls extends StatelessWidget {
             ),
             Text(
               _clock(snapshot.duration),
-              style: SpineText.label.copyWith(color: SpineColors.onInk(0.34)),
+              style: SpineText.label.copyWith(color: palette.onGround(0.34)),
             ),
           ],
         ),
@@ -115,6 +116,7 @@ class _Scrubber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return LayoutBuilder(
       builder: (context, constraints) {
         void seekTo(double dx) =>
@@ -133,7 +135,7 @@ class _Scrubber extends StatelessWidget {
               child: SizedBox(
                 height: 4,
                 child: ColoredBox(
-                  color: SpineColors.surface,
+                  color: palette.surface,
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: FractionallySizedBox(
@@ -165,6 +167,7 @@ class _PlayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return TapScale(
       onTap: onTap,
       scale: 0.93,
@@ -190,7 +193,7 @@ class _PlayButton extends StatelessWidget {
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
                 size: 30,
-                color: SpineColors.parchment,
+                color: palette.text,
               ),
       ),
     );

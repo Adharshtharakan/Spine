@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../core/theme/spine_colors.dart';
+import '../../core/theme/spine_palette.dart';
 
 /// The book's colour as light rather than as a panel.
 ///
@@ -29,6 +30,7 @@ class AmbientBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final size = MediaQuery.sizeOf(context);
     final bloom = size.width * 1.45;
 
@@ -92,9 +94,9 @@ class AmbientBackdrop extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      SpineColors.ink.withValues(alpha: 0),
-                      SpineColors.ink.withValues(alpha: 0.55),
-                      SpineColors.ink.withValues(alpha: 0.92),
+                      palette.ground.withValues(alpha: 0),
+                      palette.ground.withValues(alpha: 0.55),
+                      palette.ground.withValues(alpha: 0.92),
                     ],
                     stops: const [0.18, 0.44, 0.72],
                   ),
