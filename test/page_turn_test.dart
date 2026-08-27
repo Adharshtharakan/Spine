@@ -72,21 +72,23 @@ void main() {
     expect(find.text('one'), findsOneWidget);
   });
 
-  testWidgets('a page that never changes is never wrapped in a transform', (
+  testWidgets('a page that never changes is wrapped in nothing at all', (
     tester,
   ) async {
-    // A perspective matrix left in place distorts hit testing — the long-press
-    // that highlights a sentence lands at the wrong offset.
+    // Whatever the turn puts round the page has to come off once it lands.
+    // A clip or a transform left in place costs a layer on every frame the
+    // reader is actually reading, and a perspective matrix left in place also
+    // distorts hit testing — the long-press that highlights a sentence lands
+    // at the wrong offset.
     await pumpTurn(tester, text: 'one', key: 1, forward: true);
     await tester.pumpAndSettle();
 
-    expect(
-      find.descendant(
-        of: find.byType(PageTurn),
-        matching: find.byType(Transform),
-      ),
-      findsNothing,
-    );
+    Finder inside(Type type) =>
+        find.descendant(of: find.byType(PageTurn), matching: find.byType(type));
+
+    expect(inside(Transform), findsNothing);
+    expect(inside(ClipPath), findsNothing);
+    expect(inside(ClipRect), findsNothing);
   });
 
   testWidgets('turning again mid-turn does not strand the old page', (
@@ -106,19 +108,27 @@ void main() {
     expect(find.text('three'), findsOneWidget);
   });
 
-  testWidgets('past upright the leaf shows its back, not mirrored text', (
+  testWidgets('mid-turn the sheet is cut into a fold, not spun whole', (
     tester,
   ) async {
+    // Three pieces, and it has to be all three: the part still lying flat, the
+    // part folded back over it, and the page uncovered beyond the crease. A
+    // sheet spun about the spine instead reads as nothing happening for half
+    // the turn — under perspective the near edge is magnified by as much as
+    // the rotation foreshortens it — and then going edge-on and vanishing.
     await pumpTurn(tester, text: 'one', key: 1, forward: true);
     await tester.pumpAndSettle();
 
     await pumpTurn(tester, text: 'two', key: 2, forward: true);
-    // Beyond the midpoint the leaving page has turned over. Drawing its own
-    // content there would show it back to front.
-    await tester.pump(const Duration(milliseconds: 380));
+    await tester.pump(const Duration(milliseconds: 260));
 
-    expect(find.text('one'), findsNothing);
-    expect(find.text('two'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(PageTurn),
+        matching: find.byType(ClipPath),
+      ),
+      findsNWidgets(3),
+    );
 
     await tester.pumpAndSettle();
   });

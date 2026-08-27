@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spine/data/models/session_state.dart';
 
@@ -35,5 +36,31 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Saved').last);
     await tester.pumpAndSettle();
     await capture(tester, 'paper_saved');
+  });
+
+  testWidgets('paper — mid page turn', (tester) async {
+    usePhoneSurface(tester);
+
+    final store = InMemoryProgressStore();
+    await store.saveSession(const SessionState(darkMode: false));
+
+    await pumpApp(tester, store: store);
+    await swipeToCard(tester, 1);
+
+    await tester.tap(find.text('NEXT'));
+    // The tap only schedules a rebuild; the turn starts on the frame after it.
+    // Advancing straight from the tap captured the animation at exactly zero —
+    // one page drawn whole and the other clipped away to nothing, which looks
+    // like the fold not working at all.
+    await tester.pump();
+    // Caught partway through, while the crease is out over the page.
+    await tester.pump(const Duration(milliseconds: 230));
+    await precacheCovers(tester);
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('output/paper_turn.png'),
+    );
+    await tester.pumpAndSettle();
   });
 }

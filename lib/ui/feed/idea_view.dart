@@ -54,37 +54,21 @@ class IdeaView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 340),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 0.03),
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
-        ),
-      ),
-      layoutBuilder: (current, previous) => Stack(
-        alignment: Alignment.topLeft,
-        children: [...previous, if (current != null) current],
-      ),
-      child: _IdeaText(
-        key: ValueKey(idea.id),
-        idea: idea,
-        index: index,
-        total: total,
-        saved: saved,
-        onToggleSave: onToggleSave,
-        highlights: highlights,
-        onToggleHighlight: onToggleHighlight,
-        accent: accent,
-        compact: compact,
-        dense: dense,
-      ),
+    // No transition of its own. PageTurn moves between ideas now, and a
+    // cross-fade running inside the turning leaf put both ideas on screen at
+    // once, flat, which read as no turn happening at all.
+    return _IdeaText(
+      key: ValueKey(idea.id),
+      idea: idea,
+      index: index,
+      total: total,
+      saved: saved,
+      onToggleSave: onToggleSave,
+      highlights: highlights,
+      onToggleHighlight: onToggleHighlight,
+      accent: accent,
+      compact: compact,
+      dense: dense,
     );
   }
 }
@@ -175,17 +159,14 @@ class _IdeaText extends StatelessWidget {
                               ? Icons.bookmark_rounded
                               : Icons.bookmark_border_rounded,
                           size: 15,
-                          color: saved
-                              ? palette.brass
-                              : palette.onGround(0.65),
+                          color: saved ? palette.brass : palette.onGround(0.65),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           saved ? 'SAVED' : 'SAVE',
                           style: SpineText.labelSmall.copyWith(
-                            color: saved
-                                ? palette.brass
-                                : palette.onGround(0.65),
+                            color:
+                                saved ? palette.brass : palette.onGround(0.65),
                           ),
                         ),
                       ],
@@ -305,7 +286,6 @@ class _BodyState extends State<_Body> {
   }
 }
 
-
 /// The rule between an idea's title and its body: a short line either side of
 /// the same four-pointed star the bookmark uses. It is the one ornament in the
 /// design, and it marks where the heading stops and the prose starts.
@@ -317,10 +297,10 @@ class _Ornament extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget rule() => Container(
-      width: 46,
-      height: 1,
-      color: accent.withValues(alpha: 0.5),
-    );
+          width: 46,
+          height: 1,
+          color: accent.withValues(alpha: 0.5),
+        );
 
     return Row(
       children: [

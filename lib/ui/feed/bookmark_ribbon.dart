@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/spine_palette.dart';
@@ -181,20 +183,40 @@ class _Stars extends StatelessWidget {
   final Color accent;
   final ValueChanged<int> onSelect;
 
+  /// Kept clear at the bottom for the swallowtail.
+  static const _footRoom = 26.0;
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final step = constraints.maxHeight / count;
+        final height = constraints.maxHeight;
+
+        // The run stops short of the foot: the swallowtail is cut out of the
+        // ribbon there, and a star sitting in the notch reads as a mistake.
+        // On a short ribbon — Listen mode, a small screen — a fixed 26 is a
+        // large share of the column and squeezes the run unevenly, so it gives
+        // way proportionally.
+        final foot = math.min(_footRoom, height * 0.12);
+        final usable = math.max(height - foot, 0.0);
+        final step = usable / count;
+
+        // Stars are drawn to whatever the spacing will carry. At the fixed
+        // slot they collided on a short ribbon, and stars overlapping their
+        // neighbours is exactly what reads as uneven spacing — the gaps are
+        // even, but the shapes are not.
+        final slot = math.min(_Star.slot, step);
 
         return Stack(
           children: [
-            // The thread the stars are strung on, drawn behind them.
+            // The thread the stars are strung on, drawn behind them. It spans
+            // the centres of the first and last star, not the whole column, or
+            // it pokes out past both ends.
             Positioned(
               top: step / 2,
-              bottom: step / 2,
+              bottom: foot + step / 2,
               left: 0,
               right: 0,
               child: Center(
@@ -225,6 +247,7 @@ class _Stars extends StatelessWidget {
                         current: i == currentIndex,
                         colour: accent,
                         dim: palette.onGround(0.30),
+                        slotSize: slot,
                       ),
                     ),
                   ),
@@ -238,11 +261,16 @@ class _Stars extends StatelessWidget {
 }
 
 class _Star extends StatelessWidget {
+  /// What a star is drawn at when the ribbon has room for it. Every star in a
+  /// ribbon gets the same box whatever its state.
+  static const slot = 19.0;
+
   const _Star({
     required this.filled,
     required this.current,
     required this.colour,
     required this.dim,
+    required this.slotSize,
   });
 
   final bool filled;
@@ -250,19 +278,27 @@ class _Star extends StatelessWidget {
   final Color colour;
   final Color dim;
 
+  /// What this ribbon can actually carry, which on a short one is less than
+  /// [slot].
+  final double slotSize;
+
   @override
   Widget build(BuildContext context) {
     // The reader's own star is larger and brighter; it is the thing that
     // travels, so it has to be the thing the eye lands on.
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-      width: current ? 20 : 13,
-      height: current ? 20 : 13,
-      child: CustomPaint(
-        painter: OrnamentStar(
-          colour: filled ? colour : dim,
-          filled: filled,
+    //
+    // Scaled, not resized. Growing the box moved the star within its slot and
+    // pushed the gaps around it out of step — the spacing looked wrong on
+    // whichever card happened to be on screen.
+    return SizedBox(
+      width: slotSize,
+      height: slotSize,
+      child: AnimatedScale(
+        scale: current ? 1.0 : 0.68,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        child: CustomPaint(
+          painter: OrnamentStar(colour: filled ? colour : dim, filled: filled),
         ),
       ),
     );
@@ -277,22 +313,37 @@ class OrnamentStar extends CustomPainter {
   final Color colour;
   final bool filled;
 
+  /// How thick an unfilled star is drawn.
+  static const _stroke = 1.4;
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
+
+    // A stroke straddles the line it follows, so an outline star drawn on the
+    // same path as a filled one comes out half a stroke wider all round. Next
+    // to each other down a ribbon that reads as the unfilled ones being a
+    // different size from the filled ones — which is exactly the inconsistency
+    // it looks like. Inset the outline instead, so both fill the same box.
+    final inset = filled ? 0.0 : _stroke / 2;
+    final left = inset;
+    final top = inset;
+    final right = w - inset;
+    final bottom = h - inset;
     final cx = w / 2;
     final cy = h / 2;
+
     // Waist controls how sharp the points are: the closer to the centre, the
     // more it reads as a sparkle rather than a diamond.
-    final waist = w * 0.16;
+    final waist = (right - left) * 0.16;
 
     final path = Path()
-      ..moveTo(cx, 0)
-      ..quadraticBezierTo(cx + waist, cy - waist, w, cy)
-      ..quadraticBezierTo(cx + waist, cy + waist, cx, h)
-      ..quadraticBezierTo(cx - waist, cy + waist, 0, cy)
-      ..quadraticBezierTo(cx - waist, cy - waist, cx, 0)
+      ..moveTo(cx, top)
+      ..quadraticBezierTo(cx + waist, cy - waist, right, cy)
+      ..quadraticBezierTo(cx + waist, cy + waist, cx, bottom)
+      ..quadraticBezierTo(cx - waist, cy + waist, left, cy)
+      ..quadraticBezierTo(cx - waist, cy - waist, cx, top)
       ..close();
 
     canvas.drawPath(
@@ -300,7 +351,8 @@ class OrnamentStar extends CustomPainter {
       Paint()
         ..color = colour
         ..style = filled ? PaintingStyle.fill : PaintingStyle.stroke
-        ..strokeWidth = 1.4,
+        ..strokeWidth = _stroke
+        ..strokeJoin = StrokeJoin.round,
     );
   }
 
