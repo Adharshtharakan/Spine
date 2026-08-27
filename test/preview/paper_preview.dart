@@ -22,4 +22,18 @@ void main() {
     await swipeToCard(tester, 1);
     await capture(tester, 'paper_shelf');
   });
+
+  testWidgets('paper — saved', (tester) async {
+    usePhoneSurface(tester);
+
+    final store = InMemoryProgressStore();
+    await store.saveSession(const SessionState(darkMode: false));
+
+    await pumpApp(tester, store: store);
+    // The shell painted a hardcoded dark gradient behind every tab; the shelf
+    // was only ever hiding it behind a card.
+    await tester.tap(find.bySemanticsLabel('Saved').last);
+    await tester.pumpAndSettle();
+    await capture(tester, 'paper_saved');
+  });
 }

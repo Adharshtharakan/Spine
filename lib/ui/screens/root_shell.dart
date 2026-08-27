@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/spine_colors.dart';
 import '../../core/theme/spine_palette.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
@@ -59,7 +58,7 @@ class _RootShellState extends State<RootShell> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: palette.ground,
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: SpineColors.feedBackground),
+        decoration: BoxDecoration(gradient: context.palette.backdrop),
         // The masthead floats over the feed rather than sitting on a bar above
         // it, so a book's light can run all the way to the top of the screen.
         // Tabs that scroll a list inset themselves to clear it instead.

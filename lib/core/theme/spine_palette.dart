@@ -59,6 +59,16 @@ class SpinePalette extends ThemeExtension<SpinePalette> {
   final Color ribbon;
   final Color ribbonEdge;
 
+  /// The field behind every tab. A faint lift toward the top rather than a flat
+  /// fill, so a screen of plain text still has somewhere to look. This used to
+  /// be a hardcoded dark gradient in the shell, which left Search, Saved and
+  /// Profile dark on paper — the shelf was only ever hiding it behind a card.
+  Gradient get backdrop => RadialGradient(
+    center: const Alignment(0, -0.75),
+    radius: 1.2,
+    colors: [groundRaised, ground],
+  );
+
   bool get isDark => brightness == Brightness.dark;
 
   /// Text at a given strength, for the many places that want a softer weight

@@ -37,6 +37,17 @@ class BookmarkRibbon extends StatelessWidget {
   /// this, so it is part of the page's left margin rather than an overlay.
   static const width = 58.0;
 
+  /// The ribbon's own colour, tinted by the book but never so far that it
+  /// stops reading as a paper bookmark.
+  Color _body(SpinePalette palette) {
+    final tint = HSLColor.fromColor(accent);
+    final base = HSLColor.fromColor(palette.ribbon);
+    return base
+        .withHue(tint.hue)
+        .withSaturation((base.saturation * 0.85).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
@@ -45,11 +56,14 @@ class BookmarkRibbon extends StatelessWidget {
       width: width,
       child: CustomPaint(
         painter: _RibbonPainter(
-          body: palette.isDark
-              ? accent.withValues(alpha: 0.22)
-              : accent.withValues(alpha: 0.30),
-          edge: accent.withValues(alpha: palette.isDark ? 0.45 : 0.55),
-          stitch: palette.isDark ? palette.onGround(0.18) : accent,
+          // The mockup's bookmark is a printed object, not a wash: an opaque
+          // warm body with the weave showing through it.
+          body: _body(palette),
+          shade: _body(palette).withValues(alpha: 0.0),
+          edge: palette.ribbonEdge,
+          stitch: palette.isDark
+              ? palette.onGround(0.22)
+              : palette.ribbonEdge.withValues(alpha: 0.8),
         ),
         child: Padding(
           padding: EdgeInsets.fromLTRB(0, compact ? 14 : 20, 0, 36),
@@ -96,7 +110,9 @@ class _Counter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final ink = palette.isDark ? palette.text : palette.text;
+    // Printed on the ribbon, so it takes its contrast from the ribbon's own
+    // body rather than from the page behind it.
+    final ink = palette.isDark ? palette.text : const Color(0xFF3A2E14);
 
     return ExcludeSemantics(
       child: Column(
@@ -298,11 +314,13 @@ class OrnamentStar extends CustomPainter {
 class _RibbonPainter extends CustomPainter {
   const _RibbonPainter({
     required this.body,
+    required this.shade,
     required this.edge,
     required this.stitch,
   });
 
   final Color body;
+  final Color shade;
   final Color edge;
   final Color stitch;
 
@@ -311,16 +329,44 @@ class _RibbonPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     const notch = 22.0;
+    const head = 10.0;
 
+    // Rounded at the head, square down the sides, swallowtailed at the foot.
     final shape = Path()
-      ..moveTo(0, 0)
-      ..lineTo(w, 0)
+      ..moveTo(0, head)
+      ..quadraticBezierTo(0, 0, head, 0)
+      ..lineTo(w - head, 0)
+      ..quadraticBezierTo(w, 0, w, head)
       ..lineTo(w, h)
       ..lineTo(w / 2, h - notch)
       ..lineTo(0, h)
       ..close();
 
+    canvas.save();
+    canvas.clipPath(shape);
     canvas.drawPath(shape, Paint()..color = body);
+
+    // A woven grain, printed into the body. Two crossing sets of hairlines at
+    // very low contrast: enough to read as cloth up close, invisible as
+    // pattern at arm's length.
+    final weave = Paint()
+      ..color = edge.withValues(alpha: 0.16)
+      ..strokeWidth = 0.7;
+    for (var d = -h; d < w + h; d += 7) {
+      canvas.drawLine(Offset(d, 0), Offset(d + h, h), weave);
+      canvas.drawLine(Offset(d + h, 0), Offset(d, h), weave);
+    }
+
+    // The fold shadow down the inner edge, so it sits on the page rather than
+    // in it.
+    canvas.drawRect(
+      Rect.fromLTWH(w - 6, 0, 6, h),
+      Paint()
+        ..shader = LinearGradient(
+          colors: [shade, edge.withValues(alpha: 0.28)],
+        ).createShader(Rect.fromLTWH(w - 6, 0, 6, h)),
+    );
+    canvas.restore();
     canvas.drawPath(
       shape,
       Paint()

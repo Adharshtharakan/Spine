@@ -37,46 +37,69 @@ class SpineBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
+    // A condensed floating bar rather than a full-width strip: inset from the
+    // edges, fully rounded, and lifted off the bottom so the page runs beneath
+    // it. The shape is the affordance — it reads as a control resting on the
+    // page rather than a chrome band the page stops at.
     return SafeArea(
       top: false,
-      child: SizedBox(
-        height: 58,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final slot = constraints.maxWidth / SpineTab.values.length;
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: palette.groundRaised,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: palette.isDark
+                    ? Colors.black.withValues(alpha: 0.45)
+                    : Colors.black.withValues(alpha: 0.10),
+                blurRadius: 22,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: SizedBox(
+            height: 62,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final slot = constraints.maxWidth / SpineTab.values.length;
 
-            return Stack(
-              children: [
-                // The bubble travels between tabs rather than appearing under
-                // the new one. Overshoot on the way, and a squash across the
-                // travel axis, is what makes it read as something elastic
-                // being flung rather than a rectangle being moved.
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 420),
-                  curve: Curves.easeOutBack,
-                  left: slot * currentIndex,
-                  width: slot,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: _Bubble(colour: palette.brass, index: currentIndex),
-                  ),
-                ),
-                Row(
+                return Stack(
                   children: [
-                    for (var i = 0; i < SpineTab.values.length; i++)
-                      Expanded(
-                        child: _NavItem(
-                          tab: SpineTab.values[i],
-                          active: i == currentIndex,
-                          onTap: () => onSelect(i),
-                        ),
+                    // The bubble travels between tabs rather than appearing under
+                    // the new one. Overshoot on the way, and a squash across the
+                    // travel axis, is what makes it read as something elastic
+                    // being flung rather than a rectangle being moved.
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 420),
+                      curve: Curves.easeOutBack,
+                      left: slot * currentIndex,
+                      width: slot,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child:
+                            _Bubble(colour: palette.brass, index: currentIndex),
                       ),
+                    ),
+                    Row(
+                      children: [
+                        for (var i = 0; i < SpineTab.values.length; i++)
+                          Expanded(
+                            child: _NavItem(
+                              tab: SpineTab.values[i],
+                              active: i == currentIndex,
+                              onTap: () => onSelect(i),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
-                ),
-              ],
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -84,7 +107,8 @@ class SpineBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.tab, required this.active, required this.onTap});
+  const _NavItem(
+      {required this.tab, required this.active, required this.onTap});
 
   final SpineTab tab;
   final bool active;
@@ -122,7 +146,6 @@ class _NavItem extends StatelessWidget {
     );
   }
 }
-
 
 /// The travelling highlight behind the selected tab.
 ///
@@ -176,11 +199,11 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
           scaleX: 1 + squash * 0.35,
           scaleY: 1 - squash * 0.22,
           child: Container(
-            width: 54,
-            height: 38,
+            width: 52,
+            height: 42,
             decoration: BoxDecoration(
               color: widget.colour.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(19),
+              borderRadius: BorderRadius.circular(21),
             ),
           ),
         );
