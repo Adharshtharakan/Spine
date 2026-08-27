@@ -39,14 +39,14 @@ class StoryShareButton extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: palette.surfaceRaised,
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(32),
           ),
           child: ExcludeSemantics(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.share_outlined, size: 16, color: palette.brass),
-                const SizedBox(width: 9),
+                Icon(Icons.share_outlined, size: 19, color: palette.brass),
+                const SizedBox(width: 11),
                 Text(
                   'SHARE',
                   style: SpineText.labelMedium.copyWith(color: palette.brass),

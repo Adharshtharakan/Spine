@@ -19,6 +19,11 @@ import '../../core/theme/spine_palette.dart';
 ///  * **The leaf shades as it stands up**, and casts onto the page beneath.
 ///    Without that it reads as a rotating rectangle rather than paper.
 ///
+///  * **It goes all the way over.** A leaf that stops edge-on at ninety
+///    degrees and disappears is a card being dismissed. A real page keeps
+///    going, and past upright you are looking at its back — so the turn runs a
+///    full half circle and swaps to a blank reverse face at the midpoint.
+///
 /// This is a rigid leaf, not a curl. A real curl needs a deformed mesh, and
 /// the cost of that is out of proportion to half a second of motion.
 class PageTurn extends StatefulWidget {
@@ -119,11 +124,11 @@ class _Beneath extends StatelessWidget {
       fit: StackFit.passthrough,
       children: [
         child,
-        // Deepest when the leaf is halfway up — that is when it is closest to
-        // standing over this page. Gone by the time it is flat or edge-on.
+        // Deepest as the leaf passes upright, which is when it stands closest
+        // over this page. Gone once it is flat, either side.
         IgnorePointer(
           child: Opacity(
-            opacity: math.sin(lift * math.pi) * 0.30,
+            opacity: math.sin(lift * math.pi).clamp(0.0, 1.0) * 0.32,
             child: const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -141,11 +146,11 @@ class _Beneath extends StatelessWidget {
   }
 }
 
-/// The leaf in flight: hinged at the spine, shading as it stands up.
+/// The leaf in flight: hinged at the spine, turning a full half circle.
 class _Leaf extends StatelessWidget {
   const _Leaf({required this.lift, required this.child});
 
-  /// 0 flat on the page, 1 standing edge-on at the spine.
+  /// 0 lying flat on the page, 1 turned right over onto the other side.
   final double lift;
 
   final Widget child;
@@ -153,19 +158,42 @@ class _Leaf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final angle = -lift * math.pi;
+
+    // Past upright the reader is looking at the back of the leaf. Rendering the
+    // page's own content there would show it mirrored — what a real page shows
+    // is blank stock catching the light.
+    final showingFront = lift < 0.5;
+
+    // Deepest as it passes upright, from either side.
+    final shade = math.sin(lift * math.pi).clamp(0.0, 1.0);
 
     return Transform(
-      // The spine. Fixed, both directions — this is the whole point.
+      // The spine. Fixed, both directions — this is the whole point. Forward,
+      // the free edge lifts off the right and carries left; backward it comes
+      // back down to the right, which is the same motion rewound.
       alignment: Alignment.centerLeft,
       transform: Matrix4.identity()
         // Without perspective the rotation is an affine squash and reads as a
         // shrink rather than a turn.
         ..setEntry(3, 2, 0.0012)
-        ..rotateY(-lift * math.pi / 2),
+        ..rotateY(angle),
       child: Stack(
         fit: StackFit.passthrough,
         children: [
-          child,
+          if (showingFront)
+            child
+          else
+            // The reverse of the sheet. Flipped back the right way round so it
+            // isn't a mirror of nothing, and left plain.
+            Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()..rotateY(math.pi),
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: palette.groundRaised),
+                child: const SizedBox.expand(),
+              ),
+            ),
           IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -173,10 +201,10 @@ class _Leaf extends StatelessWidget {
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
-                    // Darkest at the spine, where a lifted page catches least
+                    // Darkest at the spine, where a turning page catches least
                     // light, easing out across the leaf.
-                    palette.ground.withValues(alpha: 0.85 * lift),
-                    palette.ground.withValues(alpha: 0.10 * lift),
+                    palette.ground.withValues(alpha: 0.80 * shade),
+                    palette.ground.withValues(alpha: 0.12 * shade),
                   ],
                 ),
               ),

@@ -34,14 +34,17 @@ void main() {
     expect(find.text('one'), findsOneWidget);
   });
 
-  testWidgets('turning forward shows both pages mid-turn', (tester) async {
+  testWidgets('turning forward shows both pages before the leaf goes over', (
+    tester,
+  ) async {
     await pumpTurn(tester, text: 'one', key: 1, forward: true);
     await tester.pumpAndSettle();
 
     await pumpTurn(tester, text: 'two', key: 2, forward: true);
-    await tester.pump(const Duration(milliseconds: 200));
+    // Early, while the leaf is still face-up: past upright it turns onto its
+    // back and its text is no longer the side you can see.
+    await tester.pump(const Duration(milliseconds: 150));
 
-    // The leaving page is still in flight above the arriving one.
     expect(find.text('one'), findsOneWidget);
     expect(find.text('two'), findsOneWidget);
 
@@ -55,8 +58,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Backward: the page being returned to swings down onto the current one.
+    // It starts face-down — the reader sees its back until it passes upright —
+    // so the point where both faces are readable is late in the turn, the
+    // mirror of the forward case.
     await pumpTurn(tester, text: 'one', key: 1, forward: false);
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 420));
 
     expect(find.text('two'), findsOneWidget);
     expect(find.text('one'), findsOneWidget);
@@ -98,5 +104,22 @@ void main() {
     expect(find.text('one'), findsNothing);
     expect(find.text('two'), findsNothing);
     expect(find.text('three'), findsOneWidget);
+  });
+
+  testWidgets('past upright the leaf shows its back, not mirrored text', (
+    tester,
+  ) async {
+    await pumpTurn(tester, text: 'one', key: 1, forward: true);
+    await tester.pumpAndSettle();
+
+    await pumpTurn(tester, text: 'two', key: 2, forward: true);
+    // Beyond the midpoint the leaving page has turned over. Drawing its own
+    // content there would show it back to front.
+    await tester.pump(const Duration(milliseconds: 380));
+
+    expect(find.text('one'), findsNothing);
+    expect(find.text('two'), findsOneWidget);
+
+    await tester.pumpAndSettle();
   });
 }
