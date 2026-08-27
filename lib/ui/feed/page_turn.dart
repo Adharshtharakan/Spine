@@ -4,28 +4,35 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/spine_palette.dart';
 
-/// Turns one idea to the next like a page.
+/// Turns one idea to the next the way a leaf turns in a book.
 ///
-/// This is a perspective flip, not a paper curl. A true curl needs a deformed
-/// mesh — a fragment shader or a custom `Canvas.drawVertices` — and the cost of
-/// getting it right is out of proportion to a transition the reader sees for
-/// 400ms. Rotating each page about its inner edge, with a shadow that deepens
-/// as it goes, reads as a page turning and costs a matrix.
+/// The physics that matter, and that a cross-fade or a slide both miss:
 ///
-/// Direction follows the reader: forward turns the leaving page away to the
-/// left, backward brings it back from the left.
-class PageTurn extends StatelessWidget {
+///  * **The hinge never moves.** A page is bound at the spine, so it pivots
+///    about the same edge whichever way you go. Swapping the hinge by
+///    direction — which is what a naive implementation does — makes going back
+///    look like a different object entirely.
+///  * **Only one leaf moves.** Going forward, the page you are on lifts and
+///    swings away, and the next page is simply revealed lying underneath it.
+///    Going back, the previous page swings down on top of the one you are on.
+///    The other leaf is still.
+///  * **The leaf shades as it stands up**, and casts onto the page beneath.
+///    Without that it reads as a rotating rectangle rather than paper.
+///
+/// This is a rigid leaf, not a curl. A real curl needs a deformed mesh, and
+/// the cost of that is out of proportion to half a second of motion.
+class PageTurn extends StatefulWidget {
   const PageTurn({
     super.key,
     required this.child,
     required this.turnKey,
     required this.forward,
-    this.duration = const Duration(milliseconds: 420),
+    this.duration = const Duration(milliseconds: 520),
   });
 
   final Widget child;
 
-  /// Changing this is what starts a turn.
+  /// Changing this turns the page.
   final Object turnKey;
 
   /// Which way the reader is going.
@@ -34,96 +41,149 @@ class PageTurn extends StatelessWidget {
   final Duration duration;
 
   @override
+  State<PageTurn> createState() => _PageTurnState();
+}
+
+class _PageTurnState extends State<PageTurn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  );
+
+  /// The page being left behind, held only for as long as the turn lasts.
+  Widget? _leaving;
+  bool _forward = true;
+
+  @override
+  void didUpdateWidget(PageTurn old) {
+    super.didUpdateWidget(old);
+    if (old.turnKey == widget.turnKey) return;
+
+    _leaving = old.child;
+    _forward = widget.forward;
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: duration,
-      // The outgoing page has to finish leaving before the new one is done
-      // arriving, or both are edge-on at once and the card looks empty.
-      reverseDuration: duration,
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      layoutBuilder: (current, previous) => Stack(
-        alignment: Alignment.centerLeft,
-        children: [...previous, if (current != null) current],
-      ),
-      transitionBuilder: (child, animation) => _Leaf(
-        animation: animation,
-        forward: forward,
-        child: child,
-      ),
-      child: KeyedSubtree(key: ValueKey(turnKey), child: child),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final leaving = _leaving;
+        // Flat and still: hand the page through untouched. A perspective matrix
+        // left in place distorts hit testing, and the long-press that
+        // highlights a sentence lands at the wrong offset.
+        if (leaving == null || !_controller.isAnimating) return widget.child;
+
+        final t = Curves.easeInOut.transform(_controller.value);
+
+        // Forward: the page you were on lifts away, the new one lies beneath.
+        // Backward: the page you were on stays put, and the one you are
+        // returning to swings down onto it.
+        final beneath = _forward ? widget.child : leaving;
+        final moving = _forward ? leaving : widget.child;
+
+        // Both run 0 (flat) to 1 (edge-on), so the leaf is always drawn by the
+        // same code; only the direction of travel through it differs.
+        final lift = _forward ? t : 1 - t;
+
+        return Stack(
+          fit: StackFit.passthrough,
+          children: [
+            _Beneath(lift: lift, child: beneath),
+            _Leaf(lift: lift, child: moving),
+          ],
+        );
+      },
     );
   }
 }
 
-class _Leaf extends StatelessWidget {
-  const _Leaf({
-    required this.animation,
-    required this.forward,
-    required this.child,
-  });
+/// The still page, with the moving leaf's shadow sweeping across it.
+class _Beneath extends StatelessWidget {
+  const _Beneath({required this.lift, required this.child});
 
-  final Animation<double> animation;
-  final bool forward;
+  final double lift;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        // Deepest when the leaf is halfway up — that is when it is closest to
+        // standing over this page. Gone by the time it is flat or edge-on.
+        IgnorePointer(
+          child: Opacity(
+            opacity: math.sin(lift * math.pi) * 0.30,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Colors.black, Colors.transparent],
+                  stops: [0, 0.7],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The leaf in flight: hinged at the spine, shading as it stands up.
+class _Leaf extends StatelessWidget {
+  const _Leaf({required this.lift, required this.child});
+
+  /// 0 flat on the page, 1 standing edge-on at the spine.
+  final double lift;
+
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        // 0 while edge-on, 1 flat to the reader.
-        final t = animation.value;
-
-        // At rest the page is flat, so it is handed through untouched. A
-        // perspective matrix left in place distorts hit testing — the
-        // long-press that highlights a sentence lands at the wrong offset —
-        // and there is nothing to see for the cost.
-        if (t >= 1) return child;
-
-        final angle = (1 - t) * (math.pi / 2) * (forward ? -1 : 1);
-
-        return Transform(
-          alignment: forward ? Alignment.centerLeft : Alignment.centerRight,
-          transform: Matrix4.identity()
-            // Perspective. Without this the rotation is an affine squash and
-            // reads as a shrink rather than a turn.
-            ..setEntry(3, 2, 0.0011)
-            ..rotateY(angle),
-          child: Stack(
-            fit: StackFit.passthrough,
-            children: [
-              child,
-              // The page darkens along the spine as it stands up, which is what
-              // sells the fold — a flat rotation looks like a sliding card.
-              IgnorePointer(
-                child: Opacity(
-                  opacity: (1 - t).clamp(0.0, 1.0) * 0.55,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: forward
-                            ? Alignment.centerLeft
-                            : Alignment.centerRight,
-                        end: forward
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        colors: [
-                          palette.ground.withValues(alpha: 0.9),
-                          palette.ground.withValues(alpha: 0),
-                        ],
-                        stops: const [0, 0.55],
-                      ),
-                    ),
-                  ),
+    return Transform(
+      // The spine. Fixed, both directions — this is the whole point.
+      alignment: Alignment.centerLeft,
+      transform: Matrix4.identity()
+        // Without perspective the rotation is an affine squash and reads as a
+        // shrink rather than a turn.
+        ..setEntry(3, 2, 0.0012)
+        ..rotateY(-lift * math.pi / 2),
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          child,
+          IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    // Darkest at the spine, where a lifted page catches least
+                    // light, easing out across the leaf.
+                    palette.ground.withValues(alpha: 0.85 * lift),
+                    palette.ground.withValues(alpha: 0.10 * lift),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

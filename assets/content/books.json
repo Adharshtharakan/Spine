@@ -50,7 +50,7 @@
           "audio": "asset:assets/audio/atomic-habits/05.wav"
         }
       ],
-      "cover": "asset:assets/covers/atomic-habits.jpg"
+      "cover": null
     },
     {
       "id": "sapiens",
@@ -95,7 +95,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/sapiens.jpg"
+      "cover": null
     },
     {
       "id": "deep-work",
@@ -140,7 +140,7 @@
           "seconds": 9
         }
       ],
-      "cover": "asset:assets/covers/deep-work.jpg"
+      "cover": null
     },
     {
       "id": "thinking-fast-slow",
@@ -185,7 +185,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/thinking-fast-slow.jpg"
+      "cover": null
     },
     {
       "id": "naval-almanack",
@@ -230,7 +230,7 @@
           "seconds": 9
         }
       ],
-      "cover": "asset:assets/covers/naval-almanack.jpg"
+      "cover": null
     },
     {
       "id": "mans-search-for-meaning",
@@ -275,7 +275,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/mans-search-for-meaning.jpg"
+      "cover": null
     },
     {
       "id": "mindset",
@@ -320,7 +320,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/mindset.jpg"
+      "cover": null
     },
     {
       "id": "psychology-of-money",
@@ -365,7 +365,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/psychology-of-money.jpg"
+      "cover": null
     },
     {
       "id": "zero-to-one",
@@ -410,7 +410,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/zero-to-one.jpg"
+      "cover": null
     },
     {
       "id": "meditations",
@@ -455,7 +455,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/meditations.jpg"
+      "cover": null
     },
     {
       "id": "never-split-the-difference",
@@ -500,7 +500,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/never-split-the-difference.jpg"
+      "cover": null
     },
     {
       "id": "quiet",
@@ -545,7 +545,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/quiet.jpg"
+      "cover": null
     },
     {
       "id": "essentialism",
@@ -590,7 +590,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/essentialism.jpg"
+      "cover": null
     },
     {
       "id": "why-we-sleep",
@@ -635,7 +635,7 @@
           "seconds": 12
         }
       ],
-      "cover": "asset:assets/covers/why-we-sleep.jpg"
+      "cover": null
     },
     {
       "id": "grit",
@@ -680,7 +680,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/grit.jpg"
+      "cover": null
     },
     {
       "id": "range",
@@ -725,7 +725,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/range.jpg"
+      "cover": null
     },
     {
       "id": "lean-startup",
@@ -770,7 +770,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/lean-startup.jpg"
+      "cover": null
     },
     {
       "id": "thinking-in-bets",
@@ -815,7 +815,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/thinking-in-bets.jpg"
+      "cover": null
     },
     {
       "id": "power-of-habit",
@@ -860,7 +860,7 @@
           "seconds": 12
         }
       ],
-      "cover": "asset:assets/covers/power-of-habit.jpg"
+      "cover": null
     },
     {
       "id": "breath",
@@ -905,7 +905,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/breath.jpg"
+      "cover": null
     },
     {
       "id": "how-to-win-friends",
@@ -950,7 +950,7 @@
           "seconds": 10
         }
       ],
-      "cover": "asset:assets/covers/how-to-win-friends.jpg"
+      "cover": null
     },
     {
       "id": "antifragile",
@@ -995,7 +995,7 @@
           "seconds": 12
         }
       ],
-      "cover": "asset:assets/covers/antifragile.jpg"
+      "cover": null
     },
     {
       "id": "make-it-stick",
@@ -1040,7 +1040,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/make-it-stick.jpg"
+      "cover": null
     },
     {
       "id": "factfulness",
@@ -1085,7 +1085,7 @@
           "seconds": 12
         }
       ],
-      "cover": "asset:assets/covers/factfulness.jpg"
+      "cover": null
     },
     {
       "id": "steal-like-an-artist",
@@ -1130,7 +1130,7 @@
           "seconds": 11
         }
       ],
-      "cover": "asset:assets/covers/steal-like-an-artist.jpg"
+      "cover": null
     }
   ]
 }

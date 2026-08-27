@@ -12,7 +12,7 @@ import '../../services/reading/sentences.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
 import 'bookmark_ribbon.dart';
-import 'cover_backdrop.dart';
+import 'ambient_backdrop.dart';
 import 'page_turn.dart';
 import 'book_header.dart';
 import 'book_recap.dart';
@@ -244,7 +244,9 @@ class _Backdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = this.controller;
     if (controller == null) {
-      return RepaintBoundary(child: CoverBackdrop(book: book));
+      return RepaintBoundary(
+        child: AmbientBackdrop(color: book.spineColor),
+      );
     }
 
     return RepaintBoundary(
@@ -256,8 +258,8 @@ class _Backdrop extends StatelessWidget {
               : controller.initialPage.toDouble();
           final delta = (page - index).clamp(-1.0, 1.0);
 
-          return CoverBackdrop(
-            book: book,
+          return AmbientBackdrop(
+            color: book.spineColor,
             parallax: delta,
             intensity: 1 - delta.abs() * 0.55,
           );
