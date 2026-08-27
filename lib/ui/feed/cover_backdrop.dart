@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/spine_palette.dart';
 import '../../data/models/book.dart';
 import 'ambient_backdrop.dart';
 
@@ -30,6 +31,14 @@ class CoverBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+
+    // Paper mode has no cover behind the text. The art is composed to fall to
+    // ink, which on a cream page smothers it and takes the type down with it —
+    // the whole card goes to a dark wash with near-black text on top. A book's
+    // identity comes from its accent on paper, not from a full-bleed image.
+    if (!palette.isDark) return ColoredBox(color: palette.ground);
+
     final asset = _assetPath(book.coverUrl);
     if (asset == null) {
       return AmbientBackdrop(
