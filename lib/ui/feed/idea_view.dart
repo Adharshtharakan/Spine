@@ -6,6 +6,7 @@ import '../../core/theme/spine_text.dart';
 import '../../data/models/idea.dart';
 import '../../services/reading/sentences.dart';
 import '../widgets/tap_scale.dart';
+import 'bookmark_ribbon.dart';
 
 /// The idea itself: counter, heading, body.
 ///
@@ -20,6 +21,7 @@ class IdeaView extends StatelessWidget {
     required this.onToggleSave,
     required this.highlights,
     required this.onToggleHighlight,
+    required this.accent,
     this.compact = false,
     this.dense = false,
   });
@@ -38,6 +40,9 @@ class IdeaView extends StatelessWidget {
 
   /// Long-pressing a sentence keeps or drops it.
   final ValueChanged<String> onToggleHighlight;
+
+  /// The book's colour, used by the rule under the title.
+  final Color accent;
 
   final bool compact;
 
@@ -76,6 +81,7 @@ class IdeaView extends StatelessWidget {
         onToggleSave: onToggleSave,
         highlights: highlights,
         onToggleHighlight: onToggleHighlight,
+        accent: accent,
         compact: compact,
         dense: dense,
       ),
@@ -93,6 +99,7 @@ class _IdeaText extends StatelessWidget {
     required this.onToggleSave,
     required this.highlights,
     required this.onToggleHighlight,
+    required this.accent,
     required this.compact,
     required this.dense,
   });
@@ -104,6 +111,7 @@ class _IdeaText extends StatelessWidget {
   final VoidCallback onToggleSave;
   final List<String> highlights;
   final ValueChanged<String> onToggleHighlight;
+  final Color accent;
   final bool compact;
   final bool dense;
 
@@ -115,9 +123,9 @@ class _IdeaText extends StatelessWidget {
   /// empty below the text, on every idea, because the surplus was constant.
   double get _bodySize {
     final base = switch (idea.body.length) {
-      <= 110 => 20.0,
-      <= 135 => 18.5,
-      _ => 17.0,
+      <= 110 => 18.5,
+      <= 135 => 17.0,
+      _ => 16.0,
     };
     return base - (compact ? 2.5 : 0) - (dense ? 3 : 0);
   }
@@ -135,14 +143,9 @@ class _IdeaText extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  'IDEA ${index + 1} OF $total',
-                  style: SpineText.label.copyWith(
-                    color: palette.onGround(0.4),
-                  ),
-                ),
-              ),
+              // The counter lives on the bookmark now — printing it twice was
+              // the same fact in two places.
+              const Spacer(),
               // A real target, not a hairline glyph: this used to be an 18px
               // icon at 38% opacity, which readers could neither see nor hit.
               TapScale(
@@ -200,7 +203,9 @@ class _IdeaText extends StatelessWidget {
               height: 1.15,
             ),
           ),
-          SizedBox(height: compact || dense ? 14 : 20),
+          SizedBox(height: compact || dense ? 14 : 18),
+          _Ornament(accent: accent),
+          SizedBox(height: compact || dense ? 14 : 18),
           _Body(
             body: idea.body,
             highlights: highlights,
@@ -261,7 +266,12 @@ class _BodyState extends State<_Body> {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final sentences = Sentences.of(widget.body);
-    final style = SpineText.ideaBody.copyWith(fontSize: widget.fontSize);
+    final style = SpineText.ideaBody.copyWith(
+      fontFamily: SpineText.serif,
+      fontWeight: FontWeight.w400,
+      fontSize: widget.fontSize,
+      height: 1.55,
+    );
 
     return Text.rich(
       TextSpan(
@@ -291,6 +301,40 @@ class _BodyState extends State<_Body> {
             )
           : style,
       recognizer: _recogniserFor(sentence),
+    );
+  }
+}
+
+
+/// The rule between an idea's title and its body: a short line either side of
+/// the same four-pointed star the bookmark uses. It is the one ornament in the
+/// design, and it marks where the heading stops and the prose starts.
+class _Ornament extends StatelessWidget {
+  const _Ornament({required this.accent});
+
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget rule() => Container(
+      width: 46,
+      height: 1,
+      color: accent.withValues(alpha: 0.5),
+    );
+
+    return Row(
+      children: [
+        rule(),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: SizedBox(
+            width: 11,
+            height: 11,
+            child: CustomPaint(painter: OrnamentStar(colour: accent)),
+          ),
+        ),
+        rule(),
+      ],
     );
   }
 }

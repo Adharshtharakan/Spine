@@ -64,6 +64,22 @@ void main() {
   }
 
 
+  /// Presses inside the first line of a paragraph rather than at its centre.
+  /// A body that fills its box has a centre below the visible fold, and the
+  /// press lands on nothing.
+  Future<void> longPressFirstLine(WidgetTester tester, String text) async {
+    final box = tester.getRect(find.textContaining(text));
+    await tester.longPressAt(Offset(box.left + 20, box.top + 10));
+    await tester.pumpAndSettle();
+  }
+
+  /// The idea counter is printed on the bookmark as three stacked lines —
+  /// "IDEA", the number, "OF 5" — so it can't be matched as one string.
+  void expectOnIdea(int number) {
+    expect(find.text('$number'), findsWidgets);
+    expect(find.text('OF 5'), findsWidgets);
+  }
+
   /// A reader with no history lands on the Today card. Tests about the shelf
   /// itself step past it first.
   Future<void> swipeToShelf(WidgetTester tester) async {
@@ -83,7 +99,7 @@ void main() {
     await swipeToShelf(tester);
 
     expect(find.text('First Book'), findsOneWidget);
-    expect(find.text('IDEA 1 OF 5'), findsOneWidget);
+    expectOnIdea(1);
     expect(find.text('Idea 1'), findsOneWidget);
     // Only the current card is on screen.
     expect(find.text('Second Book'), findsNothing);
@@ -108,12 +124,12 @@ void main() {
 
     await tester.tap(find.text('NEXT'));
     await tester.pumpAndSettle();
-    expect(find.text('IDEA 2 OF 5'), findsOneWidget);
+    expectOnIdea(2);
 
     // Ribbon segments are addressable directly — tap the fourth.
     await tester.tap(find.bySemanticsLabel('Idea 4'));
     await tester.pumpAndSettle();
-    expect(find.text('IDEA 4 OF 5'), findsOneWidget);
+    expectOnIdea(4);
   });
 
   testWidgets('a sideways flick moves to the next idea', (tester) async {
@@ -123,7 +139,7 @@ void main() {
     await tester.fling(find.text('Idea 1'), const Offset(-300, 0), 1000);
     await tester.pumpAndSettle();
 
-    expect(find.text('IDEA 2 OF 5'), findsOneWidget);
+    expectOnIdea(2);
   });
 
   testWidgets('Listen mode cues the track and plays it', (tester) async {
@@ -157,7 +173,7 @@ void main() {
     audio.finishTrack();
     await tester.pumpAndSettle();
 
-    expect(find.text('IDEA 2 OF 5'), findsOneWidget);
+    expectOnIdea(2);
     expect(audio.loaded.last, 'one-2');
   });
 
@@ -231,7 +247,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Back on the shelf, parked on the book that was tapped.
-    expect(find.text('IDEA 1 OF 5'), findsOneWidget);
+    expectOnIdea(1);
     expect(find.text('Third Book'), findsOneWidget);
   });
 
@@ -328,7 +344,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Idea 5'));
     await tester.pumpAndSettle();
-    expect(find.text('IDEA 5 OF 5'), findsOneWidget);
+    expectOnIdea(5);
 
     // The end of the book is a destination, not a dead end.
     await tester.tap(find.text('ALL 5 IDEAS'));
@@ -348,7 +364,7 @@ void main() {
 
     await tester.tap(find.text('BACK'));
     await tester.pumpAndSettle();
-    expect(find.text('IDEA 5 OF 5'), findsOneWidget);
+    expectOnIdea(5);
   });
 
   testWidgets('a due idea comes back as a review card', (tester) async {
@@ -450,7 +466,7 @@ void main() {
     await pumpSpine(tester, store: store);
 
     expect(find.text('Second Book'), findsOneWidget);
-    expect(find.text('IDEA 2 OF 5'), findsOneWidget);
+    expectOnIdea(2);
   });
 
   testWidgets('the feed builds with a real ad preloader in the tree', (
@@ -481,16 +497,14 @@ void main() {
 
     // The body renders as one Text.rich of sentence spans, so the gesture goes
     // to the paragraph and the recogniser on the span decides what was hit.
-    await tester.longPress(find.textContaining('Body of idea 1'));
-    await tester.pumpAndSettle();
+    await longPressFirstLine(tester, 'Body of idea 1');
     // Writes are debounced before they reach the store.
     await tester.pump(const Duration(seconds: 1));
 
     final saved = await store.loadAll();
     expect(saved['one']?.highlightsFor('one-1'), ['Body of idea 1.']);
 
-    await tester.longPress(find.textContaining('Body of idea 1'));
-    await tester.pumpAndSettle();
+    await longPressFirstLine(tester, 'Body of idea 1');
     await tester.pump(const Duration(seconds: 1));
 
     final after = await store.loadAll();

@@ -94,11 +94,11 @@ class _NavButton extends StatelessWidget {
     final palette = context.palette;
     final tinted = accent != null && enabled;
     final foreground = enabled
-        ? (tinted ? palette.text : palette.onGround(0.72))
-        : palette.onGround(0.3);
+        ? (tinted ? palette.brass : palette.onGround(0.62))
+        : palette.onGround(0.28);
 
     final content = [
-      Icon(icon, size: 15, color: foreground),
+      Icon(icon, size: 16, color: foreground),
       const SizedBox(width: 8),
       Flexible(
         child: Text(
@@ -116,13 +116,10 @@ class _NavButton extends StatelessWidget {
       semanticLabel: label,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-        decoration: BoxDecoration(
-          color: tinted
-              ? accent!.withValues(alpha: 0.26)
-              : palette.surface,
-          borderRadius: BorderRadius.circular(24),
-        ),
+        // No plate behind them. The page's own controls are set in it, not
+        // stuck on top of it — the only filled thing on the card is SHARE.
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+        decoration: const BoxDecoration(),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: iconTrailing ? content.reversed.toList() : content,

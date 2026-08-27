@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/spine_palette.dart';
 import '../../data/models/book.dart';
 import '../../data/models/book_progress.dart';
 import '../../data/models/reading_mode.dart';
@@ -10,14 +11,15 @@ import '../../services/audio/playback_snapshot.dart';
 import '../../services/reading/sentences.dart';
 import '../../state/playback_controller.dart';
 import '../../state/progress_controller.dart';
+import 'bookmark_ribbon.dart';
 import 'cover_backdrop.dart';
+import 'page_turn.dart';
 import 'book_header.dart';
 import 'book_recap.dart';
 import 'idea_view.dart';
 import 'listen_controls.dart';
 import 'mode_toggle.dart';
 import 'read_controls.dart';
-import 'spine_ribbon.dart';
 import 'watch_panel.dart';
 import '../sharing/story_share_sheet.dart';
 import '../widgets/spine_top_bar.dart';
@@ -63,6 +65,12 @@ class _BookSlideState extends State<BookSlide> {
   Timer? _dwellTimer;
   bool _showRecap = false;
   int? _dwellingOn;
+
+  /// Which way the last move went, so the page turns the way the reader is
+  /// going. Held here rather than derived in the card, because by the time the
+  /// card rebuilds the old index is gone.
+  int _lastIdeaIndex = 0;
+  bool _forward = true;
 
   Book get book => widget.book;
 
@@ -110,6 +118,11 @@ class _BookSlideState extends State<BookSlide> {
     // Short devices (and large system text) get a tighter card so the idea
     // itself never loses its room.
     final compact = MediaQuery.sizeOf(context).height < 760;
+
+    if (ideaIndex != _lastIdeaIndex) {
+      _forward = ideaIndex > _lastIdeaIndex;
+      _lastIdeaIndex = ideaIndex;
+    }
 
     _watchDwell(ideaIndex, progress);
 
@@ -163,6 +176,7 @@ class _BookSlideState extends State<BookSlide> {
                   book: book,
                   progress: progress,
                   ideaIndex: ideaIndex,
+                  forward: _forward,
                   isActive: widget.isActive,
                   compact: compact,
                   showRecap: _showRecap,
@@ -258,6 +272,7 @@ class _Body extends StatelessWidget {
     required this.book,
     required this.progress,
     required this.ideaIndex,
+    required this.forward,
     required this.isActive,
     required this.compact,
     required this.showRecap,
@@ -269,6 +284,10 @@ class _Body extends StatelessWidget {
   final Book book;
   final BookProgress progress;
   final int ideaIndex;
+
+  /// Direction of the last move between ideas.
+  final bool forward;
+
   final bool isActive;
   final bool compact;
   final bool showRecap;
@@ -317,17 +336,20 @@ class _Body extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Ribbon(
-                  book: book,
-                  progress: progress,
-                  ideaIndex: ideaIndex,
-                  isActive: isActive,
+                BookmarkRibbon(
+                  count: book.ideaCount,
+                  currentIndex: ideaIndex,
+                  accent: context.palette.accent(book.spineColor),
+                  completed: progress.completedIdeas,
                   compact: compact,
                   onSelect: onSelectIdea,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Align(
+                  child: PageTurn(
+                    turnKey: idea.id,
+                    forward: forward,
+                    child: Align(
                     // Top-aligned. Centring was tried and reads worse: it
                     // pushes the idea away from the mode toggle it belongs to
                     // and leaves the card feeling distant. The larger type is
@@ -344,10 +366,12 @@ class _Body extends StatelessWidget {
                       onToggleSave: () => context
                           .read<ProgressController>()
                           .toggleSavedIdea(book.id, idea.id),
+                      accent: context.palette.accent(book.spineColor),
                       highlights: progress.highlightsFor(idea.id),
                       onToggleHighlight: (line) => context
                           .read<ProgressController>()
                           .toggleHighlight(book.id, idea.id, line),
+                      ),
                     ),
                   ),
                 ),
@@ -394,58 +418,6 @@ class _Body extends StatelessWidget {
 
 /// The ribbon fills from the playhead in Listen mode, so it subscribes to
 /// playback rather than making the whole card do so.
-class _Ribbon extends StatelessWidget {
-  const _Ribbon({
-    required this.book,
-    required this.progress,
-    required this.ideaIndex,
-    required this.isActive,
-    required this.compact,
-    required this.onSelect,
-  });
-
-  final Book book;
-  final BookProgress progress;
-  final int ideaIndex;
-  final bool isActive;
-  final bool compact;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final listening = isActive && progress.mode == ReadingMode.listen;
-
-    final fill = listening
-        ? context.select<PlaybackController, double>((controller) {
-            final snapshot = controller.snapshot;
-            final isThisIdea =
-                snapshot.bookId == book.id && snapshot.ideaIndex == ideaIndex;
-            return isThisIdea ? snapshot.fraction : 0;
-          })
-        : 0.0;
-
-    // Held to the top of the body at a fixed height: run full-height and it
-    // stops reading as a bookmark and starts reading as a rule.
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        height: compact ? 168 : 196,
-        child: RepaintBoundary(
-          child: SpineRibbon(
-            count: book.ideaCount,
-            currentIndex: ideaIndex,
-            currentFill: fill,
-            showPlayhead: listening,
-            completed: progress.completedIdeas,
-            color: book.spineColor,
-            onSelect: onSelect,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ListenFooter extends StatelessWidget {
   const _ListenFooter({
     required this.book,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/spine_palette.dart';
+import '../../core/theme/spine_text.dart';
 import '../widgets/tap_scale.dart';
 
 /// The share control, sized to sit in the footer band above the bottom nav.
@@ -9,7 +10,8 @@ import '../widgets/tap_scale.dart';
 /// in the same place on screen, and it should stay the same size and weight
 /// when the reader switches between them.
 class StoryShareButton extends StatelessWidget {
-  const StoryShareButton({super.key, required this.onTap, this.compact = false});
+  const StoryShareButton(
+      {super.key, required this.onTap, this.compact = false});
 
   final VoidCallback onTap;
 
@@ -20,22 +22,38 @@ class StoryShareButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final size = compact ? 46.0 : 52.0;
 
-    return TapScale(
-      onTap: onTap,
-      semanticLabel: 'Share this idea',
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: palette.surfaceRaised,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.ios_share_rounded,
-          size: compact ? 20 : 22,
-          color: palette.onGround(0.75),
+    // Named, not a bare glyph: sharing an idea is the one thing on this card a
+    // reader has no reason to guess at, and an icon alone was missed.
+    // Scaled down rather than clipped: in Listen the pill shares its row with
+    // the play control and has less width than in Read.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: TapScale(
+        onTap: onTap,
+        semanticLabel: 'Share this idea',
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 18 : 22,
+            vertical: compact ? 12 : 14,
+          ),
+          decoration: BoxDecoration(
+            color: palette.surfaceRaised,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.share_outlined, size: 16, color: palette.brass),
+                const SizedBox(width: 9),
+                Text(
+                  'SHARE',
+                  style: SpineText.labelMedium.copyWith(color: palette.brass),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
