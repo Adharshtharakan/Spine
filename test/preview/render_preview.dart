@@ -133,7 +133,9 @@ Future<void> precacheCovers(WidgetTester tester) async {
   final context = tester.element(find.byType(MaterialApp));
   await tester.runAsync(() async {
     for (final image in images) {
-      await precacheImage(image.image, context);
+      // An absent asset is a legitimate state — Hoot's poses are optional and
+      // the widget draws its own stand-in — so a preview must not fail on one.
+      await precacheImage(image.image, context, onError: (_, __) {});
     }
   });
 }

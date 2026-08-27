@@ -9,6 +9,7 @@ class SessionState {
     this.brokenStreak = 0,
     this.lastRepairMonth,
     this.darkMode = true,
+    this.readerName,
   });
 
   /// The book the reader was last on. Stored by id rather than by feed position
@@ -44,6 +45,14 @@ class SessionState {
   /// than being handed a different one on launch.
   final bool darkMode;
 
+  /// What the reader calls themselves. Null until they say — Spine never asks
+  /// for a name, and shows a neutral one until it is given.
+  final String? readerName;
+
+  /// The name to print. Never empty: a blank header reads as a bug.
+  String get displayName =>
+      (readerName == null || readerName!.trim().isEmpty) ? 'Reader' : readerName!.trim();
+
   bool get wantsDailyIdea => dailyIdeaHour != null;
 
   static String monthKey(DateTime date) =>
@@ -65,6 +74,7 @@ class SessionState {
       brokenStreak: 0,
       lastRepairMonth: monthKey(now),
       darkMode: darkMode,
+      readerName: readerName,
     );
   }
 
@@ -81,6 +91,8 @@ class SessionState {
     bool clearBrokenStreak = false,
     String? lastRepairMonth,
     bool? darkMode,
+    String? readerName,
+    bool clearReaderName = false,
   }) {
     return SessionState(
       lastBookId: lastBookId ?? this.lastBookId,
@@ -92,6 +104,7 @@ class SessionState {
       brokenStreak: clearBrokenStreak ? 0 : (brokenStreak ?? this.brokenStreak),
       lastRepairMonth: lastRepairMonth ?? this.lastRepairMonth,
       darkMode: darkMode ?? this.darkMode,
+      readerName: clearReaderName ? null : (readerName ?? this.readerName),
     );
   }
 
@@ -103,6 +116,7 @@ class SessionState {
     'brokenStreak': brokenStreak,
     'lastRepairMonth': lastRepairMonth,
     'darkMode': darkMode,
+    'readerName': readerName,
   };
 
   factory SessionState.fromJson(Map<String, dynamic> json) {
@@ -114,6 +128,7 @@ class SessionState {
       brokenStreak: json['brokenStreak'] as int? ?? 0,
       lastRepairMonth: json['lastRepairMonth'] as String?,
       darkMode: json['darkMode'] as bool? ?? true,
+      readerName: json['readerName'] as String?,
     );
   }
 

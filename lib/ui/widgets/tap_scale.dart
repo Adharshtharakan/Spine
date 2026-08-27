@@ -37,6 +37,12 @@ class _TapScaleState extends State<TapScale> {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // Its own node. Without this, Semantics annotates whatever it lands in
+      // rather than creating a boundary, so several controls sitting in one
+      // row collapse into a single node carrying all their labels at once —
+      // a screen reader reads the row as one button, and a tap aimed at one
+      // control lands wherever that merged node's centre happens to be.
+      container: true,
       button: widget.onTap != null,
       enabled: widget.enabled,
       label: widget.semanticLabel,

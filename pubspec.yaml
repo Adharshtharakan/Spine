@@ -80,6 +80,9 @@ flutter:
     - assets/content/
     - assets/audio/atomic-habits/
     - assets/story/
+    # Hoot's poses. The app falls back to a drawn owl for any that are absent,
+    # so this directory may ship empty.
+    - assets/mascot/
 
   # Fraunces and Inter ship as variable fonts — Flutter maps FontWeight onto the
   # `wght` axis, so one file covers every weight the design uses.

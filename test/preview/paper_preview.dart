@@ -38,6 +38,24 @@ void main() {
     await capture(tester, 'paper_saved');
   });
 
+  testWidgets('paper — you', (tester) async {
+    usePhoneSurface(tester);
+
+    final store = InMemoryProgressStore();
+    await store.saveSession(const SessionState(darkMode: false));
+
+    await pumpApp(tester, store: store);
+    await tester.tap(find.bySemanticsLabel('You'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'paper_profile');
+
+    // The lower half: the streak block, awards and the appearance toggle all
+    // sit below the fold on a 6.1" screen.
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await capture(tester, 'paper_profile_lower');
+  });
+
   testWidgets('paper — mid page turn', (tester) async {
     usePhoneSurface(tester);
 

@@ -176,6 +176,25 @@ class ProgressController extends ChangeNotifier {
       for (final ideaId in entry.savedIdeaIds) (entry.bookId, ideaId),
   ];
 
+  String get readerName => _session.displayName;
+
+  /// Whether the reader has actually chosen one, as opposed to sitting on the
+  /// default. The profile uses this to offer the prompt only once.
+  bool get hasReaderName => _session.readerName != null;
+
+  /// An empty name puts it back to the default rather than storing a blank.
+  void setReaderName(String? name) {
+    final trimmed = name?.trim();
+    final next = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    if (_session.readerName == next) return;
+    _session = _session.copyWith(
+      readerName: next,
+      clearReaderName: next == null,
+    );
+    unawaited(_store.saveSession(_session));
+    notifyListeners();
+  }
+
   void setDarkMode(bool value) {
     if (_session.darkMode == value) return;
     _session = _session.copyWith(darkMode: value);
