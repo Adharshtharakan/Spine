@@ -29,8 +29,8 @@ class ShelfScreen extends StatefulWidget {
 }
 
 class _ShelfScreenState extends State<ShelfScreen> {
-  /// Created once the feed exists, because where the reader resumes depends on
-  /// where their book landed in today's order.
+  /// Created once the feed exists, because which card the app opens on depends
+  /// on how today's feed came out.
   PageController? _controller;
   int _activeIndex = 0;
 
@@ -44,14 +44,22 @@ class _ShelfScreenState extends State<ShelfScreen> {
     final existing = _controller;
     if (existing != null) return existing;
 
-    final lastBookId = context.read<ProgressController>().lastBookId;
-    final resumeAt = lastBookId == null
-        ? -1
-        : items.indexWhere(
-            (item) => item is BookFeedItem && item.book.id == lastBookId,
-          );
+    // Always the day's idea, whatever the reader was doing last time.
+    //
+    // Opening on the card they left on sounds friendlier and reads worse: the
+    // one card that is different every day is the only reason to open the app
+    // at all, and dropping someone back mid-book hides it behind a scroll they
+    // have no reason to make. It also means two opens in a row look identical,
+    // so the app feels like it has nothing new in it.
+    //
+    // Nothing is lost by it. The book they were on is offered back by name on
+    // the Today card itself — see [_resumePoint] — so returning to it is one
+    // tap, in a place they are looking at anyway.
+    final today = items.indexWhere((item) => item is DailyIdeaFeedItem);
 
-    _activeIndex = resumeAt < 0 ? 0 : resumeAt;
+    // No pick today (an empty catalogue, or a clock the picker refused) puts
+    // them at the top of the feed rather than nowhere.
+    _activeIndex = today < 0 ? 0 : today;
     return _controller = PageController(initialPage: _activeIndex);
   }
 

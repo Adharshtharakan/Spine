@@ -448,7 +448,41 @@ void main() {
     expect(find.text(widget.published.single), findsOneWidget);
   });
 
-  testWidgets('the reader returns to the card they left on', (tester) async {
+  testWidgets('every launch opens on the day\'s idea, not where they left off', (
+    tester,
+  ) async {
+    // The one card that is different every day is the reason to open the app.
+    // Landing mid-book instead hides it behind a scroll nobody has a reason to
+    // make, and makes two mornings in a row look identical.
+    final store = InMemoryProgressStore();
+    await pumpSpine(tester, store: store);
+    await swipeToShelf(tester);
+
+    await tester.fling(find.text('Idea 1'), const Offset(0, -400), 1200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('NEXT'));
+    await tester.pumpAndSettle();
+    expect(find.text('Second Book'), findsOneWidget);
+
+    // Relaunch: tear the app down entirely, then start again on the same
+    // storage. (Pumping another SpineApp straight away would update the
+    // existing element in place and prove nothing.)
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await pumpSpine(tester, store: store);
+
+    expect(find.text('TODAY'), findsOneWidget);
+    // Not on a book card at all. Checked by the bookmark's counter rather than
+    // by the title, because the Today card names the book they left on too —
+    // that is the resume strip, and it is meant to be there.
+    expect(find.text('OF 5'), findsNothing);
+  });
+
+  testWidgets('the book they left is offered back on the Today card', (
+    tester,
+  ) async {
+    // What makes opening on Today cheap rather than a loss: the way back is a
+    // tap, in the place they are already looking.
     final store = InMemoryProgressStore();
     await pumpSpine(tester, store: store);
     await swipeToShelf(tester);
@@ -458,15 +492,11 @@ void main() {
     await tester.tap(find.text('NEXT'));
     await tester.pumpAndSettle();
 
-    // Relaunch: tear the app down entirely, then start again on the same
-    // storage. (Pumping another SpineApp straight away would update the
-    // existing element in place and prove nothing.)
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     await pumpSpine(tester, store: store);
 
-    expect(find.text('Second Book'), findsOneWidget);
-    expectOnIdea(2);
+    expect(find.textContaining('Second Book'), findsWidgets);
   });
 
   testWidgets('the feed builds with a real ad preloader in the tree', (
