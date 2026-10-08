@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'core/theme/theme.dart';
+import 'app.dart';
+import 'core/config/env.dart';
+import 'features/stops/stops_tab.dart';
+import 'features/trips/trip_screen.dart';
+import 'services/mesh/mesh_bridge.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (Env.isConfigured) {
+    await Supabase.initialize(url: Env.supabaseUrl, publishableKey: Env.supabaseAnonKey);
+  }
+
+  // Offline mesh rides along with every open trip.
+  tripSessionHooks.add(attachMesh);
+  // Affiliate stops along the route (hotels, campsites, fuel, rest areas).
+  registerTripTab(
+    const NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Stops'),
+    (s) => StopsTab(session: s),
+  );
+
   runApp(const ProviderScope(child: ConvoyApp()));
-}
-
-class ConvoyApp extends StatelessWidget {
-  const ConvoyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Convoy',
-        theme: ConvoyTheme.light(),
-        darkTheme: ConvoyTheme.dark(),
-        home: const Scaffold(body: Center(child: Text('Convoy'))),
-      );
 }

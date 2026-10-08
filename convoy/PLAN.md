@@ -10,12 +10,12 @@ the six steps the brief requires. Each step lands as its own commit.
 
 | Feature (synopsis) | Client (Flutter) | Backend |
 |---|---|---|
-| Collaborative dynamic itineraries | `sync/itinerary_doc.dart` (HLC last-writer-wins CRDT, fractional ordering), `features/itinerary` | `waypoints` table, `hlc` guard trigger, `shift_schedule` RPC, Realtime `postgres_changes` |
+| Collaborative dynamic itineraries | `sync/itinerary_doc.dart` (HLC last-writer-wins CRDT, fractional ordering, schedule shift), `features/itinerary` | `waypoints` table, `hlc` guard trigger, Realtime `postgres_changes` |
 | Live group tracking + lead vehicle identification | `services/location`, `services/tracking/lead_vehicle.dart`, `features/map` | Realtime broadcast `trip:<id>` (ephemeral), `member_locations` last-known upsert |
 | Localized text + push-to-talk voice | `features/chat`, `services/voice/ptt_service.dart` (WebRTC mesh, floor control) | `messages` table (RLS per party), Realtime broadcast for WebRTC signalling only — media stays P2P |
-| Offline resiliency | `services/offline/offline_maps.dart` (bounding-box tile packs), `services/tracking/dead_reckoning.dart`, `services/offline/outbox.dart` | Self-hosted PMTiles served as XYZ by the Worker (`/tiles`) |
+| Offline resiliency | `services/offline/offline_maps.dart` (bounding-box tile packs), `services/tracking/dead_reckoning.dart`, `services/offline/outbox.dart`, `services/offline/trip_cache.dart` | Self-hosted PMTiles served as XYZ by the Worker (`/tiles`) |
 | Offline mesh fallback | `services/mesh` (Nearby Connections on Android, MultipeerConnectivity on iOS, compact binary GPS codec, TTL relay) | — |
-| Public trip discovery + mutual acceptance | `features/discovery`, `features/guidelines` | `guideline_documents`, `guideline_acceptances`, `join_requests`, `approve_join_request` RPC, Worker `/discovery/*` |
+| Public trip discovery + mutual acceptance | `features/discovery`, `features/guidelines` | `guideline_documents`, `guideline_acceptances`, `join_requests`, `request_to_join` + `decide_join_request` RPCs, Worker `/discovery/*` |
 | Freemium subscription | `services/billing`, `features/paywall` | `entitlements`, vehicle-cap trigger, Worker `/billing/verify` (Google Play + App Store Server API) |
 | B2B affiliate bookings (hotels, campsites, fuel, rest areas) + sponsored stops | `features/stops` | Worker `/affiliates/along-route`, `/affiliates/click`, `/affiliates/postback`; `affiliate_clicks`, `affiliate_conversions`, `sponsored_placements` |
 
@@ -35,7 +35,7 @@ the six steps the brief requires. Each step lands as its own commit.
    chat and itinerary over `postgres_changes`, WebRTC full-mesh PTT with
    signalling over the same private channel.
 5. **Offline mesh** — custom platform channel `convoy/mesh`: Nearby Connections
-   (`P2P_CLUSTER`) on Android, MultipeerConnectivity on iOS. 32-byte position
+   (`P2P_CLUSTER`) on Android, MultipeerConnectivity on iOS. 40-byte position
    frames, relayed with TTL and de-duplication.
 6. **Edge functions** — one Cloudflare Worker: tiles, discovery, affiliates,
    billing verification. No idle servers.

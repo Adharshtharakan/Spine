@@ -7,6 +7,8 @@ export interface Env {
   CACHE: KVNamespace;
 
   SUPABASE_URL: string;
+  /** Public anon key, sent as `apikey` when calling PostgREST as the user. */
+  SUPABASE_ANON_KEY: string;
   /** Service-role key: used only for writes the client may not make itself. */
   SUPABASE_SERVICE_ROLE_KEY: string;
   /** Legacy HS256 JWT secret. Leave empty when the project uses JWKS signing keys. */

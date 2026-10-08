@@ -6,6 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 PMTILES_KEY = "basemap/convoy.pmtiles"
 SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
+SUPABASE_ANON_KEY = "YOUR-ANON-KEY"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 APPLE_ENVIRONMENT = "Production"
 # Secrets (wrangler secret put …): SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET,
