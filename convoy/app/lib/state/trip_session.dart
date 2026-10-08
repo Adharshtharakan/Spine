@@ -14,7 +14,8 @@ import '../services/location/gps_service.dart';
 import '../services/offline/outbox.dart';
 import '../services/offline/trip_cache.dart';
 import '../services/realtime/convoy_channel.dart';
-import '../services/tracking/dead_reckoning.dart';
+import '../services/edge/edge_client.dart';
+import '../services/tracking/predictor.dart';
 import '../services/tracking/lead_vehicle.dart';
 import '../services/voice/ptt_service.dart';
 import '../sync/itinerary_doc.dart';
@@ -92,20 +93,52 @@ class TripSession extends ChangeNotifier {
   bool _polling = false;
 
   static const _resolver = LeadVehicleResolver();
-  static const _reckoner = DeadReckoning();
+  static const _predictor = ConvoyPredictor();
+
+  /// Recent fixes per member (≈10 min), for smoothed speed and for
+  /// anchoring a silent car to a convoy-mate.
+  final Map<String, List<VehiclePosition>> _history = {};
+
+  /// Road geometry through the stops, fetched while online and cached with
+  /// the trip so prediction follows real roads offline too.
+  List<GeoPoint>? _road;
+  String? _roadKey;
+  RoadSpeeds? _roadSpeeds;
+
+  /// Each car's average moving speed over the trip, persisted.
+  final Map<String, AverageSpeed> _avgSpeed = {};
+  DateTime _roadAttempt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  String get _stopsKey => itinerary.route.map((p) => '${p.lat.toStringAsFixed(5)},${p.lng.toStringAsFixed(5)}').join(';');
+
+  /// The line everything is measured along: real roads when known,
+  /// straight segments between stops otherwise.
+  List<GeoPoint> get routeLine => (_road != null && _roadKey == _stopsKey) ? _road! : itinerary.route;
 
   String? get userId => _db.auth.currentUser?.id;
   bool get isOwner => trip?.ownerId == userId;
 
-  /// Positions to draw: fresh reports as-is; silent vehicles projected
-  /// forward along the route so the map never just freezes in a dead zone.
+  /// Positions to draw: fresh reports as-is; cars that went silent are
+  /// predicted (see [ConvoyPredictor]) so the map never just freezes.
   Map<String, VehiclePosition> get positions {
     final now = DateTime.now();
-    final route = itinerary.route;
+    final route = routeLine;
+    final stops = itinerary.waypoints;
+    final labels = {for (final m in members.values) m.id: m.vehicleLabel ?? m.displayName};
     return {
       for (final e in _reported.entries)
         e.key: (e.key != me?.id && e.value.age(now) > const Duration(seconds: 30))
-            ? _reckoner.estimate(e.value, route, now)
+            ? _predictor.predict(
+                last: e.value,
+                route: route,
+                history: _history,
+                latest: _reported,
+                stops: stops,
+                now: now,
+                labels: labels,
+                averageSpeed: _avgSpeed[e.key]?.value,
+                roadSpeedAt: _road != null && _roadKey == _stopsKey ? _roadSpeeds?.at : null,
+              )
             : e.value,
     };
   }
@@ -113,13 +146,60 @@ class TripSession extends ChangeNotifier {
   LeadResult? get lead => _resolver.resolve(
         designatedMemberId: trip?.leadMemberId,
         positions: _reported,
-        route: itinerary.route,
+        route: routeLine,
       );
 
-  List<ConvoyStanding> get standings =>
-      _resolver.standings(lead: lead, positions: _reported, route: itinerary.route);
+  List<ConvoyStanding> get standings => _resolver.standings(lead: lead, positions: _reported, route: routeLine);
 
-  Waypoint? get nextStop => itinerary.nextStop(lead?.alongMeters ?? 0);
+  Waypoint? get nextStop {
+    final route = routeLine;
+    if (route.length < 2) return itinerary.waypoints.firstOrNull;
+    final leadAlong = lead?.alongMeters ?? 0;
+    for (final w in itinerary.waypoints) {
+      if (Geo.projectOntoRoute(route, w.location).alongMeters > leadAlong + 150) return w;
+    }
+    return null;
+  }
+
+  /// The last real report from a member (not a prediction).
+  VehiclePosition? lastReported(String memberId) => _reported[memberId];
+
+  void _remember(VehiclePosition p) {
+    final h = _history.putIfAbsent(p.memberId, () => []);
+    if (h.isNotEmpty && !p.timestamp.isAfter(h.last.timestamp)) return;
+    h.add(p);
+    _avgSpeed.putIfAbsent(p.memberId, AverageSpeed.new).add(p);
+    final cutoff = p.timestamp.subtract(const Duration(minutes: 10));
+    while (h.length > 1 && h.first.timestamp.isBefore(cutoff)) {
+      h.removeAt(0);
+    }
+    if (h.length > 300) h.removeAt(0);
+  }
+
+  /// Fetches road geometry when the stops change and we are online.
+  Future<void> _refreshRoad() async {
+    final key = _stopsKey;
+    if (itinerary.route.length < 2 || key == _roadKey) return;
+    if (DateTime.now().difference(_roadAttempt) < const Duration(minutes: 1)) return;
+    _roadAttempt = DateTime.now();
+    try {
+      final res = await EdgeClient(_db).post('/route', {
+        'points': [for (final p in itinerary.route.take(50)) [p.lat, p.lng]],
+      });
+      _road = [
+        for (final c in res['geometry'] as List) GeoPoint((c[0] as num).toDouble(), (c[1] as num).toDouble()),
+      ];
+      _roadKey = key;
+      _roadSpeeds = RoadSpeeds.fromLegs([
+        for (final l in (res['legs'] as List? ?? const []))
+          (distanceM: (l['distance_m'] as num).toDouble(), durationS: (l['duration_s'] as num).toDouble()),
+      ]);
+      unawaited(_saveSnapshot());
+      notifyListeners();
+    } catch (_) {
+      // Offline or no route: straight segments keep working.
+    }
+  }
 
   Future<void> open() async {
     final uid = userId;
@@ -131,6 +211,15 @@ class TripSession extends ChangeNotifier {
     }
     itinerary = ItineraryDoc(tripId, nodeId: uid.substring(0, 8));
     final cache = TripCache(tripId);
+    final cached = await cache.load();
+    if (cached?['road'] is List && cached?['road_key'] is String) {
+      _road = [for (final c in cached!['road'] as List) GeoPoint((c[0] as num).toDouble(), (c[1] as num).toDouble())];
+      _roadKey = cached['road_key'] as String;
+      if (cached['road_speeds'] is List) _roadSpeeds = RoadSpeeds.fromJson(cached['road_speeds'] as List);
+    }
+    if (cached?['avg_speed'] is Map) {
+      (cached!['avg_speed'] as Map).forEach((k, v) => _avgSpeed[k as String] = AverageSpeed((v as num).toDouble()));
+    }
     try {
       trip = await _repo.trip(tripId);
       await _loadMembers();
@@ -156,7 +245,7 @@ class TripSession extends ChangeNotifier {
     } catch (e) {
       // Opened with no signal: restore the last snapshot so the map, GPS,
       // offline tiles and the mesh all still work.
-      final snap = await cache.load();
+      final snap = cached;
       if (snap != null) {
         _restoreSnapshot(snap);
       } else {
@@ -182,6 +271,13 @@ class TripSession extends ChangeNotifier {
         'waypoints': [for (final w in itinerary.allRows) w.toRow()],
         'messages': [for (final m in messages.where((m) => !m.pending).take(100)) m.toRow()],
         'positions': [for (final p in _reported.values) p.toJson()],
+        'road': [for (final p in _road ?? const <GeoPoint>[]) [p.lat, p.lng]],
+        'road_key': _roadKey,
+        'road_speeds': _roadSpeeds?.toJson(),
+        'avg_speed': {
+          for (final e in _avgSpeed.entries)
+            if (e.value.value != null) e.key: e.value.value,
+        },
       });
 
   void _restoreSnapshot(Map<String, dynamic> snap) {
@@ -259,6 +355,7 @@ class TripSession extends ChangeNotifier {
     // Same fix may arrive via cloud and mesh; keep the newest.
     if (prev != null && !p.timestamp.isAfter(prev.timestamp)) return;
     _reported[p.memberId] = p;
+    _remember(p);
     notifyListeners();
   }
 
@@ -319,6 +416,7 @@ class TripSession extends ChangeNotifier {
 
   Future<void> _onOwnFix(VehiclePosition p) async {
     _reported[p.memberId] = p;
+    _remember(p);
     notifyListeners();
     final now = DateTime.now();
     if (now.difference(_lastBroadcast) < const Duration(seconds: 1)) return;
@@ -339,6 +437,7 @@ class TripSession extends ChangeNotifier {
   void _tick() {
     final live = channel?.isLive ?? false;
     final now = DateTime.now();
+    if (live || _cloudReachable) unawaited(_refreshRoad());
     if (live) {
       _offlineSince = null;
       if (_toRelay.isNotEmpty) unawaited(_relayPositions());

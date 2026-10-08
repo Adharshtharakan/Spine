@@ -34,6 +34,7 @@ class _MapTabState extends State<MapTab> {
           positions: positions,
           members: s.members,
           waypoints: s.itinerary.waypoints,
+          routeLine: s.routeLine,
           selfMemberId: s.me?.id,
           leadMemberId: lead?.memberId,
           followSelf: _follow,

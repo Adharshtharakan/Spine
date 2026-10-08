@@ -8,7 +8,7 @@ where there is no cell signal.
 |---|---|
 | `app/` | Flutter app (iOS + Android) |
 | `supabase/` | Postgres schema, RLS, RPCs, seed, rule tests |
-| `edge/` | Cloudflare Worker: map tiles, discovery, affiliates, billing |
+| `edge/` | Cloudflare Worker: map tiles, road routing, discovery, affiliates, billing |
 | `tiles/` | Script to build and upload the self-hosted Protomaps basemap |
 | `PLAN.md` | Feature → component map and the build sequence |
 
@@ -25,14 +25,23 @@ where there is no cell signal.
 - **Party-only text and push-to-talk.** Chat is visible to trip members
   only (RLS). Voice is half-duplex push-to-talk over peer-to-peer WebRTC,
   so no media server is involved.
-- **Offline resiliency.** Basemap packs are cached along the route as
-  bounding boxes. GPS keeps plotting with no network. Silent vehicles are
-  dead-reckoned along the route with a growing uncertainty halo. Writes
-  queue in an outbox, and the whole trip is snapshotted on the device.
-- **Offline mesh.** When the cell network is gone, cars exchange positions,
-  chat and plan edits directly: Nearby Connections on Android,
-  MultipeerConnectivity on iOS. Frames are HMAC-signed with a trip secret.
-  Premium relays across several hops.
+- **Offline resiliency: last-resort prediction.** When nothing can reach
+  a car, each phone estimates where it is from what it already had, with
+  no data exchanged during the outage. It uses the car's last reported
+  location (GPS, or a coarser cell-tower fix whose wider uncertainty is
+  carried forward), its average moving speed (saved with the trip), and
+  the cached road route with each leg's expected driving speed. It also
+  holds a car at a planned stop until its departure time, and keeps a
+  silent car at its last gap behind a convoy-mate that is still
+  reporting. The estimate is drawn with a growing uncertainty halo and a
+  plain-language reason ("moving with Blue Jeep", "probably at Dhaba
+  until 14:30"). Offline map packs and the GPS keep your own position
+  exact, and writes queue in an outbox.
+- **Optional off-grid links.** With weak signal, the app polls over HTTP
+  every 15 s. With no signal, cars with a paired Meshtastic LoRa radio
+  (2–10 km car to car, relayed between radios) keep sharing encrypted
+  positions and chat, and any car with signal acts as a gateway.
+  Phone-to-phone Bluetooth/Wi-Fi covers cars that are bunched together.
 - **Public trip discovery.** Verified organisers (confirmed phone plus
   current terms) publish trips. A traveller accepts the guidelines and
   driver terms (licensed, insured, roadworthy) and requests to join; the
@@ -91,6 +100,9 @@ wrangler secret put AFFILIATE_SIGNING_KEY
 # APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID
 npm run deploy
 ```
+
+`OSRM_URL` (road geometry for prediction) defaults to the public OSRM demo
+server, which is for development only; self-host OSRM for production.
 
 Store notifications: point App Store Server Notifications V2 at
 `/billing/apple/notify`, and the Play RTDN Pub/Sub push subscription at

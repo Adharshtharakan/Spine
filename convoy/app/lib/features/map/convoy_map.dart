@@ -16,6 +16,7 @@ class ConvoyMap extends StatefulWidget {
     required this.members,
     required this.waypoints,
     required this.selfMemberId,
+    this.routeLine = const [],
     this.leadMemberId,
     this.followSelf = true,
     this.onWaypointLongPress,
@@ -25,6 +26,9 @@ class ConvoyMap extends StatefulWidget {
   final Map<String, VehiclePosition> positions;
   final Map<String, TripMember> members;
   final List<Waypoint> waypoints;
+
+  /// Road geometry to draw; falls back to straight lines between stops.
+  final List<GeoPoint> routeLine;
   final String? selfMemberId;
   final String? leadMemberId;
   final bool followSelf;
@@ -177,20 +181,23 @@ class _ConvoyMapState extends State<ConvoyMap> {
     }
   }
 
-  Map<String, dynamic> _routeGeoJson() => {
-        'type': 'FeatureCollection',
-        'features': [
-          if (widget.waypoints.length >= 2)
-            {
-              'type': 'Feature',
-              'properties': <String, dynamic>{},
-              'geometry': {
-                'type': 'LineString',
-                'coordinates': [for (final w in widget.waypoints) [w.location.lng, w.location.lat]],
-              },
+  Map<String, dynamic> _routeGeoJson() {
+    final line = widget.routeLine.length >= 2 ? widget.routeLine : [for (final w in widget.waypoints) w.location];
+    return {
+      'type': 'FeatureCollection',
+      'features': [
+        if (line.length >= 2)
+          {
+            'type': 'Feature',
+            'properties': <String, dynamic>{},
+            'geometry': {
+              'type': 'LineString',
+              'coordinates': [for (final p in line) [p.lng, p.lat]],
             },
-        ],
-      };
+          },
+      ],
+    };
+  }
 
   Map<String, dynamic> _stopsGeoJson() => {
         'type': 'FeatureCollection',

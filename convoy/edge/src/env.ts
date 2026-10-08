@@ -20,6 +20,8 @@ export interface Env {
   BOOKING_AFFILIATE_ID?: string;
   HIPCAMP_AFFILIATE_ID?: string;
   OVERPASS_URL?: string;
+  /** OSRM routing server for road geometry (self-host in production). */
+  OSRM_URL?: string;
 
   /** Google Play Developer API service account (JSON) for purchase checks. */
   GOOGLE_SERVICE_ACCOUNT_JSON?: string;

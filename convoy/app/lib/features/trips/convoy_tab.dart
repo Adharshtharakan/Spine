@@ -194,14 +194,14 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
     final parts = <String>[];
     if (m.id == leadId) {
       parts.add('Lead');
-    } else if (standing != null && s.itinerary.route.length >= 2) {
+    } else if (standing != null && s.routeLine.length >= 2) {
       parts.add('${Geo.formatDistance(standing.gapToLeadMeters.abs())} behind lead');
     }
     if (standing != null && standing.offRoute) parts.add('off route');
     parts.add('${(pos.speedMps * 3.6).round()} km/h');
     parts.add(switch (pos.source) {
       PositionSource.mesh => 'via nearby cars',
-      PositionSource.estimated => 'estimated',
+      PositionSource.estimated => 'estimated: ${pos.basis ?? 'from last report'} (±${Geo.formatDistance(pos.accuracyM)}, last heard ${_ago(s.lastReported(m.id)?.timestamp ?? pos.timestamp)})',
       _ => _ago(pos.timestamp),
     });
     return parts.join(' · ');

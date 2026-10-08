@@ -3,7 +3,8 @@ import 'dart:typed_data';
 import 'package:convoy/core/geo/geo.dart';
 import 'package:convoy/data/models/trip.dart';
 import 'package:convoy/services/mesh/position_frame.dart';
-import 'package:convoy/services/tracking/dead_reckoning.dart';
+import 'package:convoy/data/models/waypoint.dart';
+import 'package:convoy/services/tracking/predictor.dart';
 import 'package:convoy/services/tracking/lead_vehicle.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,14 +72,154 @@ void main() {
     });
   });
 
-  group('DeadReckoning', () {
-    test('projects a silent vehicle along the route with growing uncertainty', () {
-      final last = _at(_tail, 0.5, now.subtract(const Duration(minutes: 2)));
-      final est = const DeadReckoning().estimate(last, _route, now);
+  group('ConvoyPredictor', () {
+    const predictor = ConvoyPredictor();
+
+    // A car's track: 25 m/s east along the equator for 3 minutes.
+    List<VehiclePosition> track(String id, double startLng, DateTime end, {double speed = 25}) => [
+          for (var s = 180; s >= 0; s -= 10)
+            VehiclePosition(
+              memberId: id,
+              point: GeoPoint(0, startLng - speed * s / 111195),
+              timestamp: end.subtract(Duration(seconds: s)),
+              speedMps: speed,
+              headingDeg: 90,
+            ),
+        ];
+
+    test('follows the road at the smoothed recent speed', () {
+      final lastAt = now.subtract(const Duration(minutes: 2));
+      final h = track(_tail, 0.5, lastAt);
+      final est = predictor.predict(
+          last: h.last, route: _route, history: {_tail: h}, latest: {_tail: h.last}, stops: const [], now: now);
       expect(est.source, PositionSource.estimated);
-      final moved = Geo.distanceMeters(last.point, est.point);
-      expect(moved, closeTo(25 * 120, 100));
-      expect(est.accuracyM, greaterThan(last.accuracyM + 600));
+      expect(Geo.distanceMeters(h.last.point, est.point), closeTo(25 * 120, 150));
+      expect(est.point.lat, closeTo(0, 1e-6), reason: 'stays on the road');
+      expect(est.basis, contains('along the road'));
+      expect(est.accuracyM, greaterThan(h.last.accuracyM + 400));
+    });
+
+    test('holds a car at a planned stop until its departure time', () {
+      final lastAt = now.subtract(const Duration(minutes: 20));
+      final h = track(_tail, 0.5, lastAt);
+      // A rest stop ~5.5 km ahead, leaving 30 min after the car went quiet.
+      final stop = Waypoint(
+        id: 'w',
+        tripId: 't',
+        name: 'Dhaba',
+        location: const GeoPoint(0, 0.55),
+        kind: WaypointKind.restStop,
+        sortKey: 1,
+        hlc: 'x',
+        plannedDeparture: lastAt.add(const Duration(minutes: 30)),
+      );
+      final est = predictor.predict(
+          last: h.last, route: _route, history: {_tail: h}, latest: {_tail: h.last}, stops: [stop], now: now);
+      expect(Geo.distanceMeters(est.point, stop.location), lessThan(50));
+      expect(est.basis, contains('Dhaba'));
+    });
+
+    test('keeps the gap to a convoy-mate that is still reporting', () {
+      final lastAt = now.subtract(const Duration(minutes: 5));
+      // Silent car was 1 km behind the lead when it went quiet.
+      final silent = track(_tail, 0.5, lastAt);
+      final leadThen = VehiclePosition(
+          memberId: _lead, point: const GeoPoint(0, 0.5 + 1000 / 111195), timestamp: lastAt, speedMps: 10, headingDeg: 90);
+      // The lead slowed to a crawl (traffic): only 600 m further now.
+      final leadNow = VehiclePosition(
+          memberId: _lead,
+          point: GeoPoint(0, 0.5 + 1600 / 111195),
+          timestamp: now.subtract(const Duration(seconds: 5)),
+          speedMps: 2,
+          headingDeg: 90);
+      final est = predictor.predict(
+        last: silent.last,
+        route: _route,
+        history: {_tail: silent, _lead: [leadThen, leadNow]},
+        latest: {_tail: silent.last, _lead: leadNow},
+        stops: const [],
+        now: now,
+        labels: const {_lead: 'Blue Jeep'},
+      );
+      // A speed-only model would put it 7.5 km on; the convoy model keeps
+      // it ~1 km behind the lead.
+      expect(Geo.distanceMeters(est.point, leadNow.point), closeTo(1000, 100));
+      expect(est.basis, 'moving with Blue Jeep');
+    });
+
+    test('a car that had stopped stays put', () {
+      final lastAt = now.subtract(const Duration(minutes: 3));
+      final h = track(_tail, 0.5, lastAt);
+      final stopped = VehiclePosition(memberId: _tail, point: h.last.point, timestamp: lastAt, speedMps: 0);
+      final est = predictor.predict(
+          last: stopped, route: _route, history: {_tail: [...h, stopped]}, latest: {_tail: stopped}, stops: const [], now: now);
+      expect(Geo.distanceMeters(est.point, stopped.point), lessThan(1));
+      expect(est.basis, contains('stopped'));
+    });
+
+    test('off the route it only extrapolates a few minutes', () {
+      final lastAt = now.subtract(const Duration(minutes: 20));
+      final off = VehiclePosition(
+          memberId: _tail, point: const GeoPoint(0.5, 0.5), timestamp: lastAt, speedMps: 20, headingDeg: 0);
+      final est = predictor.predict(last: off, route: _route, history: const {}, latest: {_tail: off}, stops: const [], now: now);
+      expect(Geo.distanceMeters(off.point, est.point), closeTo(20 * 300, 50));
+    });
+
+    test('typical speed smooths over a single odd reading', () {
+      final h = track(_tail, 0.5, now);
+      final odd = VehiclePosition(memberId: _tail, point: h.last.point, timestamp: now, speedMps: 5, headingDeg: 90);
+      expect(ConvoyPredictor.typicalSpeed([...h.sublist(0, h.length - 1), odd], odd), closeTo(0.7 * 25 + 0.3 * 5, 2));
+    });
+  });
+
+  group('last-resort prediction inputs', () {
+    final predictor = const ConvoyPredictor();
+
+    test('with no recent history it uses the car\'s trip average, capped by the road', () {
+      final last = VehiclePosition(
+          memberId: _tail, point: const GeoPoint(0, 0.5), timestamp: now.subtract(const Duration(minutes: 10)), speedMps: 30, headingDeg: 90);
+      final est = predictor.predict(
+          last: last, route: _route, history: const {}, latest: {_tail: last}, stops: const [], now: now,
+          averageSpeed: 20, roadSpeedAt: (_) => 25);
+      expect(Geo.distanceMeters(last.point, est.point), closeTo(20 * 600, 200));
+      expect(est.basis, contains('its average speed'));
+    });
+
+    test('with no history at all it uses the cached road speed over one odd reading', () {
+      final last = VehiclePosition(
+          memberId: _tail, point: const GeoPoint(0, 0.5), timestamp: now.subtract(const Duration(minutes: 10)), speedMps: 40, headingDeg: 90);
+      final est = predictor.predict(
+          last: last, route: _route, history: const {}, latest: {_tail: last}, stops: const [], now: now,
+          roadSpeedAt: (_) => 20);
+      expect(Geo.distanceMeters(last.point, est.point), closeTo(20 * 600, 200));
+      expect(est.basis, contains('typical road speed'));
+    });
+
+    test('a coarse cell-tower fix starts with a wide uncertainty', () {
+      final cell = VehiclePosition(
+          memberId: _tail, point: const GeoPoint(0, 0.5), timestamp: now.subtract(const Duration(minutes: 1)),
+          speedMps: 20, headingDeg: 90, accuracyM: 1500);
+      final est = predictor.predict(last: cell, route: _route, history: const {}, latest: {_tail: cell}, stops: const [], now: now);
+      expect(est.accuracyM, greaterThan(1500));
+    });
+
+    test('average speed ignores stops and GPS jumps', () {
+      final avg = AverageSpeed();
+      var t = now;
+      var lng = 0.0;
+      for (final v in [25.0, 25.0, 0.0, 0.0, 25.0, 500.0, 25.0]) {
+        t = t.add(const Duration(seconds: 60));
+        lng += v * 60 / 111195;
+        avg.add(VehiclePosition(memberId: _tail, point: GeoPoint(0, lng), timestamp: t));
+      }
+      expect(avg.value, closeTo(25, 1));
+    });
+
+    test('road speeds come from the cached route legs', () {
+      final r = RoadSpeeds.fromLegs([(distanceM: 10000, durationS: 400), (distanceM: 5000, durationS: 500)]);
+      expect(r.at(3000), 25);
+      expect(r.at(12000), 10);
+      expect(RoadSpeeds.fromJson(r.toJson()).at(12000), 10);
     });
   });
 

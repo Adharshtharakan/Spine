@@ -114,3 +114,34 @@ describe("worker routes", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("routing", () => {
+  const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext;
+  const kv = { get: async () => null, put: async () => {} } as unknown as KVNamespace;
+  const env = { CACHE: kv, OSRM_URL: "https://osrm.test" } as Env;
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns simplified road geometry as [lat,lng]", async () => {
+    const coords = Array.from({ length: 200 }, (_, i) => [77.5 + i * 0.0001, 12.9] as [number, number]);
+    const fetchMock = vi.fn(async (_url: string) =>
+      Response.json({ code: "Ok", routes: [{ distance: 2200, duration: 180, geometry: { coordinates: coords }, legs: [{ distance: 2200, duration: 180 }] }] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await worker.fetch(
+      new Request("https://edge/route", { method: "POST", body: JSON.stringify({ points: [[12.9, 77.5], [12.9, 77.52]] }) }),
+      env,
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { geometry: [number, number][]; distance_m: number };
+    expect(body.distance_m).toBe(2200);
+    expect(body.geometry[0]).toEqual([12.9, 77.5]);
+    expect(body.geometry.length).toBeLessThan(200);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/route/v1/driving/77.50000,12.90000;77.52000,12.90000");
+  });
+
+  it("rejects a single point", async () => {
+    const res = await worker.fetch(new Request("https://edge/route", { method: "POST", body: JSON.stringify({ points: [[1, 1]] }) }), env, ctx);
+    expect(res.status).toBe(400);
+  });
+});

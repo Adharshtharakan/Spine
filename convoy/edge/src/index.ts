@@ -1,6 +1,7 @@
 import { handleAffiliates } from "./affiliates";
 import { handleBilling } from "./billing";
 import { handleDiscovery } from "./discovery";
+import { handleRouting } from "./routing";
 import type { Env } from "./env";
 import { corsHeaders, errorResponse, json } from "./http";
 import { handleTiles } from "./tiles";
@@ -11,6 +12,7 @@ import { handleTiles } from "./tiles";
  *   /style.json, /tiles/…, /fonts/…, /sprites/…   self-hosted PMTiles basemap
  *   /discovery/…                                   public trip discovery
  *   /affiliates/…                                  B2B bookings along the route
+ *   /route                                         road geometry for prediction
  *   /billing/…                                     subscription verification
  */
 export default {
@@ -20,7 +22,7 @@ export default {
       const url = new URL(req.url);
       if (url.pathname === "/health") return json({ ok: true });
 
-      for (const handler of [handleTiles, handleDiscovery, handleAffiliates]) {
+      for (const handler of [handleTiles, handleDiscovery, handleAffiliates, handleRouting]) {
         const res = await handler(req, env, ctx);
         if (res) return res;
       }

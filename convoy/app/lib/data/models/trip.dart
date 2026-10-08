@@ -130,6 +130,7 @@ class VehiclePosition {
     this.accuracyM = 10,
     this.source = PositionSource.cloud,
     this.hops = 0,
+    this.basis,
   });
 
   final String memberId;
@@ -143,18 +144,30 @@ class VehiclePosition {
   /// Mesh relay hops this frame travelled (0 = heard directly).
   final int hops;
 
+  /// For [PositionSource.estimated]: why the app thinks the car is here,
+  /// shown to drivers ("moving with Blue Jeep", "at Dhaba until 14:30").
+  final String? basis;
+
   Duration age(DateTime now) => now.difference(timestamp);
 
-  VehiclePosition copyWith({GeoPoint? point, PositionSource? source, double? accuracyM}) =>
+  VehiclePosition copyWith({
+    GeoPoint? point,
+    PositionSource? source,
+    double? accuracyM,
+    double? speedMps,
+    double? headingDeg,
+    String? basis,
+  }) =>
       VehiclePosition(
         memberId: memberId,
         point: point ?? this.point,
         timestamp: timestamp,
-        speedMps: speedMps,
-        headingDeg: headingDeg,
+        speedMps: speedMps ?? this.speedMps,
+        headingDeg: headingDeg ?? this.headingDeg,
         accuracyM: accuracyM ?? this.accuracyM,
         source: source ?? this.source,
         hops: hops,
+        basis: basis ?? this.basis,
       );
 
   Map<String, dynamic> toJson() => {
