@@ -86,7 +86,7 @@ class TripMember {
           'Driver',
       role: memberRoleFromWire(r['role'] as String?),
       vehicleLabel: r['vehicle_label'] as String?,
-      vehicleColor: (r['vehicle_color'] as int?) ?? 0xFF2E7DF6,
+      vehicleColor: (r['vehicle_color'] as int?)?.toUnsigned(32) ?? 0xFF2E7DF6,
       hasVehicle: (r['has_vehicle'] as bool?) ?? true,
     );
   }
