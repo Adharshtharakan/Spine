@@ -51,6 +51,20 @@ class Trip {
       );
 
   static DateTime? _d(Object? v) => v == null ? null : DateTime.parse(v as String).toLocal();
+
+  Map<String, dynamic> toRow() => {
+        'id': id,
+        'owner_id': ownerId,
+        'title': title,
+        'description': description,
+        'invite_code': inviteCode,
+        'visibility': visibility.name,
+        'lead_member_id': leadMemberId,
+        'starts_at': startsAt?.toUtc().toIso8601String(),
+        'ends_at': endsAt?.toUtc().toIso8601String(),
+        'max_vehicles': maxVehicles,
+        'published_at': publishedAt?.toUtc().toIso8601String(),
+      };
 }
 
 /// A participant. Every member with a vehicle appears on the convoy map.
@@ -74,6 +88,17 @@ class TripMember {
   final String? vehicleLabel;
   final int vehicleColor;
   final bool hasVehicle;
+
+  Map<String, dynamic> toRow() => {
+        'id': id,
+        'trip_id': tripId,
+        'user_id': userId,
+        'display_name': displayName,
+        'role': role.name,
+        'vehicle_label': vehicleLabel,
+        'vehicle_color': vehicleColor,
+        'has_vehicle': hasVehicle,
+      };
 
   factory TripMember.fromRow(Map<String, dynamic> r) {
     final profile = r['profiles'] as Map<String, dynamic>?;

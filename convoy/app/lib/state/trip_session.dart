@@ -12,6 +12,7 @@ import '../data/models/waypoint.dart';
 import '../data/repositories/trip_repository.dart';
 import '../services/location/gps_service.dart';
 import '../services/offline/outbox.dart';
+import '../services/offline/trip_cache.dart';
 import '../services/realtime/convoy_channel.dart';
 import '../services/tracking/dead_reckoning.dart';
 import '../services/tracking/lead_vehicle.dart';
@@ -107,6 +108,7 @@ class TripSession extends ChangeNotifier {
       return;
     }
     itinerary = ItineraryDoc(tripId, nodeId: uid.substring(0, 8));
+    final cache = TripCache(tripId);
     try {
       trip = await _repo.trip(tripId);
       await _loadMembers();
@@ -124,10 +126,16 @@ class TripSession extends ChangeNotifier {
       for (final p in await _repo.lastKnownPositions(tripId)) {
         _reported[p.memberId] = p;
       }
+      unawaited(_saveSnapshot());
     } catch (e) {
-      // Opening a trip with no signal: carry on with whatever the outbox and
-      // mesh can provide. The map, GPS and offline tiles still work.
-      error = friendlyError(e);
+      // Opened with no signal: restore the last snapshot so the map, GPS,
+      // offline tiles and the mesh all still work.
+      final snap = await cache.load();
+      if (snap != null) {
+        _restoreSnapshot(snap);
+      } else {
+        error = friendlyError(e);
+      }
       link = LinkMode.isolated;
     }
 
@@ -141,6 +149,35 @@ class TripSession extends ChangeNotifier {
     loading = false;
     notifyListeners();
   }
+
+  Future<void> _saveSnapshot() => TripCache(tripId).save({
+        'trip': trip?.toRow(),
+        'members': [for (final m in members.values) m.toRow()],
+        'waypoints': [for (final w in itinerary.allRows) w.toRow()],
+        'messages': [for (final m in messages.where((m) => !m.pending).take(100)) m.toRow()],
+        'positions': [for (final p in _reported.values) p.toJson()],
+      });
+
+  void _restoreSnapshot(Map<String, dynamic> snap) {
+    List<Map<String, dynamic>> rows(String k) =>
+        [for (final r in (snap[k] as List? ?? const [])) Map<String, dynamic>.from(r as Map)];
+    if (snap['trip'] != null) trip = Trip.fromRow(Map<String, dynamic>.from(snap['trip'] as Map));
+    members = {for (final r in rows('members')) r['id'] as String: TripMember.fromRow(r)};
+    me = members.values.where((m) => m.userId == userId).firstOrNull;
+    itinerary.mergeAll(rows('waypoints').map(Waypoint.fromRow));
+    messages
+      ..clear()
+      ..addAll(rows('messages').map(ChatMessage.fromRow));
+    for (final r in rows('positions')) {
+      final p = VehiclePosition.fromJson(r);
+      _reported[p.memberId] = p;
+    }
+  }
+
+  final List<Future<void> Function()> _disposers = [];
+
+  /// Lets attached subsystems (the mesh) clean up with the session.
+  void addDisposer(Future<void> Function() d) => _disposers.add(d);
 
   Future<void> _loadMembers() async {
     final list = await _repo.members(tripId);
@@ -369,6 +406,10 @@ class TripSession extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(_saveSnapshot());
+    for (final d in _disposers) {
+      unawaited(d());
+    }
     _ticker?.cancel();
     for (final s in _subs) {
       s.cancel();

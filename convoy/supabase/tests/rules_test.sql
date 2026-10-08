@@ -104,6 +104,10 @@ select pg_temp.as_user(:dave);
 do $$ begin
   if (select count(*) from public.discover_trips()) <> 1 then raise exception 'discovery count'; end if;
 end $$;
+-- Public listing must not leak the invite code (it bypasses mutual acceptance).
+do $$ begin
+  if exists (select 1 from public.trips) then raise exception 'stranger can read published trip row'; end if;
+end $$;
 select pg_temp.expect_error(format($$select public.request_to_join(%L, 'Dave''s bike')$$, (select id from t)), 'guidelines_not_accepted');
 select pg_temp.accept_all();
 create temp table jr as select * from public.request_to_join((select id from t), 'Dave''s bike', 'Happy to sweep');

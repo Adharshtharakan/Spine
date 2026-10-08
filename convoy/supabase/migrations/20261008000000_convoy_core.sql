@@ -533,8 +533,11 @@ create policy "own entitlement" on public.entitlements for select to authenticat
 create policy "documents readable" on public.guideline_documents for select to anon, authenticated using (published_at <= now());
 create policy "own acceptances" on public.guideline_acceptances for select to authenticated using (user_id = auth.uid());
 
+-- Members only. Strangers browse public trips through discover_trips(),
+-- which never returns invite_code (the invite code admits without the
+-- mutual-acceptance flow and keys the offline mesh).
 create policy "members see trip" on public.trips for select to authenticated
-  using (public.is_trip_member(id) or (visibility = 'public' and published_at is not null));
+  using (public.is_trip_member(id));
 create policy "owner edits trip" on public.trips for update to authenticated
   using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 revoke update on public.trips from authenticated;
