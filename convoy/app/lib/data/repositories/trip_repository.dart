@@ -92,9 +92,9 @@ class TripRepository {
 
   Future<void> updateMyVehicle(String memberId, {String? label, int? color, bool? hasVehicle}) =>
       _db.from('trip_members').update({
-        if (label != null) 'vehicle_label': label,
+        'vehicle_label': ?label,
         if (color != null) 'vehicle_color': color.toSigned(32),
-        if (hasVehicle != null) 'has_vehicle': hasVehicle,
+        'has_vehicle': ?hasVehicle,
       }).eq('id', memberId);
 
   Future<void> leave(String memberId) => _db.from('trip_members').delete().eq('id', memberId);
