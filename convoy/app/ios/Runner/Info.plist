@@ -2,6 +2,31 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Convoy shows your vehicle to your travel party on the shared map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Convoy keeps sharing your position with your travel party while the phone is locked in its mount.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Push-to-talk lets you speak to the other vehicles in your convoy.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>When there is no cell signal, Convoy shares positions directly with nearby vehicles over Bluetooth.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>When there is no cell signal, Convoy shares positions directly with nearby vehicles.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_convoy-mesh._tcp</string>
+		<string>_convoy-mesh._udp</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>audio</string>
+		<string>voip</string>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
+	</array>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -15,7 +40,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>convoy</string>
+	<string>Convoy</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

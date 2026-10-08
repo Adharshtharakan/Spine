@@ -243,7 +243,7 @@ class Entitlement {
 
   static const int freeVehicleCap = 2;
   static const int premiumVehicleCap = 25;
-  static const double freeOfflineAreaKm2 = 2500;
+  static const double freeOfflineAreaKm2 = 20000;
   static const int freeOfflineRegions = 1;
 
   bool get isPremium =>
