@@ -98,8 +98,12 @@ class _LinkBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, icon, text) = switch (session.link) {
       LinkMode.cloud => (null, Icons.cloud_done, ''),
-      LinkMode.mesh => (ConvoyTheme.mesh, Icons.bluetooth_connected, 'No signal — sharing positions with nearby cars directly'),
-      LinkMode.isolated => (ConvoyTheme.offline, Icons.cloud_off, 'No signal — your GPS and offline maps still work; others are estimated'),
+      LinkMode.weak => (ConvoyTheme.offline, Icons.network_cell, 'Weak signal — convoy updates every 15 s'),
+      LinkMode.radio => (ConvoyTheme.mesh, Icons.settings_input_antenna,
+          'No signal — linked by convoy radio (${session.meshPeersOn?.call('lora') ?? 0} heard)'),
+      LinkMode.nearby => (ConvoyTheme.mesh, Icons.bluetooth_connected, 'No signal — only cars close by are linked'),
+      LinkMode.isolated => (ConvoyTheme.offline, Icons.cloud_off,
+          'No signal — your GPS and offline maps still work; others are predicted from their last report'),
     };
     final gpsProblem = switch (session.gpsPermission) {
       GpsPermission.denied || GpsPermission.deniedForever => 'Location permission is off — your convoy cannot see you',

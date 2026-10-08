@@ -66,6 +66,10 @@ class Outbox {
               await _db.from('waypoints').upsert(item.row);
             case 'messages':
               await _db.from('messages').upsert(item.row, ignoreDuplicates: true);
+            case 'relay_message':
+              // Another car's message heard over the radio; it may have no
+              // signal for hours, so whoever reaches the cloud first posts it.
+              await _db.rpc('relay_message', params: {'p_row': item.row});
           }
         } on PostgrestException catch (e) {
           // A permanent rejection (RLS, check constraint) would block the

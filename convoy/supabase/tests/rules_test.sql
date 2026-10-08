@@ -133,4 +133,36 @@ insert into realtime.messages (topic, payload) values ('trip:' || (select id fro
 select pg_temp.as_user('e0000000-0000-4000-8000-00000000000f');
 select pg_temp.expect_error($$insert into realtime.messages (topic, payload) values ('x', '{}')$$, 'row-level security');
 
+-- Off-grid gateway relaying.
+select pg_temp.as_user(:bob);
+select public.relay_positions((select id from t), jsonb_build_array(jsonb_build_object(
+  'member_id', (select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004'),
+  'lat', 10.5, 'lng', 10.5, 'recorded_at', now() - interval '1 minute')));
+-- An older relayed fix must not overwrite the newer one.
+select public.relay_positions((select id from t), jsonb_build_array(jsonb_build_object(
+  'member_id', (select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004'),
+  'lat', 1, 'lng', 1, 'recorded_at', now() - interval '10 minutes')));
+do $$ begin
+  if (select lat from public.member_locations ml join public.trip_members m on m.id = ml.member_id
+      where m.user_id = 'd0000000-0000-4000-8000-000000000004') <> 10.5 then
+    raise exception 'stale relayed fix won';
+  end if;
+end $$;
+select public.relay_message(jsonb_build_object('id', 'f0000000-0000-4000-8000-000000000001',
+  'trip_id', (select id from t), 'sender_id', 'd0000000-0000-4000-8000-000000000004', 'body', 'Flat tyre at km 82'));
+select public.relay_message(jsonb_build_object('id', 'f0000000-0000-4000-8000-000000000001',
+  'trip_id', (select id from t), 'sender_id', 'd0000000-0000-4000-8000-000000000004', 'body', 'Flat tyre at km 82'));
+do $$ begin
+  if (select count(*) from public.messages where id = 'f0000000-0000-4000-8000-000000000001') <> 1 then
+    raise exception 'relayed message not stored exactly once';
+  end if;
+end $$;
+-- Outsiders cannot relay into a trip, nor relay as someone from another trip.
+select pg_temp.as_user(:carol);
+select pg_temp.expect_error(format($$select public.relay_message(jsonb_build_object('id', gen_random_uuid(),
+  'trip_id', %L, 'sender_id', 'a0000000-0000-4000-8000-000000000001', 'body', 'x'))$$, (select id from bt)), 'not_a_member');
+select pg_temp.as_user(:bob);
+select pg_temp.expect_error(format($$select public.relay_message(jsonb_build_object('id', gen_random_uuid(),
+  'trip_id', %L, 'sender_id', 'c0000000-0000-4000-8000-000000000003', 'body', 'spoof'))$$, (select id from bt)), 'sender_not_in_trip');
+
 \echo 'ALL RULE TESTS PASSED'

@@ -19,15 +19,22 @@ import '../services/tracking/lead_vehicle.dart';
 import '../services/voice/ptt_service.dart';
 import '../sync/itinerary_doc.dart';
 
-/// How the convoy is currently being kept in sync.
+/// How the convoy is currently being kept in sync, best first.
 enum LinkMode {
   /// Supabase Realtime is live.
   cloud,
 
-  /// No internet, but peers are reachable over the BLE/Wi-Fi mesh.
-  mesh,
+  /// Realtime keeps dropping but small HTTP requests get through (2G/EDGE,
+  /// fringe coverage): positions, chat and plan are polled every 15 s.
+  weak,
 
-  /// Neither: own GPS still plots; others are dead-reckoned.
+  /// No internet; other cars are heard over the LoRa radio mesh (km range).
+  radio,
+
+  /// No internet; only cars close by, over Bluetooth / Wi-Fi Direct.
+  nearby,
+
+  /// Nothing: own GPS still plots, others are predicted from their last fix.
   isolated,
 }
 
@@ -63,11 +70,26 @@ class TripSession extends ChangeNotifier {
   DateTime _lastBroadcast = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastPersist = DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// Hooks for the offline mesh (step 5): set by [attachMesh].
+  /// Hooks for the off-grid links, set by [attachMesh].
   Future<void> Function(VehiclePosition p)? meshSendPosition;
   Future<void> Function(ChatMessage m)? meshSendChat;
   Future<void> Function(Waypoint w)? meshSendWaypoint;
-  bool Function()? meshHasPeers;
+
+  /// Gateway: push cloud-side positions / chat onto the radio.
+  Future<void> Function(VehiclePosition p)? meshForwardPosition;
+  Future<void> Function(ChatMessage m)? meshForwardChat;
+
+  /// Peers currently reachable on a link (`lora`, `nearby`).
+  int Function(String transport)? meshPeersOn;
+
+  /// Positions heard off-grid, waiting to be relayed into the cloud.
+  final Map<String, VehiclePosition> _toRelay = {};
+  final Map<String, DateTime> _gatewayBroadcastAt = {};
+  DateTime? _lastPollOk;
+  DateTime _lastPoll = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime? _offlineSince;
+  String? _waypointCursor;
+  bool _polling = false;
 
   static const _resolver = LeadVehicleResolver();
   static const _reckoner = DeadReckoning();
@@ -114,6 +136,10 @@ class TripSession extends ChangeNotifier {
       await _loadMembers();
       final rows = await _db.from('waypoints').select().eq('trip_id', tripId);
       itinerary.mergeAll(rows.map(Waypoint.fromRow));
+      for (final r in rows) {
+        final u = r['updated_at'] as String?;
+        if (u != null && (_waypointCursor == null || u.compareTo(_waypointCursor!) > 0)) _waypointCursor = u;
+      }
       final msgs = await _db
           .from('messages')
           .select('*, profiles:sender_id(display_name)')
@@ -189,11 +215,18 @@ class TripSession extends ChangeNotifier {
     final ch = ConvoyChannel(_db, tripId: tripId, memberId: memberId)..connect();
     channel = ch;
     _subs.addAll([
-      ch.positions.listen(_acceptPosition),
+      ch.positions.listen((p) {
+        _acceptPosition(p);
+        // Gateway: cars on the radio with no signal learn about this car.
+        if (meshForwardPosition != null) unawaited(meshForwardPosition!(p));
+      }),
       ch.waypoints.listen((w) {
         if (itinerary.merge(w)) notifyListeners();
       }),
-      ch.messages.listen(_acceptMessage),
+      ch.messages.listen((m) {
+        _acceptMessage(m);
+        if (meshForwardChat != null) unawaited(meshForwardChat!(m));
+      }),
       ch.membersChanged.listen((_) async {
         await _loadMembers();
         notifyListeners();
@@ -229,8 +262,19 @@ class TripSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Entry point for positions heard over the mesh.
-  void acceptMeshPosition(VehiclePosition p) => _acceptPosition(p);
+  /// Entry point for positions heard over the radio / phone mesh. If this
+  /// car has any signal it acts as a gateway and passes them to the cloud.
+  void acceptMeshPosition(VehiclePosition p) {
+    _acceptPosition(p);
+    if (p.memberId == me?.id) return;
+    _toRelay[p.memberId] = p;
+    final live = channel?.isLive ?? false;
+    final last = _gatewayBroadcastAt[p.memberId];
+    if (live && (last == null || DateTime.now().difference(last) > const Duration(seconds: 5))) {
+      _gatewayBroadcastAt[p.memberId] = DateTime.now();
+      unawaited(channel!.sendPosition(p));
+    }
+  }
 
   void _acceptMessage(ChatMessage m) {
     final i = messages.indexWhere((x) => x.id == m.id);
@@ -255,8 +299,13 @@ class TripSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Entry point for chat and itinerary rows heard over the mesh.
-  void acceptMeshMessage(ChatMessage m) => _acceptMessage(m.copyWith(viaMesh: true));
+  /// Entry point for chat and itinerary rows heard over the mesh. Relayed
+  /// into the cloud (idempotently) by whichever car has signal first.
+  void acceptMeshMessage(ChatMessage m) {
+    final known = messages.any((x) => x.id == m.id);
+    _acceptMessage(m.copyWith(viaMesh: true));
+    if (!known && m.senderId != userId) _queue(OutboxItem('relay_message', m.toRow()));
+  }
 
   void acceptMeshWaypoint(Waypoint w) {
     if (itinerary.merge(w)) {
@@ -288,27 +337,113 @@ class TripSession extends ChangeNotifier {
   }
 
   void _tick() {
+    final live = channel?.isLive ?? false;
+    final now = DateTime.now();
+    if (live) {
+      _offlineSince = null;
+      if (_toRelay.isNotEmpty) unawaited(_relayPositions());
+    } else {
+      _offlineSince ??= now;
+      // Realtime has been down a while: fall back to light HTTP polling,
+      // which survives links too poor to hold a websocket.
+      if (now.difference(_offlineSince!) > const Duration(seconds: 15) &&
+          now.difference(_lastPoll) > const Duration(seconds: 15)) {
+        unawaited(_poll());
+      }
+    }
     _updateLink();
-    // Re-render so dead-reckoned vehicles keep moving between reports.
+    // Re-render so predicted vehicles keep moving between reports.
     notifyListeners();
   }
 
   void _updateLink() {
-    final live = channel?.isLive ?? false;
-    final next = live
-        ? LinkMode.cloud
-        : (meshHasPeers?.call() ?? false)
-            ? LinkMode.mesh
-            : LinkMode.isolated;
+    final now = DateTime.now();
+    final LinkMode next;
+    if (channel?.isLive ?? false) {
+      next = LinkMode.cloud;
+    } else if (_lastPollOk != null && now.difference(_lastPollOk!) < const Duration(seconds: 60)) {
+      next = LinkMode.weak;
+    } else if ((meshPeersOn?.call('lora') ?? 0) > 0) {
+      next = LinkMode.radio;
+    } else if ((meshPeersOn?.call('nearby') ?? 0) > 0) {
+      next = LinkMode.nearby;
+    } else {
+      next = LinkMode.isolated;
+    }
     if (next != link) {
       link = next;
       notifyListeners();
     }
   }
 
+  bool get _cloudReachable =>
+      (channel?.isLive ?? false) ||
+      (_lastPollOk != null && DateTime.now().difference(_lastPollOk!) < const Duration(seconds: 60));
+
+  /// Weak-signal mode: a handful of small requests every 15 s.
+  Future<void> _poll() async {
+    if (_polling) return;
+    _polling = true;
+    _lastPoll = DateTime.now();
+    const t = Duration(seconds: 10);
+    try {
+      final mine = me == null ? null : _reported[me!.id];
+      if (mine != null) await _repo.saveLastKnown(tripId, mine).timeout(t);
+      await _relayPositions();
+
+      for (final p in await _repo.lastKnownPositions(tripId).timeout(t)) {
+        if (p.memberId != me?.id) _acceptPosition(p);
+      }
+
+      final since = messages.where((m) => !m.pending).lastOrNull?.createdAt;
+      var q = _db.from('messages').select('*, profiles:sender_id(display_name)').eq('trip_id', tripId);
+      if (since != null) q = q.gt('created_at', since.toUtc().toIso8601String());
+      for (final r in await q.order('created_at').limit(50).timeout(t)) {
+        _acceptMessage(ChatMessage.fromRow(r));
+      }
+
+      var wq = _db.from('waypoints').select().eq('trip_id', tripId);
+      if (_waypointCursor != null) wq = wq.gt('updated_at', _waypointCursor!);
+      for (final r in await wq.order('updated_at').limit(200).timeout(t)) {
+        itinerary.merge(Waypoint.fromRow(r));
+        _waypointCursor = r['updated_at'] as String?;
+      }
+
+      _lastPollOk = DateTime.now();
+      await _flushOutbox();
+    } catch (_) {
+      // Still no usable connection.
+    } finally {
+      _polling = false;
+      _updateLink();
+      notifyListeners();
+    }
+  }
+
+  /// Gateway: hand positions heard off-grid to the server so every car with
+  /// signal (and anyone opening the trip later) sees them.
+  Future<void> _relayPositions() async {
+    if (_toRelay.isEmpty) return;
+    final batch = _toRelay.values.toList();
+    _toRelay.clear();
+    try {
+      await _repo.relayPositions(tripId, batch);
+    } catch (_) {
+      for (final p in batch) {
+        _toRelay.putIfAbsent(p.memberId, () => p);
+      }
+    }
+  }
+
+  Future<void> _flushOutbox() async {
+    final sent = await _outbox?.flush() ?? 0;
+    pendingWrites = _outbox?.length ?? 0;
+    if (sent > 0) notifyListeners();
+  }
+
   Future<void> _onConnectivity() async {
     _updateLink();
-    if (channel?.isLive ?? false) {
+    if (_cloudReachable) {
       final sent = await _outbox?.flush() ?? 0;
       pendingWrites = _outbox?.length ?? 0;
       if (sent > 0) notifyListeners();

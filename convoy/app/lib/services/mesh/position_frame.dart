@@ -47,8 +47,9 @@ class PositionFrame {
   final int hops;
   final int sequence;
 
-  /// Key used to drop frames already seen when relaying around the mesh.
-  String get dedupeKey => '${position.memberId}:$sequence';
+  /// Identity of the fix itself (one per member per second), so the same fix
+  /// arriving from its car and from a gateway is only delivered once.
+  String get dedupeKey => '${position.memberId}:${position.timestamp.millisecondsSinceEpoch ~/ 1000}';
 
   Uint8List encode() {
     final b = ByteData(MeshFrame.positionLength);

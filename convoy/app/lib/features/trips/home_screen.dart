@@ -8,6 +8,7 @@ import '../../state/providers.dart';
 import '../discovery/discover_screen.dart';
 import '../offline_maps/offline_maps_screen.dart';
 import '../paywall/paywall_screen.dart';
+import '../radio/radio_screen.dart';
 import 'trip_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -31,6 +32,8 @@ class HomeScreen extends ConsumerWidget {
               switch (v) {
                 case 'offline':
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const OfflineMapsScreen()));
+                case 'radio':
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const RadioScreen()));
                 case 'premium':
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
                 case 'signout':
@@ -39,6 +42,7 @@ class HomeScreen extends ConsumerWidget {
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'offline', child: Text('Offline maps')),
+              const PopupMenuItem(value: 'radio', child: Text('Convoy radio (no-signal link)')),
               PopupMenuItem(value: 'premium', child: Text(ent?.isPremium == true ? 'Premium (active)' : 'Upgrade to Premium')),
               const PopupMenuItem(value: 'signout', child: Text('Sign out')),
             ],

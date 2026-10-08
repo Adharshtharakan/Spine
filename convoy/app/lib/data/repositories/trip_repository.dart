@@ -131,6 +131,23 @@ class TripRepository {
     });
   }
 
+  /// Gateway upload of positions heard over the radio / phone mesh.
+  Future<void> relayPositions(String tripId, List<VehiclePosition> positions) => _db.rpc('relay_positions', params: {
+        'p_trip': tripId,
+        'p_positions': [
+          for (final p in positions)
+            {
+              'member_id': p.memberId,
+              'lat': p.point.lat,
+              'lng': p.point.lng,
+              'speed_mps': p.speedMps,
+              'heading_deg': p.headingDeg,
+              'accuracy_m': p.accuracyM,
+              'recorded_at': p.timestamp.toUtc().toIso8601String(),
+            },
+        ],
+      });
+
   // ───────────── discovery: publishing & mutual acceptance ─────────────
 
   Future<Trip> publish(String tripId,
