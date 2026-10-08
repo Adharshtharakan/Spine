@@ -12,9 +12,13 @@ export class Supabase {
 
   private headers(token?: string): HeadersInit {
     const key = token ? this.env.SUPABASE_ANON_KEY : this.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Legacy keys are JWTs and go in both headers. New-style keys
+    // (sb_publishable_… / sb_secret_…) are not JWTs: send them only as
+    // `apikey`, and only real user JWTs as the bearer token.
+    const bearer = token ?? (isJwt(key) ? key : undefined);
     return {
       apikey: key,
-      authorization: `Bearer ${token ?? this.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
       "content-type": "application/json",
     };
   }
@@ -54,4 +58,8 @@ export class Supabase {
     }
     return body as T;
   }
+}
+
+function isJwt(key: string): boolean {
+  return key.split(".").length === 3;
 }

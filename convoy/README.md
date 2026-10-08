@@ -11,6 +11,7 @@ where there is no cell signal.
 | `edge/` | Cloudflare Worker: map tiles, road routing, discovery, affiliates, billing |
 | `tiles/` | Script to build and upload the self-hosted Protomaps basemap |
 | `PLAN.md` | Feature → component map and the build sequence |
+| `SETUP.md` | **Step-by-step setup: Supabase, map, Worker, running in Android Studio** |
 
 ## What it does
 
@@ -66,6 +67,9 @@ where there is no cell signal.
   a week.
 
 ## Setup
+
+New to the project? Follow **[SETUP.md](SETUP.md)**. It covers everything
+from installing Flutter to running on your phone. The short version:
 
 ### 1. Supabase
 

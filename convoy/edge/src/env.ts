@@ -1,6 +1,6 @@
 export interface Env {
   /** R2 bucket holding the PMTiles basemap plus fonts and sprites. */
-  TILES: R2Bucket;
+  TILES?: R2Bucket;
   /** Object key of the PMTiles archive inside TILES. */
   PMTILES_KEY: string;
   /** Workers KV for POI corridor results and other short-lived caches. */

@@ -48,7 +48,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
 
   static const _font = ['Noto Sans Regular'];
 
-  String get _style => '${Env.mapStyleUrl}${widget.dark ? '?theme=dark' : ''}';
+  String get _style => '${Env.mapStyleUrl}${widget.dark && Env.styleSupportsDarkTheme ? '?theme=dark' : ''}';
 
   @override
   void didUpdateWidget(covariant ConvoyMap old) {

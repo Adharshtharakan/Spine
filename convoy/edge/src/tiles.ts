@@ -38,7 +38,7 @@ let archive: { key: string; pm: PMTiles } | undefined;
 
 function getArchive(env: Env): PMTiles {
   if (!archive || archive.key !== env.PMTILES_KEY) {
-    archive = { key: env.PMTILES_KEY, pm: new PMTiles(new R2Source(env.TILES, env.PMTILES_KEY)) };
+    archive = { key: env.PMTILES_KEY, pm: new PMTiles(new R2Source(env.TILES!, env.PMTILES_KEY)) };
   }
   return archive.pm;
 }
@@ -48,6 +48,11 @@ const TILE_RE = /^\/tiles\/(\d+)\/(\d+)\/(\d+)\.(mvt|pbf|png|jpg|webp)$/;
 export async function handleTiles(req: Request, env: Env, ctx: ExecutionContext): Promise<Response | null> {
   const url = new URL(req.url);
   const path = url.pathname;
+  const isMapPath =
+    path === "/style.json" || path === "/tiles.json" || path.startsWith("/tiles/") || path.startsWith("/fonts/") || path.startsWith("/sprites/");
+  if (!isMapPath) return null;
+  // R2 is optional: until the basemap is uploaded the app uses OpenFreeMap.
+  if (!env.TILES) throw new HttpError(503, "self_hosted_tiles_not_configured");
 
   if (path === "/style.json") return styleJson(url, env);
   if (path === "/tiles.json") return tileJson(url, env);
@@ -155,7 +160,7 @@ async function staticAsset(req: Request, env: Env, ctx: ExecutionContext): Promi
 
   const type = path.endsWith(".png") ? "image/png" : path.endsWith(".json") ? "application/json" : "application/x-protobuf";
   let body: ArrayBuffer | null = null;
-  const obj = await env.TILES.get(`assets/${path}`);
+  const obj = await env.TILES!.get(`assets/${path}`);
   if (obj) {
     body = await obj.arrayBuffer();
   } else {

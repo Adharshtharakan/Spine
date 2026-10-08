@@ -11,14 +11,17 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 # Public demo server: development only. Self-host OSRM for production.
 OSRM_URL = "https://router.project-osrm.org"
 APPLE_ENVIRONMENT = "Production"
-# Secrets (wrangler secret put …): SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET,
+# Secrets (npx wrangler secret put …): SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET,
 # AFFILIATE_SIGNING_KEY, BOOKING_AFFILIATE_ID, HIPCAMP_AFFILIATE_ID,
 # GOOGLE_SERVICE_ACCOUNT_JSON, ANDROID_PACKAGE_NAME, APPLE_ISSUER_ID,
 # APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID
 
-[[r2_buckets]]
-binding = "TILES"
-bucket_name = "convoy-tiles"
+# Self-hosted basemap (optional — R2 needs a payment method on the
+# Cloudflare account). Uncomment after `wrangler r2 bucket create convoy-tiles`
+# and running tiles/build_region.sh; until then the app uses OpenFreeMap.
+# [[r2_buckets]]
+# binding = "TILES"
+# bucket_name = "convoy-tiles"
 
 [[kv_namespaces]]
 binding = "CACHE"
