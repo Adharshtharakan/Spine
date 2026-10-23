@@ -1,4 +1,4 @@
-# Setting up Convoy and running it from Android Studio
+# Setting up DriveSync and running it from Android Studio
 
 This takes you from an empty PC to the app running on your phone. Steps 1–4
 are all you need for a first run; everything after that is optional and can

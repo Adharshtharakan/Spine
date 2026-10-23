@@ -1,8 +1,14 @@
-# Convoy
+# DriveSync
 
-A coordination platform for group trips with several vehicles: one shared
+A coordination app for group trips with several vehicles: one shared
 plan, one live map, one private channel for every car in the party, even
-where there is no cell signal.
+where there is no cell signal. Light and dark themes; the logo and launcher
+icons are drawn in code (`app/lib/core/brand/logo.dart`) and regenerated with
+`flutter test tool/gen_icons_test.dart`.
+
+Internal identifiers (Dart package `convoy`, Android `app.convoy.convoy`,
+Worker `convoy-edge`) keep the original project name; change the Android
+application id and iOS bundle id to your own before publishing.
 
 | | |
 |---|---|

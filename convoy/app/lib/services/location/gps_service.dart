@@ -58,9 +58,9 @@ class GpsService {
         intervalDuration: const Duration(seconds: 1),
         // A foreground service keeps fixes flowing with the screen off.
         foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: 'Convoy is sharing your location',
+          notificationTitle: 'DriveSync is sharing your location',
           notificationText: 'Your group can see you on the convoy map.',
-          notificationChannelName: 'Convoy tracking',
+          notificationChannelName: 'DriveSync tracking',
           enableWakeLock: true,
           setOngoing: true,
         ),

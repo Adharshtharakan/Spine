@@ -12,7 +12,7 @@ import 'meshtastic_transport.dart';
 /// session hook in `main.dart`, so the session stays transport-agnostic.
 ///
 /// Always runs the short-range phone mesh; adds the long-range LoRa radio
-/// when the driver has paired one (Settings → Convoy radio).
+/// when the driver has paired one (menu → Long-range radio).
 void attachMesh(WidgetRef ref, TripSession session) {
   MeshService? mesh;
   final subs = <StreamSubscription<dynamic>>[];

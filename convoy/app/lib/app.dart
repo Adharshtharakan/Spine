@@ -7,16 +7,18 @@ import 'features/auth/sign_in_screen.dart';
 import 'features/guidelines/guidelines_screen.dart';
 import 'features/trips/home_screen.dart';
 import 'state/providers.dart';
+import 'state/settings.dart';
 
-class ConvoyApp extends StatelessWidget {
-  const ConvoyApp({super.key});
+class DriveSyncApp extends ConsumerWidget {
+  const DriveSyncApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Convoy',
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
+        title: 'DriveSync',
         debugShowCheckedModeBanner: false,
         theme: ConvoyTheme.light(),
         darkTheme: ConvoyTheme.dark(),
+        themeMode: ref.watch(themeModeProvider),
         home: Env.isConfigured ? const _Gate() : const _NotConfigured(),
       );
 }
@@ -47,7 +49,7 @@ class _NotConfigured extends StatelessWidget {
         body: Center(
           child: Padding(
             padding: EdgeInsets.all(24),
-            child: Text('Convoy is not configured.\n\nRun with --dart-define-from-file=env.json '
+            child: Text('DriveSync is not configured.\n\nRun with --dart-define-from-file=env.json '
                 '(see env.example.json).', textAlign: TextAlign.center),
           ),
         ),

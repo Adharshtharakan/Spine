@@ -49,7 +49,7 @@ class _OfflineMapsScreenState extends ConsumerState<OfflineMapsScreen> {
             if (packs.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('Nothing cached yet. Open a trip, go to Convoy, and download maps along the route '
+                child: Text('Nothing cached yet. Open a trip, go to the Convoy tab, and download maps along the route '
                     'before you leave coverage. GPS keeps working without signal; the map needs these tiles.'),
               ),
             for (final p in packs)

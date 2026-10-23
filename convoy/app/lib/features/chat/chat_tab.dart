@@ -54,24 +54,36 @@ class _ChatTabState extends State<ChatTab> {
               alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(14, 9, 14, 8),
                 constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
                 decoration: BoxDecoration(
-                  color: mine ? t.colorScheme.primaryContainer : t.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(14),
+                  color: mine ? t.colorScheme.primary : t.colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(20),
+                    topRight: const Radius.circular(20),
+                    bottomLeft: Radius.circular(mine ? 20 : 6),
+                    bottomRight: Radius.circular(mine ? 6 : 20),
+                  ),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (!mine) Text(m.senderName ?? 'Driver', style: t.textTheme.labelMedium),
-                  Text(m.body, style: m.kind == 'quick' ? t.textTheme.titleMedium : t.textTheme.bodyLarge),
+                  if (!mine)
+                    Text(m.senderName ?? 'Driver',
+                        style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.primary, fontWeight: FontWeight.w800)),
+                  Text(m.body,
+                      style: (m.kind == 'quick' ? t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700) : t.textTheme.bodyLarge)
+                          ?.copyWith(color: mine ? t.colorScheme.onPrimary : t.colorScheme.onSurface)),
+                  const SizedBox(height: 2),
                   Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(DateFormat.Hm().format(m.createdAt), style: t.textTheme.labelSmall),
+                    Text(DateFormat.Hm().format(m.createdAt),
+                        style: t.textTheme.labelSmall?.copyWith(
+                            color: (mine ? t.colorScheme.onPrimary : t.colorScheme.onSurfaceVariant).withValues(alpha: 0.8))),
                     if (m.viaMesh) ...[
                       const SizedBox(width: 4),
                       const Icon(Icons.settings_input_antenna, size: 12, color: ConvoyTheme.mesh),
                     ],
                     if (m.pending) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.schedule, size: 12),
+                      Icon(Icons.schedule, size: 12, color: mine ? t.colorScheme.onPrimary : null),
                     ],
                   ]),
                 ]),

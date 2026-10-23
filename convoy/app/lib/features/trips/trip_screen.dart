@@ -51,7 +51,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ...extraTripTabs(session),
         ];
         return Scaffold(
-          appBar: AppBar(title: Text(session.trip?.title ?? 'Convoy')),
+          appBar: AppBar(title: Text(session.trip?.title ?? 'DriveSync')),
           body: IndexedStack(index: _tab, children: tabs),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _tab,

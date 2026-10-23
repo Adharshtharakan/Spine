@@ -60,7 +60,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     final ent = ref.watch(entitlementProvider).value ?? Entitlement.free;
     final t = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Convoy Premium')),
+      appBar: AppBar(title: const Text('DriveSync Premium')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         const Icon(Icons.workspace_premium, size: 56, color: ConvoyTheme.lead),
         const SizedBox(height: 12),

@@ -55,6 +55,6 @@ class EdgeException implements Exception {
   final String code;
   @override
   String toString() => code == 'edge_not_configured'
-      ? 'This feature needs the Convoy Worker (set EDGE_BASE_URL in env.json).'
+      ? 'This feature needs the DriveSync Worker (set EDGE_BASE_URL in env.json).'
       : 'EdgeException($status, $code)';
 }

@@ -64,11 +64,28 @@ class _GuidelinesScreenState extends ConsumerState<GuidelinesScreen> {
         data: (list) => ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            Text('A few promises before the road', style: t.textTheme.headlineSmall),
+            const SizedBox(height: 6),
+            Text('Everyone in a DriveSync convoy accepts the same rules. Read them once; we ask again only if they change.',
+                style: t.textTheme.bodyMedium?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 16),
             for (final d in list) ...[
-              Text('${d.title} (v${d.version})', style: t.textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(d.body.trim(), style: t.textTheme.bodyMedium),
-              const SizedBox(height: 20),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(d.kind == 'driver_terms' ? Icons.badge_outlined : Icons.handshake_outlined, color: t.colorScheme.primary),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(d.title, style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+                      Text('v${d.version}', style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                    ]),
+                    const SizedBox(height: 10),
+                    Text(d.body.trim(), style: t.textTheme.bodyMedium?.copyWith(height: 1.45)),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 14),
             ],
             CheckboxListTile(
               value: _readGuidelines,

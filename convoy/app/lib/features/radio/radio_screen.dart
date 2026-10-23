@@ -62,7 +62,7 @@ class _RadioScreenState extends State<RadioScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Convoy radio')),
+      appBar: AppBar(title: const Text('Long-range radio')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Text('Stay linked with no cell signal', style: t.textTheme.titleLarge),
         const SizedBox(height: 8),
@@ -70,7 +70,7 @@ class _RadioScreenState extends State<RadioScreen> {
           'Phones alone only reach cars a few hundred metres away. A small LoRa radio running Meshtastic '
           '(Heltec V3, RAK WisBlock, LilyGO T-Echo — about \$25–40) reaches 2–10 km between cars on the road, '
           'and every radio relays for the others, so the link stretches with the convoy.\n\n'
-          'Set each radio to the same region and the default channel in the Meshtastic app once. Convoy '
+          'Set each radio to the same region and the default channel in the Meshtastic app once. DriveSync '
           'encrypts everything it sends with your trip\'s key, so other radio users cannot read or fake it.',
         ),
         const SizedBox(height: 16),

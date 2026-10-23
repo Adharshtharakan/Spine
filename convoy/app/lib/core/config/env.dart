@@ -16,6 +16,7 @@ abstract final class Env {
   /// Free, key-less OpenStreetMap vector tiles (openfreemap.org): lets the
   /// app run before any map infrastructure exists.
   static const openFreeMapStyle = 'https://tiles.openfreemap.org/styles/liberty';
+  static const openFreeMapDarkStyle = 'https://tiles.openfreemap.org/styles/dark';
 
   /// Map style: explicit override → self-hosted Protomaps via the Worker →
   /// OpenFreeMap.
@@ -26,9 +27,14 @@ abstract final class Env {
     return openFreeMapStyle;
   }
 
-  /// Whether the style understands `?theme=dark` (only our Worker's does).
-  static bool get styleSupportsDarkTheme =>
-      const String.fromEnvironment('MAP_STYLE_URL').isEmpty && hasEdge && selfHostedTiles;
+  /// Style for the app's current brightness: our Worker's `?theme=dark`
+  /// variant, OpenFreeMap's dark style, or the override as given.
+  static String mapStyleUrlFor({required bool dark}) {
+    const override = String.fromEnvironment('MAP_STYLE_URL');
+    if (override.isNotEmpty) return override;
+    if (hasEdge && selfHostedTiles) return '$edgeBaseUrl/style.json${dark ? '?theme=dark' : ''}';
+    return dark ? openFreeMapDarkStyle : openFreeMapStyle;
+  }
 
   /// Optional TURN relay for voice when both peers sit behind symmetric NAT.
   /// STUN alone keeps media peer-to-peer at zero cost.

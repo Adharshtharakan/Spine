@@ -39,12 +39,14 @@ import 'package:convoy/services/voice/ptt_service.dart';
 import 'package:convoy/state/providers.dart';
 import 'package:convoy/state/trip_session.dart';
 import 'package:convoy/sync/itinerary_doc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
+import 'package:in_app_purchase/in_app_purchase.dart' show InAppPurchase;
 import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -264,7 +266,7 @@ class FakeGuidelines extends GuidelineRepository {
 
     return [
       GuidelineDocument(id: 'd2', kind: 'driver_terms', version: 1, title: 'Driver terms', body: body("'Driver terms'")),
-      GuidelineDocument(id: 'd1', kind: 'platform_guidelines', version: 1, title: 'Convoy community guidelines', body: body("'Convoy community guidelines'")),
+      GuidelineDocument(id: 'd1', kind: 'platform_guidelines', version: 1, title: 'DriveSync community guidelines', body: body("'DriveSync community guidelines'")),
     ];
   }
 }
@@ -321,9 +323,10 @@ class FakeIap extends InAppPurchasePlatform {
 /// Paints a quiet road-map backdrop plus the convoy exactly as ConvoyMap
 /// styles it (route, stops, halos, lead ring, labels).
 class MapPreview extends CustomPainter {
-  MapPreview(this.s, {required this.focus, this.topPad = 150, this.bottomPad = 230});
+  MapPreview(this.s, {required this.focus, this.topPad = 150, this.bottomPad = 230, this.dark = false});
 
   final TripSession s;
+  final bool dark;
   final List<GeoPoint> focus;
   final double topPad, bottomPad;
 
@@ -345,9 +348,9 @@ class MapPreview extends CustomPainter {
     final metersPerPx = 40075016.0 * math.cos(focus.first.lat * math.pi / 180) / scale;
 
     // Land, parks, water, minor roads.
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFFF2EFE9));
+    canvas.drawRect(Offset.zero & size, Paint()..color = dark ? const Color(0xFF151B27) : const Color(0xFFF2EFE9));
     final rnd = math.Random(7);
-    final park = Paint()..color = const Color(0xFFD8EBCF);
+    final park = Paint()..color = dark ? const Color(0xFF18291F) : const Color(0xFFD8EBCF);
     for (var i = 0; i < 9; i++) {
       canvas.drawRRect(
           RRect.fromRectAndRadius(
@@ -357,9 +360,9 @@ class MapPreview extends CustomPainter {
     }
     final river = Path()..moveTo(-20, size.height * 0.30);
     river.cubicTo(size.width * 0.3, size.height * 0.22, size.width * 0.55, size.height * 0.55, size.width + 20, size.height * 0.48);
-    canvas.drawPath(river, Paint()..color = const Color(0xFFAAD3DF)..style = PaintingStyle.stroke..strokeWidth = 14);
-    final minor = Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 4;
-    final minorEdge = Paint()..color = const Color(0xFFDAD5CC)..style = PaintingStyle.stroke..strokeWidth = 6;
+    canvas.drawPath(river, Paint()..color = dark ? const Color(0xFF1C3550) : const Color(0xFFAAD3DF)..style = PaintingStyle.stroke..strokeWidth = 14);
+    final minor = Paint()..color = dark ? const Color(0xFF2A3445) : Colors.white..style = PaintingStyle.stroke..strokeWidth = 4;
+    final minorEdge = Paint()..color = dark ? const Color(0xFF1E2634) : const Color(0xFFDAD5CC)..style = PaintingStyle.stroke..strokeWidth = 6;
     for (var i = 0; i < 14; i++) {
       final a = Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height);
       final c = a + Offset(rnd.nextDouble() * 300 - 150, rnd.nextDouble() * 300 - 150);
@@ -374,7 +377,7 @@ class MapPreview extends CustomPainter {
       final o = p(road[i]);
       i == 0 ? route.moveTo(o.dx, o.dy) : route.lineTo(o.dx, o.dy);
     }
-    canvas.drawPath(route, Paint()..color = const Color(0xFFF9B26B)..style = PaintingStyle.stroke..strokeWidth = 11..strokeJoin = StrokeJoin.round);
+    canvas.drawPath(route, Paint()..color = dark ? const Color(0xFF6B4A22) : const Color(0xFFF9B26B)..style = PaintingStyle.stroke..strokeWidth = 11..strokeJoin = StrokeJoin.round);
     canvas.drawPath(route, Paint()..color = const Color(0xBF1F6FEB)..style = PaintingStyle.stroke..strokeWidth = 5..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.round);
 
     for (final w in s.itinerary.waypoints) {
@@ -429,9 +432,13 @@ class MapPreview extends CustomPainter {
       (TextPainter(text: TextSpan(text: t, style: TextStyle(fontFamily: 'Roboto', fontSize: size, fontWeight: FontWeight.w600)), textDirection: TextDirection.ltr)..layout()).size;
 
   void _text(Canvas c, String t, Offset at, double size, {bool top = false, bool bold = false}) {
-    final style = TextStyle(fontFamily: 'Roboto', fontSize: size, color: const Color(0xFF1B1B1F), fontWeight: bold ? FontWeight.w600 : FontWeight.w500);
+    final style = TextStyle(
+        fontFamily: 'Roboto', fontSize: size, color: dark ? const Color(0xFFE7ECF5) : const Color(0xFF1B1B1F), fontWeight: bold ? FontWeight.w600 : FontWeight.w500);
     final halo = TextPainter(
-      text: TextSpan(text: t, style: style.copyWith(foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = Colors.white)),
+      text: TextSpan(
+          text: t,
+          style: style.copyWith(
+              foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = dark ? const Color(0xFF0D121C) : Colors.white)),
       textDirection: TextDirection.ltr,
     )..layout();
     final tp = TextPainter(text: TextSpan(text: t, style: style), textDirection: TextDirection.ltr)..layout();
@@ -458,8 +465,8 @@ Future<void> loadFonts() async {
   await icons.load();
 }
 
-ThemeData theme() {
-  final t = ConvoyTheme.light();
+ThemeData theme({bool dark = false}) {
+  final t = dark ? ConvoyTheme.dark() : ConvoyTheme.light();
   return t.copyWith(
     textTheme: t.textTheme.apply(fontFamily: 'Roboto'),
     primaryTextTheme: t.primaryTextTheme.apply(fontFamily: 'Roboto'),
@@ -521,7 +528,7 @@ Widget tripShell(TripSession s, int tab, Widget body, {Widget? backdrop}) => Sta
     ]);
 
 Future<void> shoot(WidgetTester tester, String name, Widget screen,
-    {bool signal = true, bool premium = false, Duration settle = const Duration(milliseconds: 600)}) async {
+    {bool signal = true, bool premium = false, bool dark = false, Duration settle = const Duration(milliseconds: 600)}) async {
   final key = GlobalKey();
   // flutter_test swaps shadows for black outlines by default; render real ones.
   debugDisableShadows = false;
@@ -551,7 +558,9 @@ Future<void> shoot(WidgetTester tester, String name, Widget screen,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: theme(),
-        home: Stack(children: [screen, Positioned(top: 0, left: 0, right: 0, child: StatusBar(signal: signal))]),
+        darkTheme: theme(dark: true),
+        themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+        home: Stack(children: [screen, Positioned(top: 0, left: 0, right: 0, child: StatusBar(signal: signal, dark: dark))]),
       ),
     ),
   ));
@@ -575,6 +584,12 @@ void main() {
     // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues({'meshtastic.device': 'F4:12:FA:9C:31:0E'});
     GeolocatorPlatform.instance = FakeGeolocator();
+    // InAppPurchase registers the real Play Billing implementation on first
+    // use when the target is Android; create it under a neutral platform so
+    // the fake store below is the one used.
+    debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+    InAppPurchase.instance;
+    debugDefaultTargetPlatformOverride = null;
     InAppPurchasePlatform.instance = FakeIap();
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     // MapLibre's global channel: two cached offline packs.
@@ -669,6 +684,29 @@ void main() {
   testWidgets('10 stops', (t) async {
     final s = PreviewSession(liveTracks);
     await shoot(t, '10_stops', tripShell(s, 4, StopsTab(session: s)), premium: true);
+  });
+
+  // Dark mode.
+  testWidgets('d01 sign in dark', (t) => shoot(t, 'd01_sign_in_dark', const SignInScreen(), dark: true));
+  testWidgets('d03 home dark', (t) => shoot(t, 'd03_home_dark', const HomeScreen(), dark: true));
+  testWidgets('d04 map dark', (t) async {
+    final s = PreviewSession(liveTracks);
+    s.ptt!.talking.value = mRavi;
+    await shoot(t, 'd04_map_live_dark',
+        tripShell(s, 0, MapTab(session: s), backdrop: CustomPaint(painter: MapPreview(s, focus: convoyFocus(s), dark: true))),
+        premium: true, dark: true);
+  });
+  testWidgets('d08 chat dark', (t) async {
+    final s = PreviewSession(liveTracks);
+    await shoot(t, 'd08_chat_dark', tripShell(s, 2, ChatTab(session: s)), premium: true, dark: true);
+  });
+  testWidgets('d09 convoy dark', (t) async {
+    final s = PreviewSession(liveTracks);
+    await shoot(t, 'd09_convoy_dark', tripShell(s, 3, ConvoyTab(session: s)), premium: true, dark: true);
+  });
+  testWidgets('d07 plan dark', (t) async {
+    final s = PreviewSession(liveTracks);
+    await shoot(t, 'd07_plan_dark', tripShell(s, 1, ItineraryTab(session: s)), premium: true, dark: true);
   });
 
   testWidgets('11 discover', (t) => shoot(t, '11_discover', const DiscoverScreen()));

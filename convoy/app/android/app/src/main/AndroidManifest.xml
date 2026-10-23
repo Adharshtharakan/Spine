@@ -34,7 +34,7 @@
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
-        android:label="Convoy"
+        android:label="DriveSync"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

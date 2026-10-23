@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('without build configuration the app explains how to configure it', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ConvoyApp()));
+    await tester.pumpWidget(const ProviderScope(child: DriveSyncApp()));
     expect(find.textContaining('not configured'), findsOneWidget);
     expect(find.byType(MaterialApp), findsOneWidget);
   });

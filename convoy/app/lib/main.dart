@@ -22,5 +22,5 @@ Future<void> main() async {
     (s) => StopsTab(session: s),
   );
 
-  runApp(const ProviderScope(child: ConvoyApp()));
+  runApp(const ProviderScope(child: DriveSyncApp()));
 }

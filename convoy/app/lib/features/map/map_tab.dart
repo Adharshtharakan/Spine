@@ -112,14 +112,21 @@ class _LinkBanner extends StatelessWidget {
       _ => null,
     };
     if (color == null && gpsProblem == null && session.pendingWrites == 0) return const SizedBox.shrink();
+    final bg = gpsProblem != null ? Theme.of(context).colorScheme.error : color ?? Theme.of(context).colorScheme.inverseSurface;
     return Material(
-      color: (gpsProblem != null ? Theme.of(context).colorScheme.error : color ?? Colors.black87).withValues(alpha: 0.92),
-      borderRadius: BorderRadius.circular(12),
+      color: bg.withValues(alpha: 0.94),
+      elevation: 3,
+      shadowColor: Colors.black38,
+      borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(children: [
-          Icon(gpsProblem != null ? Icons.location_disabled : icon, color: Colors.white),
-          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), shape: BoxShape.circle),
+            child: Icon(gpsProblem != null ? Icons.location_disabled : icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               gpsProblem ?? (text.isEmpty ? 'Syncing ${session.pendingWrites} change(s)…' : text),
@@ -150,17 +157,24 @@ class _LeadCard extends StatelessWidget {
       final d = Geo.distanceMeters(me.point, leadPos.point);
       relation = '${Geo.formatDistance(d)} ${Geo.compass(Geo.bearingDeg(me.point, leadPos.point))} of you';
     }
-    return Card(
-      elevation: 4,
+    return Material(
+      color: t.colorScheme.surfaceContainerLowest.withValues(alpha: 0.97),
+      elevation: 6,
+      shadowColor: Colors.black45,
+      borderRadius: BorderRadius.circular(20),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(children: [
-              const Icon(Icons.star, color: ConvoyTheme.lead),
-              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(color: ConvoyTheme.lead.withValues(alpha: 0.18), shape: BoxShape.circle),
+                child: const Icon(Icons.star_rounded, color: ConvoyTheme.lead, size: 20),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   leadMember == null
@@ -220,18 +234,26 @@ class _PttButtonState extends State<PttButton> {
         final name = someoneElse
             ? (widget.session.members[talker]?.vehicleLabel ?? widget.session.members[talker]?.displayName ?? 'Someone')
             : null;
-        final color = _held
-            ? Colors.red
+        final colors = _held
+            ? const [Color(0xFFFF5A5F), Color(0xFFD62828)]
             : someoneElse
-                ? ConvoyTheme.lead
-                : Theme.of(context).colorScheme.primary;
+                ? const [Color(0xFFFFC14D), Color(0xFFE08A00)]
+                : const [Color(0xFF3B8BFF), Color(0xFF0B4FC2)];
         return Column(mainAxisSize: MainAxisSize.min, children: [
           if (name != null)
             Container(
               margin: const EdgeInsets.only(bottom: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8)),
-              child: Text('$name is talking', style: const TextStyle(color: Colors.white)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.inverseSurface,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.graphic_eq, size: 16, color: Theme.of(context).colorScheme.onInverseSurface),
+                const SizedBox(width: 6),
+                Text('$name is talking',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onInverseSurface, fontWeight: FontWeight.w600)),
+              ]),
             ),
           GestureDetector(
             onTapDown: (_) async {
@@ -246,15 +268,24 @@ class _PttButtonState extends State<PttButton> {
               width: _held ? 88 : 76,
               height: _held ? 88 : 76,
               decoration: BoxDecoration(
-                color: color,
+                gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
                 shape: BoxShape.circle,
-                boxShadow: const [BoxShadow(blurRadius: 8, color: Colors.black38)],
+                border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 3),
+                boxShadow: [BoxShadow(blurRadius: 14, offset: const Offset(0, 4), color: colors.last.withValues(alpha: 0.45))],
               ),
               child: Icon(_held ? Icons.mic : Icons.mic_none, color: Colors.white, size: 36),
             ),
           ),
           const SizedBox(height: 4),
-          Text(_held ? 'Talking' : 'Hold to talk', style: Theme.of(context).textTheme.labelSmall),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLowest.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(_held ? 'Talking' : 'Hold to talk',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+          ),
         ]);
       },
     );

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/brand/logo.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../state/providers.dart';
+import '../../state/settings.dart';
 import '../discovery/discover_screen.dart';
 import '../offline_maps/offline_maps_screen.dart';
 import '../paywall/paywall_screen.dart';
@@ -20,7 +22,8 @@ class HomeScreen extends ConsumerWidget {
     final ent = ref.watch(entitlementProvider).value;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your convoys'),
+        titleSpacing: 20,
+        title: const DriveSyncLogo(size: 30),
         actions: [
           IconButton(
             tooltip: 'Discover public trips',
@@ -34,6 +37,8 @@ class HomeScreen extends ConsumerWidget {
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const OfflineMapsScreen()));
                 case 'radio':
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const RadioScreen()));
+                case 'appearance':
+                  await showAppearanceSheet(context, ref);
                 case 'premium':
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
                 case 'signout':
@@ -41,10 +46,12 @@ class HomeScreen extends ConsumerWidget {
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'offline', child: Text('Offline maps')),
-              const PopupMenuItem(value: 'radio', child: Text('Convoy radio (no-signal link)')),
-              PopupMenuItem(value: 'premium', child: Text(ent?.isPremium == true ? 'Premium (active)' : 'Upgrade to Premium')),
-              const PopupMenuItem(value: 'signout', child: Text('Sign out')),
+              _menuItem('appearance', Icons.dark_mode_outlined, 'Appearance'),
+              _menuItem('offline', Icons.download_for_offline_outlined, 'Offline maps'),
+              _menuItem('radio', Icons.settings_input_antenna, 'Long-range radio'),
+              _menuItem('premium', Icons.workspace_premium_outlined, ent?.isPremium == true ? 'Premium (active)' : 'Upgrade to Premium'),
+              const PopupMenuDivider(),
+              _menuItem('signout', Icons.logout, 'Sign out'),
             ],
           ),
         ],
@@ -57,21 +64,20 @@ class HomeScreen extends ConsumerWidget {
           data: (list) => list.isEmpty
               ? ListView(
                   padding: const EdgeInsets.all(32),
-                  children: const [
-                    SizedBox(height: 80),
-                    Icon(Icons.route, size: 64),
-                    SizedBox(height: 16),
-                    Text('No convoys yet', textAlign: TextAlign.center, style: TextStyle(fontSize: 20)),
-                    SizedBox(height: 8),
-                    Text('Start one and share the invite code, join with a code from a friend, or find a public trip in Discover.',
-                        textAlign: TextAlign.center),
+                  children: [
+                    const SizedBox(height: 72),
+                    const Center(child: Opacity(opacity: 0.9, child: DriveSyncMark(size: 88))),
+                    const SizedBox(height: 24),
+                    Text('No convoys yet', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Start one and share the invite code, join with a code from a friend, or find a public trip in Discover.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
                   ],
                 )
-              : ListView.separated(
-                  itemCount: list.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _TripTile(list[i]),
-                ),
+              : _TripList(list),
         ),
       ),
       floatingActionButton: Column(
@@ -80,6 +86,8 @@ class HomeScreen extends ConsumerWidget {
         children: [
           FloatingActionButton.extended(
             heroTag: 'join',
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             onPressed: () => _join(context, ref),
             icon: const Icon(Icons.vpn_key),
             label: const Text('Join with code'),
@@ -191,20 +199,110 @@ Future<void> _guard(BuildContext context, Future<void> Function() f) async {
   }
 }
 
-class _TripTile extends StatelessWidget {
-  const _TripTile(this.trip);
+PopupMenuItem<String> _menuItem(String value, IconData icon, String label) => PopupMenuItem(
+      value: value,
+      child: Row(children: [Icon(icon, size: 20), const SizedBox(width: 14), Text(label)]),
+    );
 
-  final Trip trip;
+/// Upcoming trips first, then past ones.
+class _TripList extends StatelessWidget {
+  const _TripList(this.trips);
+  final List<Trip> trips;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-        leading: CircleAvatar(child: Icon(trip.visibility == TripVisibility.public ? Icons.public : Icons.group)),
-        title: Text(trip.title),
-        subtitle: Text([
-          if (trip.startsAt != null) DateFormat.yMMMd().format(trip.startsAt!),
-          'Code ${trip.inviteCode}',
-        ].join(' · ')),
-        trailing: const Icon(Icons.chevron_right),
+  Widget build(BuildContext context) {
+    final cutoff = DateTime.now().subtract(const Duration(days: 2));
+    final upcoming = trips.where((t) => t.startsAt == null || t.startsAt!.isAfter(cutoff)).toList();
+    final past = trips.where((t) => !upcoming.contains(t)).toList();
+    Widget header(String text) => Padding(
+          padding: const EdgeInsets.fromLTRB(4, 20, 4, 10),
+          child: Text(text.toUpperCase(),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant, letterSpacing: 1.2, fontWeight: FontWeight.w800)),
+        );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 180),
+      children: [
+        if (upcoming.isNotEmpty) header('Upcoming'),
+        for (final t in upcoming) Padding(padding: const EdgeInsets.only(bottom: 12), child: _TripCard(t)),
+        if (past.isNotEmpty) header('Past trips'),
+        for (final t in past) Padding(padding: const EdgeInsets.only(bottom: 12), child: _TripCard(t, past: true)),
+      ],
+    );
+  }
+}
+
+class _TripCard extends StatelessWidget {
+  const _TripCard(this.trip, {this.past = false});
+
+  final Trip trip;
+  final bool past;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final s = t.colorScheme;
+    final public = trip.visibility == TripVisibility.public;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TripScreen(tripId: trip.id))),
-      );
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: past
+                    ? null
+                    : const LinearGradient(colors: [Color(0xFF2F80FF), Brand.navy], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                color: past ? s.surfaceContainerHigh : null,
+              ),
+              child: Icon(public ? Icons.public : Icons.directions_car_filled, color: past ? s.onSurfaceVariant : Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(trip.title, style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  if (trip.startsAt != null) _Pill(Icons.event, DateFormat('EEE, d MMM').format(trip.startsAt!)),
+                  _Pill(Icons.vpn_key_outlined, trip.inviteCode),
+                  if (public) const _Pill(Icons.public, 'Public', accent: true),
+                ]),
+              ]),
+            ),
+            Icon(Icons.chevron_right, color: s.onSurfaceVariant),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill(this.icon, this.label, {this.accent = false});
+  final IconData icon;
+  final String label;
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Theme.of(context).colorScheme;
+    final fg = accent ? s.onTertiaryContainer : s.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: accent ? s.tertiaryContainer : s.surfaceContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: fg),
+        const SizedBox(width: 4),
+        Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
 }

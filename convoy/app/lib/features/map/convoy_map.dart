@@ -48,11 +48,16 @@ class _ConvoyMapState extends State<ConvoyMap> {
 
   static const _font = ['Noto Sans Regular'];
 
-  String get _style => '${Env.mapStyleUrl}${widget.dark && Env.styleSupportsDarkTheme ? '?theme=dark' : ''}';
+  String get _style => Env.mapStyleUrlFor(dark: widget.dark);
+
+  String get _labelColor => widget.dark ? '#E7ECF5' : '#1B1B1F';
+  String get _haloColor => widget.dark ? '#0D121C' : '#FFFFFF';
 
   @override
   void didUpdateWidget(covariant ConvoyMap old) {
     super.didUpdateWidget(old);
+    // A theme switch swaps the style; our layers are re-added once it loads.
+    if (old.dark != widget.dark) _styleReady = false;
     _sync();
   }
 
@@ -86,13 +91,14 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addSymbolLayer(
       'stops',
       'stops-label',
-      const SymbolLayerProperties(
-        textField: ['get', 'label'],
+      SymbolLayerProperties(
+        textField: const ['get', 'label'],
         textFont: _font,
         textSize: 12,
-        textOffset: [0, 1.4],
+        textOffset: const [0, 1.4],
         textAnchor: 'top',
-        textHaloColor: '#FFFFFF',
+        textColor: _labelColor,
+        textHaloColor: _haloColor,
         textHaloWidth: 1.5,
       ),
     );
@@ -137,15 +143,16 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addSymbolLayer(
       'vehicles',
       'vehicles-label',
-      const SymbolLayerProperties(
-        textField: ['get', 'label'],
+      SymbolLayerProperties(
+        textField: const ['get', 'label'],
         textFont: _font,
         textSize: 13,
         // Labels move around their dot rather than piling on top of each
         // other when cars are close; the dots themselves always show.
-        textVariableAnchor: ['bottom', 'top', 'left', 'right'],
+        textVariableAnchor: const ['bottom', 'top', 'left', 'right'],
         textRadialOffset: 1.4,
-        textHaloColor: '#FFFFFF',
+        textColor: _labelColor,
+        textHaloColor: _haloColor,
         textHaloWidth: 2,
         textAllowOverlap: false,
         textOptional: true,
