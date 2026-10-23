@@ -33,6 +33,7 @@ import 'package:convoy/features/stops/stops_tab.dart';
 import 'package:convoy/features/trips/convoy_tab.dart';
 import 'package:convoy/features/trips/home_screen.dart';
 import 'package:convoy/services/edge/edge_client.dart';
+import 'package:convoy/services/tracking/convoy_watch.dart';
 import 'package:convoy/services/tracking/lead_vehicle.dart';
 import 'package:convoy/services/tracking/predictor.dart';
 import 'package:convoy/services/voice/ptt_service.dart';
@@ -171,6 +172,10 @@ class PreviewSession extends TripSession {
 
   final Map<String, List<VehiclePosition>> tracks;
   final bool predictAll;
+  bool lockTyping = false;
+
+  @override
+  bool get drivingLock => lockTyping;
 
   Map<String, VehiclePosition> get _latest => {for (final e in tracks.entries) e.key: e.value.last};
 
@@ -707,6 +712,35 @@ void main() {
   testWidgets('d07 plan dark', (t) async {
     final s = PreviewSession(liveTracks);
     await shoot(t, 'd07_plan_dark', tripShell(s, 1, ItineraryTab(session: s)), premium: true, dark: true);
+  });
+
+  // Convoy Watch.
+  List<ConvoyAlert> sampleAlerts() => [
+        ConvoyAlert(kind: AlertKind.fallingBehind, memberId: mArjun, message: 'Ertiga is 3.4 km behind Swift', at: now),
+        ConvoyAlert(kind: AlertKind.planChanged, memberId: null, message: 'Plan updated — Ravi: Lunch: Mysuru now at 12:10', at: now),
+      ];
+  testWidgets('15 map alerts', (t) async {
+    final s = PreviewSession(liveTracks);
+    s.alerts.addAll(sampleAlerts());
+    await shoot(t, '15_map_alerts', tripShell(s, 0, MapTab(session: s), backdrop: CustomPaint(painter: MapPreview(s, focus: convoyFocus(s)))),
+        premium: true);
+  });
+  testWidgets('16 chat driving lock', (t) async {
+    final s = PreviewSession(liveTracks)..lockTyping = true;
+    await shoot(t, '16_chat_driving', tripShell(s, 2, ChatTab(session: s)), premium: true);
+  });
+  testWidgets('d15 map alerts dark', (t) async {
+    final s = PreviewSession(liveTracks);
+    s.alerts.addAll([
+      ConvoyAlert(kind: AlertKind.unplannedStop, memberId: mArjun, message: 'Ertiga has stopped for 4 min — not a planned stop', at: now),
+    ]);
+    await shoot(t, 'd15_map_alerts_dark',
+        tripShell(s, 0, MapTab(session: s), backdrop: CustomPaint(painter: MapPreview(s, focus: convoyFocus(s), dark: true))),
+        premium: true, dark: true);
+  });
+  testWidgets('d16 chat driving lock dark', (t) async {
+    final s = PreviewSession(liveTracks)..lockTyping = true;
+    await shoot(t, 'd16_chat_driving_dark', tripShell(s, 2, ChatTab(session: s)), premium: true, dark: true);
   });
 
   testWidgets('11 discover', (t) => shoot(t, '11_discover', const DiscoverScreen()));

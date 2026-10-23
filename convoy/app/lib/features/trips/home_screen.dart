@@ -37,8 +37,8 @@ class HomeScreen extends ConsumerWidget {
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const OfflineMapsScreen()));
                 case 'radio':
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const RadioScreen()));
-                case 'appearance':
-                  await showAppearanceSheet(context, ref);
+                case 'settings':
+                  await showSettingsSheet(context, ref);
                 case 'premium':
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
                 case 'signout':
@@ -46,7 +46,7 @@ class HomeScreen extends ConsumerWidget {
               }
             },
             itemBuilder: (_) => [
-              _menuItem('appearance', Icons.dark_mode_outlined, 'Appearance'),
+              _menuItem('settings', Icons.tune, 'Settings'),
               _menuItem('offline', Icons.download_for_offline_outlined, 'Offline maps'),
               _menuItem('radio', Icons.settings_input_antenna, 'Long-range radio'),
               _menuItem('premium', Icons.workspace_premium_outlined, ent?.isPremium == true ? 'Premium (active)' : 'Upgrade to Premium'),

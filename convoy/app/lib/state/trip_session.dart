@@ -16,6 +16,7 @@ import '../services/offline/trip_cache.dart';
 import '../services/realtime/convoy_channel.dart';
 import '../services/edge/edge_client.dart';
 import '../services/tracking/predictor.dart';
+import '../services/tracking/convoy_watch.dart';
 import '../services/tracking/lead_vehicle.dart';
 import '../services/voice/ptt_service.dart';
 import '../sync/itinerary_doc.dart';
@@ -94,6 +95,78 @@ class TripSession extends ChangeNotifier {
 
   static const _resolver = LeadVehicleResolver();
   static const _predictor = ConvoyPredictor();
+
+  // ─────────────────────────── convoy watch ───────────────────────────
+
+  final ConvoyWatch _watch = ConvoyWatch();
+
+  /// Alerts currently shown on the map (newest first, auto-expiring).
+  final List<ConvoyAlert> alerts = [];
+  final _alertCtrl = StreamController<ConvoyAlert>.broadcast();
+
+  /// Every new alert, for the spoken announcer.
+  Stream<ConvoyAlert> get alertStream => _alertCtrl.stream;
+
+  static const alertLifetime = Duration(seconds: 45);
+
+  void _raise(ConvoyAlert a) {
+    alerts.removeWhere((x) => x.key == a.key);
+    alerts.insert(0, a);
+    if (alerts.length > 3) alerts.removeRange(3, alerts.length);
+    if (!_alertCtrl.isClosed) _alertCtrl.add(a);
+    notifyListeners();
+  }
+
+  void dismissAlert(ConvoyAlert a) {
+    alerts.remove(a);
+    notifyListeners();
+  }
+
+  /// Set by a passenger to unlock typing for this trip.
+  bool passengerMode = false;
+
+  /// True when this phone is in a moving vehicle that someone is driving:
+  /// typing is paused (quick replies and push-to-talk stay available).
+  bool get drivingLock {
+    if (passengerMode || !(me?.hasVehicle ?? false)) return false;
+    final mine = me == null ? null : _reported[me!.id];
+    return mine != null && mine.speedMps > 15 / 3.6 && DateTime.now().difference(mine.timestamp) < const Duration(seconds: 20);
+  }
+
+  void _evaluateWatch() {
+    final now = DateTime.now();
+    alerts.removeWhere((a) => now.difference(a.at) > alertLifetime);
+    final labels = {for (final m in members.values) m.id: m.vehicleLabel ?? m.displayName};
+    final vehicles = {
+      for (final e in _reported.entries)
+        if (members[e.key]?.hasVehicle ?? true) e.key: e.value,
+    };
+    final selfOnline = _cloudReachable || (meshPeersOn?.call('lora') ?? 0) + (meshPeersOn?.call('nearby') ?? 0) > 0;
+    for (final a in _watch.evaluate(
+      now: now,
+      reported: vehicles,
+      standings: _resolver.standings(lead: lead, positions: vehicles, route: routeLine, now: now),
+      route: routeLine,
+      stops: itinerary.waypoints,
+      labels: labels,
+      selfId: me?.id,
+      selfOnline: selfOnline,
+    )) {
+      _raise(a);
+    }
+  }
+
+  /// Announces edits other people make to the plan.
+  void _mergeRemoteWaypoint(Waypoint w) {
+    final before = itinerary[w.id];
+    if (!itinerary.merge(w)) return;
+    if (w.updatedBy != null && w.updatedBy != userId) {
+      final by = members.values.where((m) => m.userId == w.updatedBy).firstOrNull?.displayName;
+      final a = ConvoyWatch.describePlanChange(before, w, by: by, now: DateTime.now());
+      if (a != null) _raise(a);
+    }
+    notifyListeners();
+  }
 
   /// Recent fixes per member (≈10 min), for smoothed speed and for
   /// anchoring a silent car to a convoy-mate.
@@ -318,9 +391,7 @@ class TripSession extends ChangeNotifier {
         // Gateway: cars on the radio with no signal learn about this car.
         if (meshForwardPosition != null) unawaited(meshForwardPosition!(p));
       }),
-      ch.waypoints.listen((w) {
-        if (itinerary.merge(w)) notifyListeners();
-      }),
+      ch.waypoints.listen(_mergeRemoteWaypoint),
       ch.messages.listen((m) {
         _acceptMessage(m);
         if (meshForwardChat != null) unawaited(meshForwardChat!(m));
@@ -407,7 +478,13 @@ class TripSession extends ChangeNotifier {
   }
 
   void acceptMeshWaypoint(Waypoint w) {
+    final before = itinerary[w.id];
     if (itinerary.merge(w)) {
+      if (w.updatedBy != userId) {
+        final by = members.values.where((m) => m.userId == w.updatedBy).firstOrNull?.displayName;
+        final a = ConvoyWatch.describePlanChange(before, w, by: by, now: DateTime.now());
+        if (a != null) _raise(a);
+      }
       // Relay into the cloud on behalf of a peer that has no signal. RLS
       // requires the writer's own id on the row; the HLC is preserved, so the
       // relayed write still loses to any newer edit.
@@ -439,6 +516,7 @@ class TripSession extends ChangeNotifier {
   void _tick() {
     final live = channel?.isLive ?? false;
     final now = DateTime.now();
+    _evaluateWatch();
     if (live || _cloudReachable) unawaited(_refreshRoad());
     if (live) {
       _offlineSince = null;
@@ -642,6 +720,7 @@ class TripSession extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(_alertCtrl.close());
     unawaited(_saveSnapshot());
     for (final d in _disposers) {
       unawaited(d());

@@ -29,6 +29,11 @@ application id and iOS bundle id to your own before publishing.
   second. The organiser designates a lead. If the lead goes silent, the
   car furthest along the route is shown as lead. Standings show each car's
   gap to the lead and flag anyone off route.
+- **Convoy Watch.** Spoken, hands-free alerts when a car falls behind
+  (gap scaled to speed), leaves the route, stops somewhere unplanned or
+  loses contact, and when someone changes the plan. Typing in chat pauses
+  above 15 km/h; quick replies and push-to-talk stay available, and a
+  passenger can unlock typing.
 - **Party-only text and push-to-talk.** Chat is visible to trip members
   only (RLS). Voice is half-duplex push-to-talk over peer-to-peer WebRTC,
   so no media server is involved.

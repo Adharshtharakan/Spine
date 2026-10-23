@@ -112,14 +112,18 @@ class _ChatTabState extends State<ChatTab> {
           padding: const EdgeInsets.fromLTRB(12, 4, 8, 8),
           child: Row(children: [
             Expanded(
-              child: TextField(
-                controller: _text,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(hintText: 'Message the convoy', isDense: true),
-                onSubmitted: (_) => _send(),
-              ),
+              // Typing is paused while this phone is in a moving car that
+              // someone is driving: quick replies and push-to-talk remain.
+              child: s.drivingLock
+                  ? _DrivingLock(onPassenger: () => setState(() => s.passengerMode = true))
+                  : TextField(
+                      controller: _text,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(hintText: 'Message the convoy', isDense: true),
+                      onSubmitted: (_) => _send(),
+                    ),
             ),
-            IconButton(icon: const Icon(Icons.send), onPressed: _send),
+            if (!s.drivingLock) IconButton(icon: const Icon(Icons.send), onPressed: _send),
             Transform.scale(scale: 0.7, child: PttButton(session: s)),
           ]),
         ),
@@ -131,5 +135,31 @@ class _ChatTabState extends State<ChatTab> {
     final text = _text.text;
     _text.clear();
     widget.session.sendMessage(text);
+  }
+}
+
+class _DrivingLock extends StatelessWidget {
+  const _DrivingLock({required this.onPassenger});
+  final VoidCallback onPassenger;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+      decoration: BoxDecoration(
+        color: t.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(children: [
+        Icon(Icons.directions_car, size: 20, color: t.colorScheme.onTertiaryContainer),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text('Typing paused while driving — use quick replies or hold to talk',
+              style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onTertiaryContainer, fontWeight: FontWeight.w600)),
+        ),
+        TextButton(onPressed: onPassenger, child: const Text("I'm a passenger")),
+      ]),
+    );
   }
 }

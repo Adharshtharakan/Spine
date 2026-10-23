@@ -6,6 +6,7 @@ import '../../core/geo/geo.dart';
 import '../../core/theme/theme.dart';
 import '../../data/models/waypoint.dart';
 import '../../services/location/gps_service.dart';
+import '../../services/tracking/convoy_watch.dart';
 import '../../services/tracking/lead_vehicle.dart';
 import '../../state/trip_session.dart';
 import 'convoy_map.dart';
@@ -41,12 +42,20 @@ class _MapTabState extends State<MapTab> {
           dark: Theme.of(context).brightness == Brightness.dark,
           onWaypointLongPress: (p) => _proposeStop(context, p),
         ),
-        Positioned(top: 8, left: 8, right: 8, child: _LinkBanner(session: s)),
+        Positioned(
+          top: 8,
+          left: 8,
+          right: 8,
+          child: Column(children: [
+            _LinkBanner(session: s),
+            for (final a in s.alerts) _AlertCard(alert: a, onDismiss: () => s.dismissAlert(a)),
+          ]),
+        ),
         Positioned(left: 8, right: 96, bottom: 12, child: _LeadCard(session: s, lead: lead)),
         Positioned(right: 12, bottom: 12, child: PttButton(session: s)),
         Positioned(
-          right: 12,
-          top: 72,
+          right: 22,
+          bottom: 150,
           child: FloatingActionButton.small(
             heroTag: 'follow',
             tooltip: _follow ? 'Stop following me' : 'Follow me',
@@ -87,6 +96,54 @@ class _MapTabState extends State<MapTab> {
     if (ok == true) {
       await s.addStop(name: name.text.trim().isEmpty ? kind.label : name.text.trim(), location: p, kind: kind);
     }
+  }
+}
+
+/// One convoy alert: what happened, to whom, dismissible. Also read aloud
+/// by the announcer when spoken alerts are on.
+class _AlertCard extends StatelessWidget {
+  const _AlertCard({required this.alert, required this.onDismiss});
+
+  final ConvoyAlert alert;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final (icon, color) = switch (alert.kind) {
+      AlertKind.fallingBehind => (Icons.hourglass_bottom, ConvoyTheme.lead),
+      AlertKind.offRoute => (Icons.alt_route, const Color(0xFFE5484D)),
+      AlertKind.unplannedStop => (Icons.car_crash_outlined, const Color(0xFFE5484D)),
+      AlertKind.lostContact => (Icons.signal_wifi_connected_no_internet_4, ConvoyTheme.offline),
+      AlertKind.planChanged => (Icons.edit_road, t.colorScheme.primary),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        color: t.colorScheme.surfaceContainerLowest.withValues(alpha: 0.97),
+        elevation: 4,
+        shadowColor: Colors.black38,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border(left: BorderSide(color: color, width: 5)),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+          child: Row(children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(child: Text(alert.message, style: t.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Dismiss',
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: onDismiss,
+            ),
+          ]),
+        ),
+      ),
+    );
   }
 }
 
