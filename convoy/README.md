@@ -133,3 +133,12 @@ PGHOST=… PGUSER=… supabase/tests/run.sh # RLS isolation, mutual acceptance, 
 ```
 
 CI runs all three (`.github/workflows/ci.yml`).
+
+### UI previews
+
+Renders every screen with sample data to PNGs, no device or backend needed
+(map screens get an illustrative backdrop behind the real overlays):
+
+```bash
+cd app && flutter test test_preview --dart-define=PREVIEW_OUT=build/previews
+```

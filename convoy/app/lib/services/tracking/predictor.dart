@@ -202,6 +202,10 @@ class ConvoyPredictor {
         }
       }
       if (then == null) continue;
+      // Only cars that were travelling together: a car that had stopped (or
+      // was going much slower or faster) when it went quiet is not following
+      // whoever happened to drive past it.
+      if (last.speedMps < 2 || then.speedMps < 2 || (last.speedMps - then.speedMps).abs() > 8) continue;
       final thenProj = Geo.projectOntoRoute(route, then.point);
       final nowProj = Geo.projectOntoRoute(route, e.value.point);
       if (thenProj.offRouteMeters > 300 || nowProj.offRouteMeters > 300) continue;

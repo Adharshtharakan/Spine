@@ -67,7 +67,7 @@ class _ChatTabState extends State<ChatTab> {
                     Text(DateFormat.Hm().format(m.createdAt), style: t.textTheme.labelSmall),
                     if (m.viaMesh) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.bluetooth, size: 12, color: ConvoyTheme.mesh),
+                      const Icon(Icons.settings_input_antenna, size: 12, color: ConvoyTheme.mesh),
                     ],
                     if (m.pending) ...[
                       const SizedBox(width: 4),

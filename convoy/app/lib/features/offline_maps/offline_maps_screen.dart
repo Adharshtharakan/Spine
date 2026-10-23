@@ -19,7 +19,12 @@ class _OfflineMapsScreenState extends ConsumerState<OfflineMapsScreen> {
   final _service = OfflineMapService();
   late Future<List<OfflinePack>> _packs = _service.list();
 
-  void _reload() => setState(() => _packs = _service.list());
+  void _reload() {
+    final packs = _service.list();
+    setState(() {
+      _packs = packs;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

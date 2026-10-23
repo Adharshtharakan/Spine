@@ -57,8 +57,15 @@ void main() {
       expect(r.reason, LeadReason.designated);
     });
 
-    test('falls back to the vehicle furthest along when the lead goes silent', () {
+    test('keeps a briefly silent designated lead', () {
       final silent = {...positions, _mid: _at(_mid, 0.9, now.subtract(const Duration(minutes: 5)))};
+      final r = resolver.resolve(designatedMemberId: _mid, positions: silent, route: _route, now: now)!;
+      expect(r.memberId, _mid);
+      expect(r.reason, LeadReason.designatedSilent);
+    });
+
+    test('falls back to the vehicle furthest along when the lead stays silent', () {
+      final silent = {...positions, _mid: _at(_mid, 0.9, now.subtract(const Duration(minutes: 20)))};
       final r = resolver.resolve(designatedMemberId: _mid, positions: silent, route: _route, now: now)!;
       expect(r.memberId, _lead);
       expect(r.reason, LeadReason.furthestAlongRoute);
@@ -124,7 +131,7 @@ void main() {
       // Silent car was 1 km behind the lead when it went quiet.
       final silent = track(_tail, 0.5, lastAt);
       final leadThen = VehiclePosition(
-          memberId: _lead, point: const GeoPoint(0, 0.5 + 1000 / 111195), timestamp: lastAt, speedMps: 10, headingDeg: 90);
+          memberId: _lead, point: const GeoPoint(0, 0.5 + 1000 / 111195), timestamp: lastAt, speedMps: 24, headingDeg: 90);
       // The lead slowed to a crawl (traffic): only 600 m further now.
       final leadNow = VehiclePosition(
           memberId: _lead,
@@ -145,6 +152,22 @@ void main() {
       // it ~1 km behind the lead.
       expect(Geo.distanceMeters(est.point, leadNow.point), closeTo(1000, 100));
       expect(est.basis, 'moving with Blue Jeep');
+    });
+
+    test('a stopped car is not dragged along by a convoy-mate driving past', () {
+      final lastAt = now.subtract(const Duration(minutes: 5));
+      final stopped = VehiclePosition(memberId: _tail, point: const GeoPoint(0, 0.5), timestamp: lastAt, speedMps: 0);
+      final passing = VehiclePosition(memberId: _lead, point: const GeoPoint(0, 0.5 + 300 / 111195), timestamp: lastAt, speedMps: 25, headingDeg: 90);
+      final passingNow = VehiclePosition(memberId: _lead, point: const GeoPoint(0, 0.5 + 7800 / 111195), timestamp: now, speedMps: 25, headingDeg: 90);
+      final est = predictor.predict(
+        last: stopped,
+        route: _route,
+        history: {_tail: [stopped, stopped], _lead: [passing, passingNow]},
+        latest: {_tail: stopped, _lead: passingNow},
+        stops: const [],
+        now: now,
+      );
+      expect(Geo.distanceMeters(est.point, stopped.point), lessThan(1));
     });
 
     test('a car that had stopped stays put', () {

@@ -173,6 +173,11 @@ class _LeadCard extends StatelessWidget {
                 ),
               ),
             ]),
+            if (lead?.reason == LeadReason.designatedSilent)
+              Text(
+                'Not heard for ${DateTime.now().difference(session.lastReported(lead!.memberId)?.timestamp ?? DateTime.now()).inMinutes} min — position estimated',
+                style: t.textTheme.bodySmall,
+              ),
             if (lead?.reason == LeadReason.furthestAlongRoute)
               Text('Designated lead is silent — showing the front vehicle', style: t.textTheme.bodySmall),
             if (relation != null) Text(relation, style: t.textTheme.bodyMedium),

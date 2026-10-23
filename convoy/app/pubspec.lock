@@ -281,13 +281,13 @@ packages:
     source: hosted
     version: "2.3.14"
   geolocator_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: geolocator_platform_interface
-      sha256: b640b6b687b14c66f51fe1130b1c2e8babbd408e0158052b92006b6675ca77fc
+      sha256: e012af6b7e2674e7500237ab11e44ac9119e87fd0105e7bb55cde1750e8e5d80
       url: "https://pub.dev"
     source: hosted
-    version: "4.4.0"
+    version: "4.4.1"
   geolocator_web:
     dependency: transitive
     description:
@@ -361,7 +361,7 @@ packages:
     source: hosted
     version: "0.5.3"
   in_app_purchase_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: in_app_purchase_platform_interface
       sha256: "0b0076cac8ce4fa7048f01e76af8b123aeb6a7c4e0dea2a5206d6664454f3e36"

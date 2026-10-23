@@ -36,7 +36,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 
   Future<void> _search() async {
-    setState(() => _result = _load());
+    final result = _load();
+    setState(() {
+      _result = result;
+    });
+    await result.catchError((_) => const DiscoveryResult([], []));
   }
 
   Future<DiscoveryResult> _load() async {

@@ -143,11 +143,13 @@ class TripSession extends ChangeNotifier {
     };
   }
 
-  LeadResult? get lead => _resolver.resolve(
-        designatedMemberId: trip?.leadMemberId,
-        positions: _reported,
-        route: routeLine,
-      );
+  LeadResult? get lead {
+    final r = _resolver.resolve(designatedMemberId: trip?.leadMemberId, positions: _reported, route: routeLine);
+    if (r == null || r.reason != LeadReason.designatedSilent || routeLine.length < 2) return r;
+    // A briefly silent lead is measured where it probably is now.
+    final est = positions[r.memberId];
+    return est == null ? r : LeadResult(r.memberId, r.reason, Geo.projectOntoRoute(routeLine, est.point).alongMeters);
+  }
 
   List<ConvoyStanding> get standings => _resolver.standings(lead: lead, positions: _reported, route: routeLine);
 

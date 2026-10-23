@@ -15,8 +15,9 @@ class ItineraryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stops = session.itinerary.waypoints;
-    final route = session.itinerary.route;
-    final total = Geo.routeLength(route);
+    final byRoad = !identical(session.routeLine, session.itinerary.route) &&
+        session.routeLine.length > session.itinerary.route.length;
+    final total = Geo.routeLength(session.routeLine);
     return Scaffold(
       body: stops.isEmpty
           ? const Center(
@@ -30,7 +31,7 @@ class ItineraryTab extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(children: [
-                  Text('${stops.length} stops · ${Geo.formatDistance(total)} straight-line',
+                  Text('${stops.length} stops · ${Geo.formatDistance(total)} ${byRoad ? 'by road' : 'straight-line'}',
                       style: Theme.of(context).textTheme.titleSmall),
                   const Spacer(),
                   TextButton.icon(

@@ -200,7 +200,7 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
     if (standing != null && standing.offRoute) parts.add('off route');
     parts.add('${(pos.speedMps * 3.6).round()} km/h');
     parts.add(switch (pos.source) {
-      PositionSource.mesh => 'via nearby cars',
+      PositionSource.mesh => 'via radio / nearby cars',
       PositionSource.estimated => 'estimated: ${pos.basis ?? 'from last report'} (±${Geo.formatDistance(pos.accuracyM)}, last heard ${_ago(s.lastReported(m.id)?.timestamp ?? pos.timestamp)})',
       _ => _ago(pos.timestamp),
     });

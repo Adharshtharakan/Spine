@@ -141,11 +141,14 @@ class _ConvoyMapState extends State<ConvoyMap> {
         textField: ['get', 'label'],
         textFont: _font,
         textSize: 13,
-        textOffset: [0, -1.9],
-        textAnchor: 'bottom',
+        // Labels move around their dot rather than piling on top of each
+        // other when cars are close; the dots themselves always show.
+        textVariableAnchor: ['bottom', 'top', 'left', 'right'],
+        textRadialOffset: 1.4,
         textHaloColor: '#FFFFFF',
         textHaloWidth: 2,
-        textAllowOverlap: true,
+        textAllowOverlap: false,
+        textOptional: true,
       ),
     );
     _styleReady = true;
@@ -239,9 +242,10 @@ class _ConvoyMapState extends State<ConvoyMap> {
   String _label(VehiclePosition p) {
     final m = widget.members[p.memberId];
     final name = p.memberId == widget.selfMemberId ? 'You' : (m?.vehicleLabel ?? m?.displayName ?? 'Vehicle');
-    final lead = p.memberId == widget.leadMemberId ? '★ ' : '';
+    // Plain text: map label fonts don't reliably include symbols like ★.
+    final lead = p.memberId == widget.leadMemberId ? 'Lead · ' : '';
     final via = switch (p.source) {
-      PositionSource.mesh => ' (nearby)',
+      PositionSource.mesh => ' (off-grid)',
       PositionSource.estimated => ' (est.)',
       _ => '',
     };

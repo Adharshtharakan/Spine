@@ -6,6 +6,10 @@ enum LeadReason {
   /// The organiser designated this vehicle and it is reporting.
   designated,
 
+  /// The designated lead has gone quiet only briefly (a dead zone); it stays
+  /// the lead and its position is estimated, so the badge doesn't flip.
+  designatedSilent,
+
   /// The designated lead has gone silent (or none was set), so the vehicle
   /// furthest along the shared route is treated as the de-facto lead.
   furthestAlongRoute,
@@ -39,9 +43,16 @@ class ConvoyStanding {
 
 /// Identifies the lead vehicle and ranks the convoy along the route.
 class LeadVehicleResolver {
-  const LeadVehicleResolver({this.staleAfter = const Duration(seconds: 90)});
+  const LeadVehicleResolver({
+    this.staleAfter = const Duration(seconds: 90),
+    this.holdDesignatedFor = const Duration(minutes: 15),
+  });
 
   final Duration staleAfter;
+
+  /// How long a silent designated lead keeps the role before the front-most
+  /// reporting vehicle is shown as lead instead.
+  final Duration holdDesignatedFor;
 
   LeadResult? resolve({
     required String? designatedMemberId,
@@ -62,15 +73,13 @@ class LeadVehicleResolver {
       return LeadResult(designatedMemberId, LeadReason.designated,
           along(fresh[designatedMemberId]!));
     }
-    if (fresh.isEmpty) {
-      // Nobody fresh: still honour the designation so the badge never jumps
-      // around while the whole convoy is in a dead zone.
-      if (designatedMemberId != null && positions.containsKey(designatedMemberId)) {
-        return LeadResult(designatedMemberId, LeadReason.designated,
-            along(positions[designatedMemberId]!));
-      }
-      return null;
+    final designated = designatedMemberId == null ? null : positions[designatedMemberId];
+    // A short silence (or the whole convoy in a dead zone) keeps the
+    // designated lead, so the badge doesn't jump around.
+    if (designated != null && (fresh.isEmpty || designated.age(t) <= holdDesignatedFor)) {
+      return LeadResult(designatedMemberId!, LeadReason.designatedSilent, along(designated));
     }
+    if (fresh.isEmpty) return null;
     String? bestId;
     var best = double.negativeInfinity;
     for (final e in fresh.entries) {
