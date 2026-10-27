@@ -65,7 +65,7 @@ Flutter, so install that too.
    - **Authentication → Emails → Templates**. Edit both **Confirm signup**
      and **Magic Link** so the body includes the code:
      ```html
-     <h2>Your Convoy code</h2>
+     <h2>Your DriveSync code</h2>
      <p>Enter this code in the app: <strong>{{ .Token }}</strong></p>
      ```
    - The built-in email sender allows only a few emails per hour. That's
@@ -241,20 +241,43 @@ own Protomaps basemap instead:
   1. Flash Meshtastic from <https://flasher.meshtastic.org>.
   2. In the Meshtastic app, set **Region** to your country's band (India:
      `IN`, 865 MHz) and keep the default primary channel.
-  3. In Convoy: menu → **Convoy radio** → Find radios nearby → Pair.
+  3. In DriveSync: menu (⋮) → **Long-range radio** → Find radios nearby → Pair.
   An external car antenna makes a big difference to range.
 
 ---
+
+## 8. Testing each feature
+
+You need **two devices** for most of this: two phones, or a phone plus an
+emulator. Sign in on each with a **different email**.
+
+| Feature | How to test |
+|---|---|
+| Live map + lead | Phone A creates a convoy, phone B joins with the invite code. Both should appear on the map within a few seconds. Convoy tab → ☆ next to a vehicle makes it the lead. |
+| Driving on an emulator | Emulator **⋯ → Location → Routes**: pick two points and press **Play route** (speed ×4 or so). The car moves on everyone's map. |
+| Shared plan | Long-press the map on A to add a stop; it appears on B's **Plan** tab immediately. Try **Running late → 30 minutes**. |
+| Chat + push-to-talk | Send a message from A. Hold the mic button on A and speak; B hears it (use two real phones in different rooms to avoid feedback). |
+| Convoy alerts | Play an emulator route so one car pulls 3+ km ahead of the other: after ~30 s a "falling behind" card appears and is read aloud. Toggle in menu → **Settings → Read alerts aloud**. Editing a stop's time on A announces the change on B. |
+| Driving lock | While a route is playing (above 15 km/h), the Chat text box changes to "Typing paused while driving". **I'm a passenger** unlocks it. |
+| No signal / prediction | Switch phone B to **airplane mode** (keep location on). A's map shows B as "(est.)" with a growing halo, then a "Lost contact" alert after 5 min. B's own map keeps working. Turn signal back on: queued chat and plan edits sync. |
+| Offline maps | Convoy tab → **Download maps along this route**, then airplane mode: the map still draws. |
+| Dark mode | Menu → **Settings → Appearance → Dark**. |
+| Free plan limit | A third vehicle joining a free convoy gets "This convoy is full". Give the organiser Premium (step 2.6) to allow up to 25. |
+| Public trips | Needs the Worker (step 5) and phone verification (step 2.4): Convoy tab → **Publish to Discover**; on another account, home → 🔍 → **Request to join**; accept on the organiser's Convoy tab. |
+| Stops (hotels, fuel…) | Needs the Worker (step 5): the **Stops** tab lists places along the route. |
+
+Bluetooth phone-to-phone and the LoRa radio need two **real** phones; they
+don't work on emulators.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| "Convoy is not configured" | The run args are missing: add `--dart-define-from-file=env.json` (step 4.3), and check `env.json` is inside `app/`. |
+| "DriveSync is not configured" | The run args are missing: add `--dart-define-from-file=env.json` (step 4.3), and check `env.json` is inside `app/`. |
 | The email contains a link, not a code | Edit the email templates (step 2.3). |
 | "Please accept the current guidelines…" right after accepting | `seed.sql` wasn't run (step 2.2). |
 | Map is grey or blank | The phone has no internet on first launch, or `MAP_STYLE_URL` / `SELF_HOSTED_TILES` points at a Worker without tiles. |
-| Discover/Stops say "needs the Convoy Worker" | Set `EDGE_BASE_URL` (step 5). |
+| Discover/Stops say "needs the DriveSync Worker" | Set `EDGE_BASE_URL` (step 5). |
 | Third car can't join | The free plan allows 2 vehicles; give the organiser Premium (step 2.6). |
 | `flutter doctor` says the Android license status is unknown | Run `flutter doctor --android-licenses`. |
 | Gradle build error | Copy the **first** red error from the Build window and send it over. The native mesh code (Kotlin/Swift) hasn't been compiled on a real machine yet, so the first build may surface a small fix. |
