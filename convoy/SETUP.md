@@ -54,12 +54,20 @@ Flutter, so install that too.
 1. Go to <https://supabase.com> → sign in with GitHub → **New project**.
    - Name `convoy`, pick the region closest to your users (e.g. *Mumbai*),
      and save the database password somewhere safe.
-2. **Create the database.** Open **SQL Editor** → *New query*. For each file
-   below, in this order, paste the whole file and press **Run**. Each should
-   say "Success. No rows returned".
-   1. `supabase/migrations/20261008000000_convoy_core.sql`
-   2. `supabase/migrations/20261009000000_offgrid_relay.sql`
-   3. `supabase/seed.sql` (the community guidelines and driver terms)
+2. **Create the database.** Open **SQL Editor** → **+ New** (a new query tab).
+   1. In another browser tab open
+      <https://github.com/angith-anmesrisha/drivesync/blob/main/supabase/setup_all.sql>
+      and click the **Copy raw file** button (two overlapping squares, top
+      right of the code).
+   2. Back in Supabase, click inside the editor, paste (**Ctrl+V**) and press
+      **Run** (or **Ctrl+Enter**). If Supabase warns about a potentially
+      destructive query, choose **Run this query**.
+   3. It should finish with "Success. No rows returned". Check in
+      **Table Editor**: you should see tables such as `trips`, `waypoints`
+      and `messages`.
+   Run it **once**. A second run fails with `relation "profiles" already
+   exists`, which just means it is already set up. (The same SQL also lives
+   as the separate files `supabase/migrations/*.sql` + `supabase/seed.sql`.)
 3. **Email sign-in with a code.** The app asks for a 6-digit code, but
    Supabase's default emails contain a link instead.
    - **Authentication → Emails → Templates**. Edit both **Confirm signup**

@@ -3,6 +3,9 @@
 #   PGHOST=/var/tmp PGPORT=54329 PGUSER=postgres ./tests/run.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# setup_all.sql must match the migrations + seed it is generated from.
+./build_setup_all.sh /tmp/setup_all.check.sql
+diff -q setup_all.sql /tmp/setup_all.check.sql >/dev/null || { echo "setup_all.sql is stale: run supabase/build_setup_all.sh"; exit 1; }
 DB=${DB:-convoy_test}
 P="psql -v ON_ERROR_STOP=1 -q"
 $P -c "drop database if exists $DB" >/dev/null
