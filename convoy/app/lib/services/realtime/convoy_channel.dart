@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/models/convoy_event.dart';
@@ -52,6 +53,9 @@ class ConvoyChannel implements PttSignaller {
   Stream<ChannelStatus> get status => _status.stream;
 
   ChannelStatus _current = ChannelStatus.connecting;
+
+  /// Why the live channel last dropped, for the connection details banner.
+  String? lastError;
   ChannelStatus get currentStatus => _current;
 
   static Map<String, dynamic> _body(Map<String, dynamic> msg) =>
@@ -135,6 +139,8 @@ class ConvoyChannel implements PttSignaller {
             case RealtimeSubscribeStatus.channelError:
             case RealtimeSubscribeStatus.timedOut:
             case RealtimeSubscribeStatus.closed:
+              lastError = error == null ? 'Live connection: ${status.name}' : 'Live connection: $error';
+              debugPrint('ConvoyChannel trip:$tripId ${status.name} $error');
               _setStatus(ChannelStatus.offline);
           }
         });

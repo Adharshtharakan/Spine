@@ -305,7 +305,17 @@ class _LinkBanner extends StatelessWidget {
         child: Row(children: [
           TileIcon(gpsProblem != null ? Icons.location_disabled_rounded : icon, color: color, size: 34),
           const SizedBox(width: 12),
-          Expanded(child: Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+              // While not connected, say why, so a server problem doesn't
+              // masquerade as having no signal.
+              if (session.link != LinkMode.cloud && session.connectionProblem != null) ...[
+                const SizedBox(height: 4),
+                SelectableText('Details: ${session.connectionProblem}', style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ]),
+          ),
         ]),
       ),
     );

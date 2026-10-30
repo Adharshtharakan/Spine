@@ -67,6 +67,11 @@ class TripSession extends ChangeNotifier {
   String? error;
   int pendingWrites = 0;
 
+  /// The last reason syncing with the server failed (shown on the map while
+  /// not connected, so problems are visible instead of looking like no signal).
+  String? syncError;
+  String? get connectionProblem => syncError ?? channel?.lastError;
+
   ConvoyChannel? channel;
   GpsService? gps;
   PttService? ptt;
@@ -689,6 +694,8 @@ class TripSession extends ChangeNotifier {
       await _loadEvents();
       unawaited(_saveSnapshot());
     } catch (e) {
+      debugPrint('TripSession.open failed: $e');
+      syncError = 'Loading the trip: ${friendlyError(e)}';
       // Opened with no signal: restore the last snapshot so the map, GPS,
       // offline tiles and the mesh all still work.
       final snap = cached;
@@ -979,9 +986,12 @@ class TripSession extends ChangeNotifier {
 
       await _loadEvents().timeout(t);
       _lastPollOk = DateTime.now();
+      syncError = null;
       await _flushOutbox();
-    } catch (_) {
-      // Still no usable connection.
+    } catch (e) {
+      // Still no usable connection (or a server-side error worth showing).
+      debugPrint('TripSession poll failed: $e');
+      syncError = 'Syncing: ${friendlyError(e)}';
     } finally {
       _polling = false;
       _updateLink();
