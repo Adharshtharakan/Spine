@@ -24,10 +24,16 @@ abstract class PttSignaller {
 /// no renegotiation. Half-duplex floor control mirrors a CB radio: one
 /// talker at a time.
 class PttService {
-  PttService({required this.selfId, required this.signaller});
+  PttService({required this.selfId, required this.signaller, this.iceServers});
 
   final String selfId;
   final PttSignaller signaller;
+
+  /// Extra ICE servers (TURN relay credentials from the Worker), fetched
+  /// once when the service starts. Without them only STUN is used, which
+  /// fails between some mobile networks.
+  final Future<List<Map<String, dynamic>>> Function()? iceServers;
+  List<Map<String, dynamic>> _extraIce = const [];
 
   final Map<String, RTCPeerConnection> _peers = {};
   final Map<String, List<RTCIceCandidate>> _pendingIce = {};
@@ -40,46 +46,84 @@ class PttService {
   final talking = ValueNotifier<String?>(null);
   final connectedPeers = ValueNotifier<int>(0);
   bool _started = false;
+  Future<void>? _starting;
   Timer? _floorWatchdog;
+
+  /// Members online right now (Realtime presence), remembered so links can
+  /// be set up as soon as the service starts.
+  Set<String> _online = {};
+
+  /// Why the microphone is unavailable (permission denied…); this phone can
+  /// still hear others.
+  String? micError;
+
+  /// Per-peer link state, for the connection details sheet.
+  Map<String, String> get peerStates => {
+        for (final e in _peerState.entries) e.key: e.value.name.replaceFirst('RTCPeerConnectionState', ''),
+      };
 
   static const maxTalk = Duration(seconds: 45);
 
   Map<String, dynamic> get _rtcConfig => {
         'iceServers': [
           {'urls': ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302']},
+          ..._extraIce,
           if (Env.turnUrl.isNotEmpty)
             {'urls': Env.turnUrl, 'username': Env.turnUsername, 'credential': Env.turnCredential},
         ],
         'sdpSemantics': 'unified-plan',
       };
 
-  Future<void> start() async {
-    if (_started) return;
-    _started = true;
-    _mic = await navigator.mediaDevices.getUserMedia({
-      'audio': {
-        'echoCancellation': true,
-        'noiseSuppression': true,
-        'autoGainControl': true,
-      },
-      'video': false,
-    });
-    for (final t in _mic!.getAudioTracks()) {
-      t.enabled = false;
-    }
-    // Car cabin: play through the loudspeaker (or Bluetooth head unit).
-    await Helper.setSpeakerphoneOnButPreferBluetooth();
+  /// Whether a TURN relay is available (for the connection details sheet).
+  bool get hasRelay => Env.turnUrl.isNotEmpty || _extraIce.any((s) => '${s['urls']}'.contains('turn'));
 
+  /// Sets up the voice links. Called when the trip connects, so every phone
+  /// is ready to hear others before anyone presses the button.
+  Future<void> start() => _starting ??= _start();
+
+  Future<void> _start() async {
+    // Listen first: incoming offers and floor messages must never be missed.
     _subs.add(signaller.signals.listen(_onSignal));
     _subs.add(signaller.ptt.listen(_onPtt));
     _floorWatchdog = Timer.periodic(const Duration(seconds: 5), (_) {
       floor.expire(DateTime.now());
       talking.value = floor.holder;
     });
+    try {
+      _mic = await navigator.mediaDevices.getUserMedia({
+        'audio': {
+          'echoCancellation': true,
+          'noiseSuppression': true,
+          'autoGainControl': true,
+        },
+        'video': false,
+      });
+      for (final t in _mic!.getAudioTracks()) {
+        t.enabled = false;
+      }
+    } catch (e) {
+      // No microphone permission: this phone can still listen.
+      micError = '$e';
+      debugPrint('PttService: microphone unavailable: $e');
+    }
+    if (iceServers != null) {
+      try {
+        _extraIce = await iceServers!().timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('PttService: no TURN relay ($e)');
+      }
+    }
+    try {
+      // Car cabin: play through the loudspeaker (or Bluetooth head unit).
+      await Helper.setSpeakerphoneOnButPreferBluetooth();
+    } catch (_) {}
+    _started = true;
+    await syncPeers(_online);
   }
 
   /// Called with the set of members currently online (Realtime presence).
   Future<void> syncPeers(Set<String> online) async {
+    _online = online;
     if (!_started) return;
     for (final id in _peers.keys.toList()) {
       if (!online.contains(id)) await _closePeer(id);
@@ -129,6 +173,12 @@ class PttService {
 
   Future<void> _call(String id) async {
     final pc = await _peer(id);
+    // Receive audio even when this phone has no microphone track.
+    if (_mic == null) {
+      await pc.addTransceiver(
+          kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
+          init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
+    }
     final offer = await pc.createOffer({'offerToReceiveAudio': true});
     await pc.setLocalDescription(offer);
     await signaller.sendSignal(id, {'type': 'offer', 'sdp': offer.sdp});
@@ -137,6 +187,9 @@ class PttService {
   Future<void> _onSignal(Map<String, dynamic> s) async {
     final from = s['from'] as String?;
     if (from == null || from == selfId) return;
+    // An offer can arrive before the microphone is ready; wait for it so the
+    // answer includes our audio track.
+    if (!_started) await start();
     switch (s['type']) {
       case 'offer':
         final pc = await _peer(from);
@@ -198,7 +251,7 @@ class PttService {
 
   /// Button down. Returns false if someone else is talking.
   Future<bool> pressToTalk() async {
-    if (!_started) await start();
+    await start();
     final now = DateTime.now();
     if (!floor.tryAcquire(selfId, now)) return false;
     _setMic(true);

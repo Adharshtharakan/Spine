@@ -55,6 +55,17 @@ Future<void> showConnectionDetails(BuildContext context, TripSession s) => showM
                         '${g.parked ? '\nParked: saving battery' : ''}'
                         '${g.lastError == null ? '' : '\nError: ${g.lastError}'}',
               ),
+              (
+                Icons.mic_rounded,
+                (s.ptt?.connectedPeers.value ?? 0) > 0 ? c.good : c.warn,
+                'Voice (push-to-talk)',
+                s.ptt == null
+                    ? 'Not started'
+                    : '${s.ptt!.connectedPeers.value} of ${(s.online.length - 1).clamp(0, 99)} phones connected'
+                        '${s.ptt!.peerStates.isEmpty ? '' : '\n${s.ptt!.peerStates.entries.map((e) => '${s.members[e.key]?.vehicleLabel ?? s.members[e.key]?.displayName ?? 'member'}: ${e.value}').join(', ')}'}'
+                        '${s.ptt!.micError == null ? '' : '\nMicrophone: ${s.ptt!.micError}'}'
+                        '\nRelay (TURN): ${s.ptt!.hasRelay ? 'available' : 'not set up, so phones on different mobile networks may not hear each other'}',
+              ),
               (Icons.cloud_upload_rounded, s.pendingWrites == 0 ? c.good : c.warn, 'Waiting to send', '${s.pendingWrites} change(s)'),
             ];
             final text = [
