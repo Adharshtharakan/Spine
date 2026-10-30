@@ -10,7 +10,8 @@ String friendlyError(Object e) {
   if (e is PostgrestException) {
     const known = {
       'guidelines_not_accepted': 'Please accept the current guidelines and driver terms first.',
-      'vehicle_cap_reached': 'This convoy is full on the free plan (2 vehicles). The organiser can upgrade for larger convoys.',
+      'vehicle_cap_reached':
+          'This convoy is full on the free plan (2 vehicles). The organiser can upgrade for larger convoys.',
       'invalid_invite': 'That invite code was not found.',
       'not_verified': 'Confirm your phone number and accept the current terms to do this.',
       'trip_not_open': 'This trip is no longer open to join.',
@@ -41,7 +42,7 @@ class TripRepository {
     if (uid == null) return const [];
     final rows = await _db
         .from('trip_members')
-        .select('trips(*)')
+        .select('trips!trip_members_trip_id_fkey(*)') // trips also points back at trip_members (lead)
         .eq('user_id', uid)
         .order('joined_at', ascending: false);
     return [
@@ -50,8 +51,7 @@ class TripRepository {
     ];
   }
 
-  Future<Trip> trip(String id) async =>
-      Trip.fromRow(await _db.from('trips').select().eq('id', id).single());
+  Future<Trip> trip(String id) async => Trip.fromRow(await _db.from('trips').select().eq('id', id).single());
 
   Stream<Trip> watchTrip(String id) => _db
       .from('trips')
@@ -63,42 +63,52 @@ class TripRepository {
   Future<List<TripMember>> members(String tripId) async {
     final rows = await _db
         .from('trip_members')
-        .select('*, profiles:user_id(display_name)')
+        .select('*, profiles!trip_members_user_profile_fkey(display_name)')
         .eq('trip_id', tripId);
     return rows.map(TripMember.fromRow).toList();
   }
 
   Future<Trip> create(String title, {String description = '', DateTime? startsAt, String? vehicleLabel}) async {
-    final row = await _db.rpc('create_trip', params: {
-      'p_title': title,
-      'p_description': description,
-      'p_starts_at': startsAt?.toUtc().toIso8601String(),
-      'p_vehicle_label': vehicleLabel,
-    });
+    final row = await _db.rpc(
+      'create_trip',
+      params: {
+        'p_title': title,
+        'p_description': description,
+        'p_starts_at': startsAt?.toUtc().toIso8601String(),
+        'p_vehicle_label': vehicleLabel,
+      },
+    );
     return Trip.fromRow(row as Map<String, dynamic>);
   }
 
   Future<Trip> joinByInvite(String code, {String? vehicleLabel, bool hasVehicle = true}) async {
-    final row = await _db.rpc('join_by_invite', params: {
-      'p_code': code,
-      'p_vehicle_label': vehicleLabel,
-      'p_has_vehicle': hasVehicle,
-    });
+    final row = await _db.rpc(
+      'join_by_invite',
+      params: {'p_code': code, 'p_vehicle_label': vehicleLabel, 'p_has_vehicle': hasVehicle},
+    );
     return Trip.fromRow(row as Map<String, dynamic>);
   }
 
   Future<void> setLead(String tripId, String memberId) =>
       _db.rpc('set_lead_vehicle', params: {'p_trip': tripId, 'p_member': memberId});
 
-  Future<void> updateMyVehicle(String memberId,
-          {String? label, int? color, bool? hasVehicle, int? tankRangeKm, double? fuelKmpl}) =>
-      _db.from('trip_members').update({
+  Future<void> updateMyVehicle(
+    String memberId, {
+    String? label,
+    int? color,
+    bool? hasVehicle,
+    int? tankRangeKm,
+    double? fuelKmpl,
+  }) => _db
+      .from('trip_members')
+      .update({
         'vehicle_label': ?label,
         if (color != null) 'vehicle_color': color.toSigned(32),
         'has_vehicle': ?hasVehicle,
         'tank_range_km': ?tankRangeKm,
         'fuel_kmpl': ?fuelKmpl,
-      }).eq('id', memberId);
+      })
+      .eq('id', memberId);
 
   /// Sweep or navigator (null clears). Owner/lead assigns; anyone may be
   /// their own navigator.
@@ -144,56 +154,60 @@ class TripRepository {
   }
 
   /// Gateway upload of positions heard over the radio / phone mesh.
-  Future<void> relayPositions(String tripId, List<VehiclePosition> positions) => _db.rpc('relay_positions', params: {
-        'p_trip': tripId,
-        'p_positions': [
-          for (final p in positions)
-            {
-              'member_id': p.memberId,
-              'lat': p.point.lat,
-              'lng': p.point.lng,
-              'speed_mps': p.speedMps,
-              'heading_deg': p.headingDeg,
-              'accuracy_m': p.accuracyM,
-              'recorded_at': p.timestamp.toUtc().toIso8601String(),
-            },
-        ],
-      });
+  Future<void> relayPositions(String tripId, List<VehiclePosition> positions) => _db.rpc(
+    'relay_positions',
+    params: {
+      'p_trip': tripId,
+      'p_positions': [
+        for (final p in positions)
+          {
+            'member_id': p.memberId,
+            'lat': p.point.lat,
+            'lng': p.point.lng,
+            'speed_mps': p.speedMps,
+            'heading_deg': p.headingDeg,
+            'accuracy_m': p.accuracyM,
+            'recorded_at': p.timestamp.toUtc().toIso8601String(),
+          },
+      ],
+    },
+  );
 
   // ───────────── discovery: publishing & mutual acceptance ─────────────
 
-  Future<Trip> publish(String tripId,
-      {required String summary,
-      required List<String> tags,
-      required GeoPoint start,
-      required GeoPoint end,
-      int? maxVehicles}) async {
-    final row = await _db.rpc('publish_trip', params: {
-      'p_trip': tripId,
-      'p_summary': summary,
-      'p_tags': tags,
-      'p_start_lat': start.lat,
-      'p_start_lng': start.lng,
-      'p_end_lat': end.lat,
-      'p_end_lng': end.lng,
-      'p_max_vehicles': maxVehicles,
-    });
+  Future<Trip> publish(
+    String tripId, {
+    required String summary,
+    required List<String> tags,
+    required GeoPoint start,
+    required GeoPoint end,
+    int? maxVehicles,
+  }) async {
+    final row = await _db.rpc(
+      'publish_trip',
+      params: {
+        'p_trip': tripId,
+        'p_summary': summary,
+        'p_tags': tags,
+        'p_start_lat': start.lat,
+        'p_start_lng': start.lng,
+        'p_end_lat': end.lat,
+        'p_end_lng': end.lng,
+        'p_max_vehicles': maxVehicles,
+      },
+    );
     return Trip.fromRow(row as Map<String, dynamic>);
   }
 
   Future<void> unpublish(String tripId) => _db.rpc('unpublish_trip', params: {'p_trip': tripId});
 
   Future<void> requestToJoin(String tripId, {required String vehicleLabel, String message = ''}) =>
-      _db.rpc('request_to_join', params: {
-        'p_trip': tripId,
-        'p_vehicle_label': vehicleLabel,
-        'p_message': message,
-      });
+      _db.rpc('request_to_join', params: {'p_trip': tripId, 'p_vehicle_label': vehicleLabel, 'p_message': message});
 
   Future<List<JoinRequest>> joinRequests(String tripId) async {
     final rows = await _db
         .from('join_requests')
-        .select('*, profiles:requester_id(display_name)')
+        .select('*, profiles!join_requests_requester_profile_fkey(display_name)')
         .eq('trip_id', tripId)
         .order('created_at');
     return rows.map(JoinRequest.fromRow).toList();
@@ -204,7 +218,7 @@ class TripRepository {
     if (uid == null) return const [];
     final rows = await _db
         .from('join_requests')
-        .select('*, profiles:requester_id(display_name)')
+        .select('*, profiles!join_requests_requester_profile_fkey(display_name)')
         .eq('requester_id', uid)
         .order('created_at', ascending: false);
     return rows.map(JoinRequest.fromRow).toList();
@@ -224,10 +238,7 @@ class GuidelineRepository {
 
   /// The latest published version of each document kind.
   Future<List<GuidelineDocument>> current() async {
-    final rows = await _db
-        .from('guideline_documents')
-        .select()
-        .order('version', ascending: false);
+    final rows = await _db.from('guideline_documents').select().order('version', ascending: false);
     final byKind = <String, GuidelineDocument>{};
     for (final r in rows) {
       final d = GuidelineDocument.fromRow(r);

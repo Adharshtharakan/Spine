@@ -676,7 +676,7 @@ class TripSession extends ChangeNotifier {
       }
       final msgs = await _db
           .from('messages')
-          .select('*, profiles:sender_id(display_name)')
+          .select('*, profiles!messages_sender_profile_fkey(display_name)')
           .eq('trip_id', tripId)
           .order('created_at', ascending: false)
           .limit(100);
@@ -964,7 +964,7 @@ class TripSession extends ChangeNotifier {
       }
 
       final since = messages.where((m) => !m.pending).lastOrNull?.createdAt;
-      var q = _db.from('messages').select('*, profiles:sender_id(display_name)').eq('trip_id', tripId);
+      var q = _db.from('messages').select('*, profiles!messages_sender_profile_fkey(display_name)').eq('trip_id', tripId);
       if (since != null) q = q.gt('created_at', since.toUtc().toIso8601String());
       for (final r in await q.order('created_at').limit(50).timeout(t)) {
         _acceptMessage(ChatMessage.fromRow(r));
