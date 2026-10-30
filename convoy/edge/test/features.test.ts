@@ -4,7 +4,6 @@ import type { LatLng } from "../src/geo";
 import worker from "../src/index";
 import { fcmMessage } from "../src/notify";
 import { toPlace } from "../src/places";
-import { normalizeIceServers } from "../src/turn";
 import { plazasOnRoute } from "../src/tolls";
 import { forecastAt, warningsFor } from "../src/weather";
 
@@ -127,15 +126,3 @@ describe("invite links", () => {
   });
 });
 
-describe("turn", () => {
-  it("accepts both shapes of Cloudflare's response", () => {
-    expect(normalizeIceServers({ iceServers: [{ urls: ["turn:a"], username: "u", credential: "c" }] })).toHaveLength(1);
-    expect(normalizeIceServers({ iceServers: { urls: ["turn:a"], username: "u", credential: "c" } })).toHaveLength(1);
-    expect(normalizeIceServers({})).toEqual([]);
-  });
-
-  it("requires a signed-in user", async () => {
-    const res = await worker.fetch(new Request("https://edge/turn", { method: "POST" }), { CACHE: kv } as Env, ctx);
-    expect(res.status).toBe(401);
-  });
-});

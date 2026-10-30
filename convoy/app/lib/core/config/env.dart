@@ -49,12 +49,6 @@ abstract final class Env {
     return dark ? openFreeMapDarkStyle : openFreeMapStyle;
   }
 
-  /// Optional TURN relay for voice when both peers sit behind symmetric NAT.
-  /// STUN alone keeps media peer-to-peer at zero cost.
-  static const turnUrl = String.fromEnvironment('TURN_URL');
-  static const turnUsername = String.fromEnvironment('TURN_USERNAME');
-  static const turnCredential = String.fromEnvironment('TURN_CREDENTIAL');
-
   /// Store product ids for the premium subscription.
   static const premiumProductIds = {'convoy_premium_monthly', 'convoy_premium_yearly'};
 

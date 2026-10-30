@@ -35,8 +35,9 @@ application id and iOS bundle id to your own before publishing.
   above 15 km/h; quick replies and push-to-talk stay available, and a
   passenger can unlock typing.
 - **Party-only text and push-to-talk.** Chat is visible to trip members
-  only (RLS). Voice is half-duplex push-to-talk over peer-to-peer WebRTC,
-  so no media server is involved.
+  only (RLS). Voice is half-duplex push-to-talk relayed over the trip's
+  private Realtime channel as 8 kHz µ-law frames, so it works on any
+  network (mobile data, carrier NAT) with no media server to run.
 - **Offline resiliency: last-resort prediction.** When nothing can reach
   a car, each phone estimates where it is from what it already had, with
   no data exchanged during the outage. It uses the car's last reported
@@ -93,7 +94,7 @@ application id and iOS bundle id to your own before publishing.
   Cloudflare Worker handles everything else and scales to zero.
 - Positions never hit Postgres per fix: they go over Realtime broadcast,
   with one last-known upsert every 30 s.
-- Voice is peer-to-peer. TURN is optional.
+- Voice rides the Realtime channel: about 11 KB/s while someone talks, nothing when quiet.
 - Tiles are one PMTiles file in R2 (no egress fees) behind the edge cache.
 - Points of interest come from OpenStreetMap via Overpass, cached in KV for
   a week.

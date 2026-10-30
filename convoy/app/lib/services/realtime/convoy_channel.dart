@@ -16,7 +16,7 @@ enum ChannelStatus { connecting, live, offline }
 /// send. It multiplexes:
 ///
 /// * `pos`  — live GPS fixes (broadcast only; nothing written per fix)
-/// * `rtc`  — WebRTC offers/answers/ICE for push-to-talk (addressed by member)
+/// * `aud`  — push-to-talk voice frames (µ-law, 200 ms each)
 /// * `ptt`  — floor control: who is talking
 /// * presence — who has the app open
 /// * Postgres changes on `waypoints`, `messages`, `trip_events`, `trip_members`, `trips`
@@ -32,7 +32,7 @@ class ConvoyChannel implements PttSignaller {
   final _waypoints = StreamController<Waypoint>.broadcast();
   final _messages = StreamController<ChatMessage>.broadcast();
   final _events = StreamController<ConvoyEvent>.broadcast();
-  final _signals = StreamController<Map<String, dynamic>>.broadcast();
+  final _audio = StreamController<Map<String, dynamic>>.broadcast();
   final _ptt = StreamController<Map<String, dynamic>>.broadcast();
   final _members = StreamController<void>.broadcast();
   final _trip = StreamController<Trip>.broadcast();
@@ -44,7 +44,7 @@ class ConvoyChannel implements PttSignaller {
   Stream<ChatMessage> get messages => _messages.stream;
   Stream<ConvoyEvent> get events => _events.stream;
   @override
-  Stream<Map<String, dynamic>> get signals => _signals.stream;
+  Stream<Map<String, dynamic>> get audio => _audio.stream;
   @override
   Stream<Map<String, dynamic>> get ptt => _ptt.stream;
   Stream<void> get membersChanged => _members.stream;
@@ -100,13 +100,7 @@ class ConvoyChannel implements PttSignaller {
             if (p.memberId != memberId) _positions.add(p);
           },
         )
-        .onBroadcast(
-          event: 'rtc',
-          callback: (m) {
-            final b = _body(m);
-            if (b['to'] == memberId) _signals.add(b);
-          },
-        )
+        .onBroadcast(event: 'aud', callback: (m) => _audio.add(_body(m)))
         .onBroadcast(event: 'ptt', callback: (m) => _ptt.add(_body(m)))
         .onPresenceSync((_) {
           final ids = <String>{
@@ -176,6 +170,7 @@ class ConvoyChannel implements PttSignaller {
     _status.add(s);
   }
 
+  @override
   bool get isLive => _current == ChannelStatus.live;
 
   Future<bool> _send(String event, Map<String, dynamic> payload) async {
@@ -192,8 +187,7 @@ class ConvoyChannel implements PttSignaller {
   Future<bool> sendPosition(VehiclePosition p) => _send('pos', p.toJson());
 
   @override
-  Future<bool> sendSignal(String to, Map<String, dynamic> body) =>
-      _send('rtc', {...body, 'from': memberId, 'to': to});
+  Future<bool> sendAudio(Map<String, dynamic> body) => _send('aud', {...body, 'from': memberId});
 
   @override
   Future<bool> sendPtt(Map<String, dynamic> body) => _send('ptt', {...body, 'from': memberId});
@@ -202,7 +196,7 @@ class ConvoyChannel implements PttSignaller {
     final ch = _channel;
     _channel = null;
     if (ch != null) await _db.removeChannel(ch);
-    for (final c in [_positions, _waypoints, _messages, _events, _signals, _ptt, _members, _trip, _online, _status]) {
+    for (final c in [_positions, _waypoints, _messages, _events, _audio, _ptt, _members, _trip, _online, _status]) {
       await c.close();
     }
   }

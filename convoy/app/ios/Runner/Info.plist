@@ -47,7 +47,6 @@
 		<string>location</string>
 		<string>remote-notification</string>
 		<string>audio</string>
-		<string>voip</string>
 		<string>bluetooth-central</string>
 		<string>bluetooth-peripheral</string>
 	</array>

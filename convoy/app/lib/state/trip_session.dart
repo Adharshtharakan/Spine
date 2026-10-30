@@ -818,16 +818,9 @@ class TripSession extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Voice links come up with the trip so every phone can hear the others
-    // before anyone presses the button.
-    ptt = PttService(
-      selfId: memberId,
-      signaller: ch,
-      iceServers: () async {
-        final res = await EdgeClient(_db).post('/turn', {});
-        return [for (final s in res['iceServers'] as List) Map<String, dynamic>.from(s as Map)];
-      },
-    );
+    // Push-to-talk listens from the moment the trip connects, so every phone
+    // hears the others before anyone presses the button.
+    ptt = PttService(selfId: memberId, signaller: ch);
     unawaited(ptt!.start().then((_) => ptt?.syncPeers(online)).catchError((Object e) => debugPrint('PTT start failed: $e')));
   }
 

@@ -41,10 +41,6 @@ export interface Env {
   /** Firebase service account (JSON) for push notifications; falls back to GOOGLE_SERVICE_ACCOUNT_JSON. */
   FCM_SERVICE_ACCOUNT_JSON?: string;
 
-  /** Cloudflare Realtime TURN key (push-to-talk relay on mobile networks). */
-  CF_TURN_KEY_ID?: string;
-  CF_TURN_KEY_API_TOKEN?: string;
-
   /** Optional Twilio account for SOS text messages to emergency contacts. */
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;

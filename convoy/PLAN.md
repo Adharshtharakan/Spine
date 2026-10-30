@@ -12,7 +12,7 @@ the six steps the brief requires. Each step lands as its own commit.
 |---|---|---|
 | Collaborative dynamic itineraries | `sync/itinerary_doc.dart` (HLC last-writer-wins CRDT, fractional ordering, schedule shift), `features/itinerary` | `waypoints` table, `hlc` guard trigger, Realtime `postgres_changes` |
 | Live group tracking + lead vehicle identification | `services/location`, `services/tracking/lead_vehicle.dart`, `features/map` | Realtime broadcast `trip:<id>` (ephemeral), `member_locations` last-known upsert |
-| Localized text + push-to-talk voice | `features/chat`, `services/voice/ptt_service.dart` (WebRTC mesh, floor control) | `messages` table (RLS per party), Realtime broadcast for WebRTC signalling only — media stays P2P |
+| Localized text + push-to-talk voice | `features/chat`, `services/voice/ptt_service.dart` (Realtime voice frames, floor control) | `messages` table (RLS per party), Realtime broadcast carries floor control and 8 kHz µ-law voice frames |
 | Offline resiliency | `services/offline/offline_maps.dart` (bounding-box tile packs), `services/tracking/dead_reckoning.dart`, `services/offline/outbox.dart`, `services/offline/trip_cache.dart` | Self-hosted PMTiles served as XYZ by the Worker (`/tiles`) |
 | Offline mesh fallback | `services/mesh` (Nearby Connections on Android, MultipeerConnectivity on iOS, compact binary GPS codec, TTL relay) | — |
 | Public trip discovery + mutual acceptance | `features/discovery`, `features/guidelines` | `guideline_documents`, `guideline_acceptances`, `join_requests`, `request_to_join` + `decide_join_request` RPCs, Worker `/discovery/*` |
@@ -32,8 +32,8 @@ the six steps the brief requires. Each step lands as its own commit.
    `is_trip_member()`), guideline versions, mutual acceptance, entitlements,
    Realtime authorisation on private `trip:<id>` channels.
 4. **Realtime + voice** — positions over Realtime broadcast (no DB write per fix),
-   chat and itinerary over `postgres_changes`, WebRTC full-mesh PTT with
-   signalling over the same private channel.
+   chat and itinerary over `postgres_changes`, push-to-talk voice frames
+   and floor control over the same private channel.
 5. **Offline mesh** — custom platform channel `convoy/mesh`: Nearby Connections
    (`P2P_CLUSTER`) on Android, MultipeerConnectivity on iOS. 40-byte position
    frames, relayed with TTL and de-duplication.
@@ -44,7 +44,7 @@ the six steps the brief requires. Each step lands as its own commit.
 
 - Positions never touch Postgres per fix: broadcast only, last-known upserted
   every 30 s.
-- Voice is P2P (STUN only by default; TURN optional).
+- Voice is relayed through Supabase Realtime (works across carrier NAT; ~11 KB/s per talker).
 - Tiles: one PMTiles file in R2 (no egress fees), Worker + edge cache in front.
 - POIs for fuel / rest areas / campsites come from OpenStreetMap (Overpass),
   cached in Workers KV; paid partner APIs are adapters behind env flags.

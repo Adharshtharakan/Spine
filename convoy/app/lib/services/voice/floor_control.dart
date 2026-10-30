@@ -1,4 +1,4 @@
-/// Half-duplex floor arbitration for push-to-talk, kept free of WebRTC so it
+/// Half-duplex floor arbitration for push-to-talk, kept free of audio code so it
 /// can be unit-tested.
 ///
 /// Every client applies the same rule to the same broadcast claims, so they

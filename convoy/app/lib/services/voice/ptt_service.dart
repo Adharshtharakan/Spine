@@ -1,228 +1,213 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_pcm_sound/flutter_pcm_sound.dart';
+import 'package:record/record.dart' hide IosAudioCategory;
 
-import '../../core/config/env.dart';
 import 'floor_control.dart';
+import 'voice_codec.dart';
 
-/// Signalling transport: the trip's private Realtime channel. Only SDP and
-/// ICE travel through Supabase; audio flows peer-to-peer between phones.
+/// What push-to-talk needs from the trip's private Realtime channel.
 abstract class PttSignaller {
-  Future<bool> sendSignal(String to, Map<String, dynamic> body);
+  /// True while the live connection is up.
+  bool get isLive;
   Future<bool> sendPtt(Map<String, dynamic> body);
-  Stream<Map<String, dynamic>> get signals;
   Stream<Map<String, dynamic>> get ptt;
+  Future<bool> sendAudio(Map<String, dynamic> body);
+  Stream<Map<String, dynamic>> get audio;
 }
 
-/// Push-to-talk voice for the travel party.
+/// Plays received voice. Wraps flutter_pcm_sound so tests can fake it.
+abstract class VoicePlayer {
+  Future<void> init();
+  Future<void> play(Int16List samples);
+  Future<void> release();
+}
+
+class PcmVoicePlayer implements VoicePlayer {
+  @override
+  Future<void> init() async {
+    FlutterPcmSound.setFeedCallback((_) {});
+    await FlutterPcmSound.setup(
+      sampleRate: VoiceCodec.wireRate,
+      channelCount: 1,
+      iosAudioCategory: IosAudioCategory.playAndRecord,
+      iosAllowBackgroundAudio: true,
+    );
+  }
+
+  @override
+  Future<void> play(Int16List samples) => FlutterPcmSound.feed(PcmArrayInt16(bytes: samples.buffer.asByteData()));
+
+  @override
+  Future<void> release() => FlutterPcmSound.release();
+}
+
+/// Push-to-talk voice for the travel party, like a CB radio: one talker at a
+/// time, everyone else hears them.
 ///
-/// Topology is a full mesh of WebRTC audio connections (a convoy is a handful
-/// of vehicles, so N·(N−1)/2 links is cheap and avoids any media server). The
-/// microphone track is always attached but disabled; holding the button
-/// enables it after the floor is granted, so speaking starts instantly with
-/// no renegotiation. Half-duplex floor control mirrors a CB radio: one
-/// talker at a time.
+/// Voice travels through the trip's private Supabase Realtime channel, the
+/// same link that carries positions and chat, so it works on any internet
+/// connection (mobile data, different Wi-Fi, carrier NAT) with no media
+/// server or relay to run. Audio is sent in 200 ms frames of 8 kHz µ-law
+/// ([VoiceCodec]); listeners buffer two frames before playing so small
+/// network hiccups don't break up the voice. Latency is roughly half a
+/// second, normal for a walkie-talkie app.
 class PttService {
-  PttService({required this.selfId, required this.signaller, this.iceServers});
+  PttService({required this.selfId, required this.signaller, AudioRecorder? recorder, VoicePlayer? player})
+      : _rec = recorder,
+        _player = player ?? PcmVoicePlayer();
 
   final String selfId;
   final PttSignaller signaller;
 
-  /// Extra ICE servers (TURN relay credentials from the Worker), fetched
-  /// once when the service starts. Without them only STUN is used, which
-  /// fails between some mobile networks.
-  final Future<List<Map<String, dynamic>>> Function()? iceServers;
-  List<Map<String, dynamic>> _extraIce = const [];
-
-  final Map<String, RTCPeerConnection> _peers = {};
-  final Map<String, List<RTCIceCandidate>> _pendingIce = {};
-  final Map<String, RTCPeerConnectionState> _peerState = {};
-  MediaStream? _mic;
-  final List<StreamSubscription<dynamic>> _subs = [];
+  /// Created on the first press, so listening never touches the microphone.
+  AudioRecorder? _rec;
+  AudioRecorder get _recorder => _rec ??= AudioRecorder();
+  final VoicePlayer _player;
   final floor = FloorControl();
 
   /// Member currently holding the floor (null when the channel is quiet).
   final talking = ValueNotifier<String?>(null);
-  final connectedPeers = ValueNotifier<int>(0);
-  bool _started = false;
-  Future<void>? _starting;
-  Timer? _floorWatchdog;
 
-  /// Members online right now (Realtime presence), remembered so links can
-  /// be set up as soon as the service starts.
-  Set<String> _online = {};
-
-  /// Why the microphone is unavailable (permission denied…); this phone can
-  /// still hear others.
+  /// For the connection details sheet.
   String? micError;
-
-  /// Per-peer link state, for the connection details sheet.
-  Map<String, String> get peerStates => {
-        for (final e in _peerState.entries) e.key: e.value.name.replaceFirst('RTCPeerConnectionState', ''),
-      };
+  String? playerError;
+  int framesSent = 0;
+  int framesHeard = 0;
+  DateTime? lastHeardAt;
+  int othersOnline = 0;
 
   static const maxTalk = Duration(seconds: 45);
 
-  Map<String, dynamic> get _rtcConfig => {
-        'iceServers': [
-          {'urls': ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302']},
-          ..._extraIce,
-          if (Env.turnUrl.isNotEmpty)
-            {'urls': Env.turnUrl, 'username': Env.turnUsername, 'credential': Env.turnCredential},
-        ],
-        'sdpSemantics': 'unified-plan',
-      };
+  final List<StreamSubscription<dynamic>> _subs = [];
+  Future<void>? _starting;
+  bool _playerReady = false;
+  Timer? _floorWatchdog;
+  Timer? _talkLimit;
 
-  /// Whether a TURN relay is available (for the connection details sheet).
-  bool get hasRelay => Env.turnUrl.isNotEmpty || _extraIce.any((s) => '${s['urls']}'.contains('turn'));
+  // Sending.
+  StreamSubscription<Uint8List>? _micSub;
+  final BytesBuilder _pending = BytesBuilder(copy: false);
+  int _utterance = 0;
+  int _seq = 0;
+  bool _sending = false;
 
-  /// Sets up the voice links. Called when the trip connects, so every phone
-  /// is ready to hear others before anyone presses the button.
+  // Receiving: a small jitter buffer per utterance.
+  String? _rxKey;
+  int _rxNext = 0;
+  bool _rxPrimed = false;
+  final Map<int, Int16List> _rxFrames = {};
+  Timer? _rxPrimeTimer;
+
+  /// Prepares playback and starts listening. Called when the trip connects,
+  /// so every phone can hear the others before anyone presses the button.
   Future<void> start() => _starting ??= _start();
 
   Future<void> _start() async {
-    // Listen first: incoming offers and floor messages must never be missed.
-    _subs.add(signaller.signals.listen(_onSignal));
     _subs.add(signaller.ptt.listen(_onPtt));
+    _subs.add(signaller.audio.listen(_onAudio));
     _floorWatchdog = Timer.periodic(const Duration(seconds: 5), (_) {
       floor.expire(DateTime.now());
       talking.value = floor.holder;
     });
     try {
-      _mic = await navigator.mediaDevices.getUserMedia({
-        'audio': {
-          'echoCancellation': true,
-          'noiseSuppression': true,
-          'autoGainControl': true,
-        },
-        'video': false,
-      });
-      for (final t in _mic!.getAudioTracks()) {
-        t.enabled = false;
-      }
+      await _player.init();
+      _playerReady = true;
     } catch (e) {
-      // No microphone permission: this phone can still listen.
-      micError = '$e';
-      debugPrint('PttService: microphone unavailable: $e');
+      playerError = '$e';
+      debugPrint('PttService: playback unavailable: $e');
     }
-    if (iceServers != null) {
-      try {
-        _extraIce = await iceServers!().timeout(const Duration(seconds: 8));
-      } catch (e) {
-        debugPrint('PttService: no TURN relay ($e)');
-      }
-    }
-    try {
-      // Car cabin: play through the loudspeaker (or Bluetooth head unit).
-      await Helper.setSpeakerphoneOnButPreferBluetooth();
-    } catch (_) {}
-    _started = true;
-    await syncPeers(_online);
   }
 
-  /// Called with the set of members currently online (Realtime presence).
+  /// Called with the members currently online (Realtime presence).
   Future<void> syncPeers(Set<String> online) async {
-    _online = online;
-    if (!_started) return;
-    for (final id in _peers.keys.toList()) {
-      if (!online.contains(id)) await _closePeer(id);
-    }
-    for (final id in online) {
-      if (id == selfId || _peers.containsKey(id)) continue;
-      // Deterministic offerer avoids glare: the lexically smaller id calls.
-      if (selfId.compareTo(id) < 0) await _call(id);
-    }
+    othersOnline = online.where((id) => id != selfId).length;
   }
 
-  Future<RTCPeerConnection> _peer(String id) async {
-    final existing = _peers[id];
-    if (existing != null) return existing;
-    final pc = await createPeerConnection(_rtcConfig);
-    _peers[id] = pc;
-    for (final t in _mic?.getAudioTracks() ?? const <MediaStreamTrack>[]) {
-      await pc.addTrack(t, _mic!);
+  // ───────────────────────────── talking ─────────────────────────────
+
+  /// Button down. Returns false if someone else is talking, there is no
+  /// live connection, or the microphone isn't allowed.
+  Future<bool> pressToTalk() async {
+    await start();
+    if (!signaller.isLive) {
+      micError = 'Push-to-talk needs the live connection (internet).';
+      return false;
     }
-    pc.onIceCandidate = (c) {
-      if (c.candidate == null) return;
-      signaller.sendSignal(id, {
-        'type': 'ice',
-        'candidate': c.candidate,
-        'sdpMid': c.sdpMid,
-        'sdpMLineIndex': c.sdpMLineIndex,
-      });
-    };
-    pc.onConnectionState = (s) async {
-      _peerState[id] = s;
-      connectedPeers.value =
-          _peerState.values.where((v) => v == RTCPeerConnectionState.RTCPeerConnectionStateConnected).length;
-      if (s == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
-        // Network changed (tunnel, cell handover): restart ICE from the caller side.
-        if (selfId.compareTo(id) < 0) {
-          await pc.restartIce();
-          final offer = await pc.createOffer({'iceRestart': true});
-          await pc.setLocalDescription(offer);
-          await signaller.sendSignal(id, {'type': 'offer', 'sdp': offer.sdp});
-        }
+    final now = DateTime.now();
+    if (!floor.tryAcquire(selfId, now)) return false;
+    try {
+      if (!await _recorder.hasPermission()) {
+        micError = 'Microphone permission is off. Allow it in Settings → Apps → DriveSync → Permissions.';
+        floor.release(selfId);
+        return false;
       }
-    };
-    // Remote audio tracks play automatically on iOS/Android once attached.
-    pc.onTrack = (_) {};
-    return pc;
-  }
-
-  Future<void> _call(String id) async {
-    final pc = await _peer(id);
-    // Receive audio even when this phone has no microphone track.
-    if (_mic == null) {
-      await pc.addTransceiver(
-          kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
-          init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
+      talking.value = selfId;
+      _utterance = now.millisecondsSinceEpoch;
+      _seq = 0;
+      _pending.clear();
+      _sending = true;
+      unawaited(signaller.sendPtt({'action': 'start', 'at': now.toUtc().toIso8601String()}));
+      final stream = await _recorder.startStream(const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: VoiceCodec.micRate,
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
+      ));
+      _micSub = stream.listen(_onMic);
+      micError = null;
+    } catch (e) {
+      micError = '$e';
+      debugPrint('PttService: microphone failed: $e');
+      _sending = false;
+      floor.release(selfId);
+      talking.value = floor.holder;
+      return false;
     }
-    final offer = await pc.createOffer({'offerToReceiveAudio': true});
-    await pc.setLocalDescription(offer);
-    await signaller.sendSignal(id, {'type': 'offer', 'sdp': offer.sdp});
+    _talkLimit?.cancel();
+    _talkLimit = Timer(maxTalk, release);
+    return true;
   }
 
-  Future<void> _onSignal(Map<String, dynamic> s) async {
-    final from = s['from'] as String?;
-    if (from == null || from == selfId) return;
-    // An offer can arrive before the microphone is ready; wait for it so the
-    // answer includes our audio track.
-    if (!_started) await start();
-    switch (s['type']) {
-      case 'offer':
-        final pc = await _peer(from);
-        await pc.setRemoteDescription(RTCSessionDescription(s['sdp'] as String, 'offer'));
-        await _drainIce(from, pc);
-        final answer = await pc.createAnswer({'offerToReceiveAudio': true});
-        await pc.setLocalDescription(answer);
-        await signaller.sendSignal(from, {'type': 'answer', 'sdp': answer.sdp});
-      case 'answer':
-        final pc = _peers[from];
-        if (pc == null) return;
-        await pc.setRemoteDescription(RTCSessionDescription(s['sdp'] as String, 'answer'));
-        await _drainIce(from, pc);
-      case 'ice':
-        final c = RTCIceCandidate(
-          s['candidate'] as String?,
-          s['sdpMid'] as String?,
-          (s['sdpMLineIndex'] as num?)?.toInt(),
-        );
-        final pc = _peers[from];
-        if (pc == null || await pc.getRemoteDescription() == null) {
-          (_pendingIce[from] ??= []).add(c);
-        } else {
-          await pc.addCandidate(c);
-        }
+  void _onMic(Uint8List chunk) {
+    if (!_sending) return;
+    _pending.add(chunk);
+    while (_pending.length >= VoiceCodec.micFrameBytes) {
+      final all = _pending.takeBytes();
+      _sendFrame(Uint8List.sublistView(all, 0, VoiceCodec.micFrameBytes));
+      _pending.add(Uint8List.sublistView(all, VoiceCodec.micFrameBytes));
     }
   }
 
-  Future<void> _drainIce(String id, RTCPeerConnection pc) async {
-    for (final c in _pendingIce.remove(id) ?? const <RTCIceCandidate>[]) {
-      await pc.addCandidate(c);
-    }
+  void _sendFrame(Uint8List pcm) {
+    framesSent++;
+    unawaited(signaller.sendAudio({'u': _utterance, 's': _seq++, 'd': VoiceCodec.encodeFrame(pcm)}));
   }
+
+  /// Button up.
+  Future<void> release() async {
+    _talkLimit?.cancel();
+    if (floor.holder != selfId) return;
+    _sending = false;
+    try {
+      await _recorder.stop();
+    } catch (_) {}
+    await _micSub?.cancel();
+    _micSub = null;
+    // The last partial frame (anything over 40 ms).
+    final rest = _pending.takeBytes();
+    if (rest.length >= VoiceCodec.micFrameBytes ~/ 5) _sendFrame(Uint8List.fromList(rest.sublist(0, rest.length & ~3)));
+    floor.release(selfId);
+    talking.value = floor.holder;
+    await signaller.sendPtt({'action': 'end', 'at': DateTime.now().toUtc().toIso8601String()});
+  }
+
+  // ──────────────────────────── listening ────────────────────────────
 
   void _onPtt(Map<String, dynamic> m) {
     final from = m['from'] as String?;
@@ -232,68 +217,103 @@ class PttService {
       floor.remoteStart(from, at);
       // Two people pressed at once: the earlier claim wins; if that is the
       // other side, stop transmitting immediately.
-      if (floor.holder != selfId && _transmitting) _setMic(false);
+      if (floor.holder != selfId && _sending) unawaited(_abortTalking());
     } else if (m['action'] == 'end') {
       floor.remoteEnd(from);
     }
     talking.value = floor.holder;
   }
 
-  bool get _transmitting => _mic?.getAudioTracks().any((t) => t.enabled) ?? false;
+  Future<void> _abortTalking() async {
+    _sending = false;
+    _talkLimit?.cancel();
+    try {
+      await _recorder.stop();
+    } catch (_) {}
+    await _micSub?.cancel();
+    _micSub = null;
+    _pending.clear();
+  }
 
-  void _setMic(bool on) {
-    for (final t in _mic?.getAudioTracks() ?? const <MediaStreamTrack>[]) {
-      t.enabled = on;
+  void _onAudio(Map<String, dynamic> m) {
+    final from = m['from'] as String?;
+    final data = m['d'] as String?;
+    final seq = (m['s'] as num?)?.toInt();
+    if (from == null || from == selfId || data == null || seq == null) return;
+    // Someone else claimed the floor first: ignore a late talker.
+    final holder = floor.holder;
+    if (holder != null && holder != from) return;
+    framesHeard++;
+    lastHeardAt = DateTime.now();
+    if (holder == null) {
+      // Audio can overtake its "start" message.
+      floor.remoteStart(from, DateTime.now());
+      talking.value = floor.holder;
     }
+    final key = '$from:${m['u']}';
+    if (key != _rxKey) {
+      _rxKey = key;
+      _rxNext = seq;
+      _rxPrimed = false;
+      _rxFrames.clear();
+      _rxPrimeTimer?.cancel();
+      // Play after two frames, or 250 ms, whichever comes first.
+      _rxPrimeTimer = Timer(const Duration(milliseconds: 250), _prime);
+    }
+    if (seq < _rxNext) {
+      if (_rxPrimed) return; // arrived too late; already played past it
+      _rxNext = seq; // overtaken by a later frame before playback began
+    }
+    try {
+      _rxFrames[seq] = VoiceCodec.decodeFrame(data);
+    } catch (_) {
+      return;
+    }
+    if (!_rxPrimed && _rxFrames.length >= 2) _prime();
+    if (_rxPrimed) _drain();
   }
 
-  Timer? _talkLimit;
-
-  /// Button down. Returns false if someone else is talking.
-  Future<bool> pressToTalk() async {
-    await start();
-    final now = DateTime.now();
-    if (!floor.tryAcquire(selfId, now)) return false;
-    _setMic(true);
-    talking.value = selfId;
-    await signaller.sendPtt({'action': 'start', 'at': now.toUtc().toIso8601String()});
-    _talkLimit?.cancel();
-    _talkLimit = Timer(maxTalk, release);
-    return true;
+  void _prime() {
+    if (_rxPrimed || _rxFrames.isEmpty) return;
+    _rxPrimed = true;
+    _rxPrimeTimer?.cancel();
+    _drain();
   }
 
-  /// Button up.
-  Future<void> release() async {
-    _talkLimit?.cancel();
-    if (floor.holder != selfId) return;
-    _setMic(false);
-    floor.release(selfId);
-    talking.value = floor.holder;
-    await signaller.sendPtt({'action': 'end', 'at': DateTime.now().toUtc().toIso8601String()});
-  }
-
-  Future<void> _closePeer(String id) async {
-    await _peers.remove(id)?.close();
-    _pendingIce.remove(id);
-    _peerState.remove(id);
-    connectedPeers.value =
-        _peerState.values.where((v) => v == RTCPeerConnectionState.RTCPeerConnectionStateConnected).length;
+  /// Plays buffered frames in order. A missing frame is skipped once a
+  /// later one is waiting, rather than stalling the voice.
+  void _drain() {
+    while (_rxFrames.isNotEmpty) {
+      var f = _rxFrames.remove(_rxNext);
+      if (f == null) {
+        final later = _rxFrames.keys.where((k) => k > _rxNext);
+        if (later.isEmpty) return;
+        _rxNext = later.reduce((a, b) => a < b ? a : b);
+        f = _rxFrames.remove(_rxNext)!;
+      }
+      _rxNext++;
+      if (_playerReady) unawaited(_player.play(f).catchError((Object e) => playerError = '$e'));
+    }
   }
 
   Future<void> dispose() async {
     _talkLimit?.cancel();
     _floorWatchdog?.cancel();
+    _rxPrimeTimer?.cancel();
+    _sending = false;
     for (final s in _subs) {
       await s.cancel();
     }
-    for (final id in _peers.keys.toList()) {
-      await _closePeer(id);
+    await _micSub?.cancel();
+    try {
+      await _rec?.stop();
+      await _rec?.dispose();
+    } catch (_) {}
+    if (_playerReady) {
+      try {
+        await _player.release();
+      } on PlatformException catch (_) {}
     }
-    for (final t in _mic?.getTracks() ?? const <MediaStreamTrack>[]) {
-      await t.stop();
-    }
-    await _mic?.dispose();
     talking.dispose();
-    connectedPeers.dispose();
   }
 }

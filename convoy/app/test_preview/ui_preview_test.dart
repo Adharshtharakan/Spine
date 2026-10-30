@@ -11,6 +11,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:convoy/data/models/convoy_event.dart';
@@ -150,13 +151,24 @@ SupabaseClient fakeDb() => SupabaseClient('https://preview.supabase.co', 'anon',
 
 class NoSignaller implements PttSignaller {
   @override
+  bool get isLive => true;
+  @override
   Stream<Map<String, dynamic>> get ptt => const Stream.empty();
   @override
-  Stream<Map<String, dynamic>> get signals => const Stream.empty();
+  Stream<Map<String, dynamic>> get audio => const Stream.empty();
   @override
   Future<bool> sendPtt(Map<String, dynamic> body) async => true;
   @override
-  Future<bool> sendSignal(String to, Map<String, dynamic> body) async => true;
+  Future<bool> sendAudio(Map<String, dynamic> body) async => true;
+}
+
+class SilentPlayer implements VoicePlayer {
+  @override
+  Future<void> init() async {}
+  @override
+  Future<void> play(Int16List samples) async {}
+  @override
+  Future<void> release() async {}
 }
 
 /// A trip session driven by sample data instead of Supabase.
@@ -168,7 +180,7 @@ class PreviewSession extends TripSession {
     this.itinerary = itinerary_;
     loading = false;
     online = {mAngith, mRavi, mPriya};
-    ptt = PttService(selfId: mAngith, signaller: NoSignaller());
+    ptt = PttService(selfId: mAngith, signaller: NoSignaller(), player: SilentPlayer());
     messages.addAll(sampleMessages());
   }
 

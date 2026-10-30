@@ -123,9 +123,6 @@ In the cloned repo, open the `app` folder and copy `env.example.json` to
   "EDGE_BASE_URL": "",
   "INVITE_BASE_URL": "",
   "SELF_HOSTED_TILES": "false",
-  "TURN_URL": "",
-  "TURN_USERNAME": "",
-  "TURN_CREDENTIAL": "",
   "FIREBASE_API_KEY": "",
   "FIREBASE_APP_ID": "",
   "FIREBASE_SENDER_ID": "",
@@ -233,21 +230,6 @@ To make the link open the app directly on Android (verified app links):
 2. In `app/android/gradle.properties` add a line
    `inviteHost=convoy-edge.<your-subdomain>.workers.dev`.
 
-**Voice relay for push-to-talk (recommended).** Push-to-talk audio goes
-directly phone to phone. On mobile data, carriers often block that direct
-path, so voice works on the same Wi-Fi but not across networks. Cloudflare's
-TURN relay fixes this (free tier, no card needed for small use):
-1. Cloudflare dashboard → **Realtime** (or **Calls**) → **TURN Server** →
-   **Create TURN key**, give it a name.
-2. It shows a **Turn Token ID** and an **API Token** (shown once; copy both).
-3. ```
-   npx wrangler secret put CF_TURN_KEY_ID          (the Turn Token ID)
-   npx wrangler secret put CF_TURN_KEY_API_TOKEN   (the API Token)
-   npx wrangler deploy
-   ```
-The app fetches short-lived relay credentials from the Worker when a trip
-opens. Tap the trip name on the map → **Voice** to check "Relay: available".
-
 **SOS text messages (optional).** Without this, an SOS opens your SMS app
 with the message and location ready to send to your emergency contacts.
 To send automatically, create a Twilio account and add
@@ -345,7 +327,7 @@ emulator. Sign in on each with a **different email**.
 | Live map + lead | Phone A creates a convoy, phone B joins with the invite code. Both should appear on the map within a few seconds. Convoy tab → ☆ next to a vehicle makes it the lead. |
 | Driving on an emulator | Emulator **⋯ → Location → Routes**: pick two points and press **Play route** (speed ×4 or so). The car moves on everyone's map. |
 | Shared plan | Long-press the map on A to add a stop; it appears on B's **Plan** tab immediately. Try **Running late → 30 minutes**. |
-| Chat + push-to-talk | Send a message from A. Hold the mic button on A and speak; B hears it (use two real phones in different rooms to avoid feedback). Both phones should allow the microphone. If B sees "is talking" but hears nothing, tap the trip name → **Voice**: "1 of 1 phones connected" means the link is up; "connecting/failed" across mobile networks needs the TURN relay (step 5). |
+| Chat + push-to-talk | Send a message from A. Hold the mic button on A and speak; B hears it about half a second later, on any internet connection (use two phones in different rooms to avoid feedback). Allow the microphone on the first press. To check, tap the trip name → **Voice**: "Sent N / heard N voice frames" counts audio going out and coming in. |
 | Convoy alerts | Play an emulator route so one car pulls 3+ km ahead of the other: after ~30 s a "falling behind" card appears and is read aloud. Toggle in menu → **Settings → Read alerts aloud**. Editing a stop's time on A announces the change on B. |
 | Driving lock | While a route is playing (above 15 km/h), the Chat text box changes to "Typing paused while driving". **I'm a passenger** unlocks it. |
 | No signal / prediction | Switch phone B to **airplane mode** (keep location on). A's map shows B as "(est.)" with a growing halo, then a "Lost contact" alert after 5 min. B's own map keeps working. Turn signal back on: queued chat and plan edits sync. |

@@ -9,7 +9,6 @@ import type { Env } from "./env";
 import { corsHeaders, errorResponse, json } from "./http";
 import { handleTiles } from "./tiles";
 import { handleTolls } from "./tolls";
-import { handleTurn } from "./turn";
 import { handleWeather } from "./weather";
 
 /**
@@ -24,7 +23,6 @@ import { handleWeather } from "./weather";
  *   /weather                                       forecast at each stop's ETA
  *   /tolls                                         toll plazas on the route
  *   /notify, /sos/sms                              push to the party, SOS texts
- *   /turn                                          TURN relay credentials for voice
  *   /j/<code>, /.well-known/…                      invite links and app links
  */
 export default {
@@ -38,7 +36,7 @@ export default {
         const res = await handler(req, env, ctx);
         if (res) return res;
       }
-      for (const handler of [handleBilling, handleNotify, handleInvite, handleTurn]) {
+      for (const handler of [handleBilling, handleNotify, handleInvite]) {
         const res = await handler(req, env);
         if (res) return res;
       }
