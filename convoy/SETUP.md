@@ -76,7 +76,9 @@ Flutter, so install that too.
    convoy roles, fuel settings, multi-day trips and push tokens. Check
    **Table Editor** for `trip_events`, `checklist_items` and `device_tokens`.
    Then do the same with `supabase/migrations/20261031000000_profile_links.sql`
-   (lets the app show members' names with chat, the convoy and join requests).
+   (lets the app show members' names with chat, the convoy and join requests),
+   and `supabase/migrations/20261101000000_delete_trips.sql` (lets organisers
+   delete trips).
 3. **Email sign-in with a code.** The app asks for a 6-digit code, but
    Supabase's default emails contain a link instead.
    - **Authentication → Emails → Templates**. Edit both **Confirm signup**

@@ -17,6 +17,7 @@ import '../paywall/paywall_screen.dart';
 import '../radio/radio_screen.dart';
 import '../settings/settings_sheet.dart';
 import 'invite_qr.dart';
+import 'trip_actions.dart';
 import 'trip_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -91,8 +92,13 @@ class HomeScreen extends ConsumerWidget {
                 text: 'Start one and share the invite code, join with a code from a friend, or find a public trip in Discover.',
               ),
             if (upcoming.isNotEmpty)
-              Section(title: 'Upcoming', top: 0, children: [for (final t in upcoming) _TripTile(t)]),
-            if (past.isNotEmpty) Section(title: 'Past trips', children: [for (final t in past) _TripTile(t, past: true)]),
+              Section(title: 'Upcoming', top: 0, children: [
+                for (final t in upcoming) _TripTile(t, onLongPress: () => removeTrip(context, ref, t)),
+              ]),
+            if (past.isNotEmpty)
+              Section(title: 'Past trips', children: [
+                for (final t in past) _TripTile(t, past: true, onLongPress: () => removeTrip(context, ref, t)),
+              ]),
           ],
         ),
       ],
@@ -280,10 +286,13 @@ class _Actions extends StatelessWidget {
 }
 
 class _TripTile extends StatelessWidget {
-  const _TripTile(this.trip, {this.past = false});
+  const _TripTile(this.trip, {this.past = false, this.onLongPress});
 
   final Trip trip;
   final bool past;
+
+  /// Long-press: delete (organiser) or leave the trip.
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -293,6 +302,7 @@ class _TripTile extends StatelessWidget {
     final start = trip.startsAt;
     return Tile(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TripScreen(tripId: trip.id))),
+      onLongPress: onLongPress,
       leading: Container(
         width: 52,
         height: 56,

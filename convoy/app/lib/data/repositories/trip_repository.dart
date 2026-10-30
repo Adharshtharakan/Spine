@@ -121,6 +121,22 @@ class TripRepository {
 
   Future<void> leave(String memberId) => _db.from('trip_members').delete().eq('id', memberId);
 
+  /// Deletes a trip and everything in it, for everyone. Organiser only (RLS);
+  /// throws if nothing was deleted.
+  Future<void> deleteTrip(String tripId) async {
+    final rows = await _db.from('trips').delete().eq('id', tripId).select('id');
+    if (rows.isEmpty) throw const PostgrestException(message: 'not_owner');
+  }
+
+  /// Removes the signed-in user from a trip. The organiser can't leave;
+  /// they delete the trip instead.
+  Future<void> leaveTrip(String tripId) async {
+    final uid = userId;
+    if (uid == null) return;
+    final rows = await _db.from('trip_members').delete().eq('trip_id', tripId).eq('user_id', uid).select('id');
+    if (rows.isEmpty) throw const PostgrestException(message: 'not_allowed');
+  }
+
   /// Last-known positions for members who are not currently broadcasting.
   Future<List<VehiclePosition>> lastKnownPositions(String tripId) async {
     final rows = await _db.from('member_locations').select().eq('trip_id', tripId);

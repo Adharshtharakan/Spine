@@ -18,6 +18,7 @@ import '../auth/sign_in_screen.dart';
 import '../checklists/checklist_screen.dart';
 import '../paywall/paywall_screen.dart';
 import 'invite_qr.dart';
+import 'trip_actions.dart';
 
 class ConvoyTab extends ConsumerStatefulWidget {
   const ConvoyTab({super.key, required this.session});
@@ -272,6 +273,20 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
               children: [for (final r in _requests) _requestTile(r, c, t)],
             ),
         ],
+        if (trip != null)
+          Section(title: 'Trip', children: [
+            Tile(
+              onTap: () async {
+                if (await removeTrip(context, ref, trip) && context.mounted) {
+                  Navigator.of(context).popUntil((r) => r.isFirst);
+                }
+              },
+              leading: TileIcon(s.isOwner ? Icons.delete_forever_rounded : Icons.logout_rounded, color: c.bad),
+              title: s.isOwner ? 'Delete trip' : 'Leave trip',
+              titleStyle: t.titleMedium?.copyWith(color: c.bad),
+              subtitle: s.isOwner ? 'Removes it for everyone' : 'You can rejoin with the invite code',
+            ),
+          ]),
       ],
     );
   }

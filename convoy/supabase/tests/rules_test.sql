@@ -229,4 +229,22 @@ do $$ begin
   if exists (select 1 from public.device_tokens) then raise exception 'token still visible to previous user'; end if;
 end $$;
 
+-- Deleting trips: only the organiser, and it takes everything with it.
+select pg_temp.as_user(:bob);
+delete from public.trips where id = (select id from t); -- not Bob's: RLS filters it out
+do $$ begin
+  if not exists (select 1 from public.trips where title = 'Coast run') then raise exception 'non-owner deleted a trip'; end if;
+end $$;
+delete from public.trips where id = (select id from bt);
+do $$ begin
+  if exists (select 1 from public.trip_members m join bt on m.trip_id = bt.id) then raise exception 'members survived trip delete'; end if;
+end $$;
+select pg_temp.as_user(:alice);
+delete from public.trips where id = (select id from t);
+do $$ begin
+  if exists (select 1 from public.waypoints) or exists (select 1 from public.trip_events) then
+    raise exception 'trip contents survived delete';
+  end if;
+end $$;
+
 \echo 'ALL RULE TESTS PASSED'

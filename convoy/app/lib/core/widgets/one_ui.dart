@@ -166,6 +166,7 @@ class Tile extends StatelessWidget {
     this.trailing,
     this.below,
     this.onTap,
+    this.onLongPress,
     this.titleStyle,
   });
 
@@ -173,6 +174,7 @@ class Tile extends StatelessWidget {
   final String? subtitle;
   final Widget? leading, trailing, below;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final TextStyle? titleStyle;
 
   @override
@@ -180,6 +182,7 @@ class Tile extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         child: Row(children: [
