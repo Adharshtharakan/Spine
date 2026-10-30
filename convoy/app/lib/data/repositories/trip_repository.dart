@@ -90,12 +90,24 @@ class TripRepository {
   Future<void> setLead(String tripId, String memberId) =>
       _db.rpc('set_lead_vehicle', params: {'p_trip': tripId, 'p_member': memberId});
 
-  Future<void> updateMyVehicle(String memberId, {String? label, int? color, bool? hasVehicle}) =>
+  Future<void> updateMyVehicle(String memberId,
+          {String? label, int? color, bool? hasVehicle, int? tankRangeKm, double? fuelKmpl}) =>
       _db.from('trip_members').update({
         'vehicle_label': ?label,
         if (color != null) 'vehicle_color': color.toSigned(32),
         'has_vehicle': ?hasVehicle,
+        'tank_range_km': ?tankRangeKm,
+        'fuel_kmpl': ?fuelKmpl,
       }).eq('id', memberId);
+
+  /// Sweep or navigator (null clears). Owner/lead assigns; anyone may be
+  /// their own navigator.
+  Future<void> setConvoyRole(String memberId, ConvoyRole? role) =>
+      _db.rpc('set_convoy_role', params: {'p_member': memberId, 'p_role': role?.name});
+
+  /// Organiser's cost settings for the trip estimate.
+  Future<void> updateCosts(String tripId, {double? fuelPrice, double? tollPerPlaza}) =>
+      _db.from('trips').update({'fuel_price': ?fuelPrice, 'toll_per_plaza': ?tollPerPlaza}).eq('id', tripId);
 
   Future<void> leave(String memberId) => _db.from('trip_members').delete().eq('id', memberId);
 

@@ -8,6 +8,31 @@
 	<string>DriveSync keeps sharing your position with your travel party while the phone is locked in its mount.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Push-to-talk lets you speak to the other vehicles in your convoy.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan an invite QR code to join a convoy.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Voice commands let you message the convoy and ask where the lead car is without touching the phone.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Crash detection notices a hard impact so DriveSync can alert your convoy if you need help.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>drivesync-invite</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>drivesync</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>osmandmaps</string>
+		<string>waze</string>
+		<string>sms</string>
+		<string>tel</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>When there is no cell signal, DriveSync shares positions directly with nearby vehicles over Bluetooth.</string>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -20,6 +45,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<string>remote-notification</string>
 		<string>audio</string>
 		<string>voip</string>
 		<string>bluetooth-central</string>

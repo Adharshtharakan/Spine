@@ -51,11 +51,14 @@ void attachMesh(WidgetRef ref, TripSession session) {
       m.positions.listen(session.acceptMeshPosition),
       m.chat.listen(session.acceptMeshMessage),
       m.waypoints.listen(session.acceptMeshWaypoint),
+      m.events.listen(session.acceptMeshEvent),
     ]);
     session
       ..meshSendPosition = m.sendPosition
       ..meshSendChat = m.sendChat
       ..meshSendWaypoint = m.sendWaypoint
+      ..meshSendEvent = m.sendEvent
+      ..meshForwardEvent = m.forwardEventFromCloud
       ..meshForwardPosition = m.forwardFromCloud
       ..meshForwardChat = m.forwardChatFromCloud
       ..meshPeersOn = m.peersOn;

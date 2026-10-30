@@ -2,6 +2,7 @@ import { optionalUser, requireUser } from "./auth";
 import type { Env } from "./env";
 import { distanceM, type LatLng } from "./geo";
 import { HttpError, json, num, readJson } from "./http";
+import { pushToUsers } from "./notify";
 import { Supabase } from "./supabase";
 
 interface ListedTrip {
@@ -49,7 +50,7 @@ export async function handleDiscovery(req: Request, env: Env, ctx: ExecutionCont
   if (req.method === "GET" && url.pathname === "/discovery/trips") return list(req, url, env, ctx);
 
   const m = /^\/discovery\/trips\/([0-9a-f-]{36})\/join$/.exec(url.pathname);
-  if (req.method === "POST" && m) return join(req, m[1], env);
+  if (req.method === "POST" && m) return join(req, m[1], env, ctx);
   return null;
 }
 
@@ -113,15 +114,23 @@ function rank(t: { distance_km: number; starts_at: string | null; owner_verified
   return t.distance_km / 50 + days / 7 + (t.owner_verified ? 0 : 3) + (t.open_slots > 0 ? 0 : 100);
 }
 
-async function join(req: Request, tripId: string, env: Env): Promise<Response> {
+async function join(req: Request, tripId: string, env: Env, ctx: ExecutionContext): Promise<Response> {
   const user = await requireUser(req, env);
   const body = await readJson<{ vehicle_label?: string; message?: string }>(req);
   const label = (body.vehicle_label ?? "").trim();
   if (!label) throw new HttpError(400, "vehicle_label_required");
-  const row = await new Supabase(env).rpc(
+  const sb = new Supabase(env);
+  const row = await sb.rpc(
     "request_to_join",
     { p_trip: tripId, p_vehicle_label: label.slice(0, 40), p_message: (body.message ?? "").slice(0, 500) },
     user.token,
+  );
+  // Tell the organiser; a failure here never fails the request itself.
+  ctx.waitUntil(
+    (async () => {
+      const [trip] = await sb.select<{ owner_id: string; title: string }>("trips", `id=eq.${tripId}&select=owner_id,title`);
+      if (trip) await pushToUsers(env, [trip.owner_id], "join_request", `Request to join ${trip.title}`, `${label.slice(0, 40)} would like to join. Review it in the Convoy tab.`, tripId);
+    })().catch(() => {}),
   );
   return json({ request: row }, { status: 201 });
 }

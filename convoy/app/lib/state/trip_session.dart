@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/geo/geo.dart';
+import '../data/models/convoy_event.dart';
 import '../data/models/social.dart';
 import '../data/models/trip.dart';
 import '../data/models/waypoint.dart';
@@ -13,11 +14,15 @@ import '../data/repositories/trip_repository.dart';
 import '../services/location/gps_service.dart';
 import '../services/offline/outbox.dart';
 import '../services/offline/trip_cache.dart';
+import '../services/planning/planning_services.dart';
+import '../services/push/push_service.dart';
 import '../services/realtime/convoy_channel.dart';
 import '../services/edge/edge_client.dart';
 import '../services/tracking/predictor.dart';
+import '../services/tracking/convoy_events.dart';
 import '../services/tracking/convoy_watch.dart';
 import '../services/tracking/lead_vehicle.dart';
+import '../services/tracking/safety_watch.dart';
 import '../services/voice/ptt_service.dart';
 import '../sync/itinerary_doc.dart';
 
@@ -76,6 +81,8 @@ class TripSession extends ChangeNotifier {
   Future<void> Function(VehiclePosition p)? meshSendPosition;
   Future<void> Function(ChatMessage m)? meshSendChat;
   Future<void> Function(Waypoint w)? meshSendWaypoint;
+  Future<void> Function(ConvoyEvent e)? meshSendEvent;
+  Future<void> Function(ConvoyEvent e)? meshForwardEvent;
 
   /// Gateway: push cloud-side positions / chat onto the radio.
   Future<void> Function(VehiclePosition p)? meshForwardPosition;
@@ -126,9 +133,10 @@ class TripSession extends ChangeNotifier {
   bool passengerMode = false;
 
   /// True when this phone is in a moving vehicle that someone is driving:
-  /// typing is paused (quick replies and push-to-talk stay available).
+  /// typing is paused (quick replies and push-to-talk stay available). The
+  /// navigator is a passenger by definition.
   bool get drivingLock {
-    if (passengerMode || !(me?.hasVehicle ?? false)) return false;
+    if (passengerMode || me?.convoyRole == ConvoyRole.navigator || !(me?.hasVehicle ?? false)) return false;
     final mine = me == null ? null : _reported[me!.id];
     return mine != null && mine.speedMps > 15 / 3.6 && DateTime.now().difference(mine.timestamp) < const Duration(seconds: 20);
   }
@@ -153,6 +161,360 @@ class TripSession extends ChangeNotifier {
       selfOnline: selfOnline,
     )) {
       _raise(a);
+    }
+    _evaluateSafety(now, vehicles);
+  }
+
+
+  // ───────────────────────── safety and planning ──────────────────────
+
+  /// The convoy event log (SOS, hazards, regroup, headcount), oldest first.
+  final List<ConvoyEvent> events = [];
+  ConvoyEventState get eventState => ConvoyEventState.from(events, DateTime.now());
+
+  final DriverNudges _nudges = DriverNudges();
+  final SweepWatch _sweepWatch = SweepWatch();
+  final HazardAhead _hazardAhead = HazardAhead();
+
+  /// Speaks a reply (voice commands); set by the announcer.
+  Future<void> Function(String text)? speak;
+
+  /// Set when the crash detector suspects an accident; the trip screen shows
+  /// a 30-second countdown and raises an SOS unless cancelled.
+  final crashAlarm = ValueNotifier<DateTime?>(null);
+
+  /// Forecast at each stop's planned arrival (waypoint id → forecast).
+  Map<String, StopForecast> weather = const {};
+  DateTime _weatherAt = DateTime.fromMillisecondsSinceEpoch(0);
+  String? _weatherKey;
+  final Set<String> _weatherAnnounced = {};
+
+  /// Toll plazas on the route (null until fetched).
+  List<TollPlaza>? tolls;
+  String? _tollsKey;
+  DateTime _tollsAttempt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Distance this phone has driven during the trip, for the fuel range.
+  double _odometerM = 0;
+  VehiclePosition? _lastOdoFix;
+
+  /// Range left as the driver last entered it, and the odometer then.
+  double? _rangeSetKm;
+  double _rangeSetOdoM = 0;
+  DateTime? _fuelWarnedAt;
+
+  String? get sweepId => members.values.where((m) => m.convoyRole == ConvoyRole.sweep).firstOrNull?.id;
+
+  /// Range left now: what was entered minus what has been driven since.
+  double? get rangeLeftKm => _rangeSetKm == null ? null : (_rangeSetKm! - (_odometerM - _rangeSetOdoM) / 1000).clamp(0, 5000).toDouble();
+
+  void setRangeLeft(double km) {
+    _rangeSetKm = km;
+    _rangeSetOdoM = _odometerM;
+    _fuelWarnedAt = null;
+    unawaited(_saveSnapshot());
+    notifyListeners();
+  }
+
+  /// "Next fuel in 140 km, your range is 90 km."
+  FuelStatus? get fuelStatus {
+    final range = rangeLeftKm;
+    final mine = me == null ? null : _reported[me!.id];
+    final route = routeLine;
+    if (range == null || route.length < 2) return null;
+    final along = mine == null ? 0.0 : Geo.projectOntoRoute(route, mine.point).alongMeters / 1000;
+    return FuelStatus.evaluate(
+      rangeKm: range,
+      myAlongKm: along,
+      fuelStops: [
+        for (final w in itinerary.waypoints)
+          if (w.kind == WaypointKind.fuel) (name: w.name, alongKm: Geo.projectOntoRoute(route, w.location).alongMeters / 1000),
+      ],
+      routeKm: Geo.routeLength(route) / 1000,
+    );
+  }
+
+  /// How far each car is from the regroup point.
+  List<RegroupEta> get regroupEtas {
+    final pin = eventState.regroup?.location;
+    if (pin == null) return const [];
+    final vehicles = {
+      for (final e in positions.entries)
+        if (members[e.key]?.hasVehicle ?? true) e.key: e.value,
+    };
+    return RegroupEta.compute(
+      point: pin,
+      positions: vehicles,
+      route: routeLine,
+      averageSpeedMps: {for (final e in _avgSpeed.entries) e.key: e.value.value},
+    );
+  }
+
+  String _label(String memberId) {
+    final m = members[memberId];
+    return m?.vehicleLabel ?? m?.displayName ?? 'A car';
+  }
+
+  void _evaluateSafety(DateTime now, Map<String, VehiclePosition> vehicles) {
+    final mine = me == null ? null : _reported[me!.id];
+    final others = [
+      for (final p in vehicles.values)
+        if (p.memberId != me?.id && p.speedMps > 3 && p.age(now) < const Duration(minutes: 1)) p.speedMps * 3.6,
+    ]..sort();
+    final median = others.isEmpty ? null : others[others.length ~/ 2];
+    if (me?.hasVehicle ?? false) {
+      for (final a in _nudges.evaluate(now: now, me: mine, convoyKmh: median)) {
+        _raise(a);
+      }
+    }
+    if (me != null && sweepId == me!.id) {
+      final labels = {for (final m in members.values) m.id: m.vehicleLabel ?? m.displayName};
+      for (final a in _sweepWatch.evaluate(now: now, sweepId: me!.id, standings: standings, labels: labels)) {
+        _raise(a);
+      }
+    }
+    for (final a in _hazardAhead.evaluate(now: now, me: mine, hazards: eventState.hazards, route: routeLine)) {
+      _raise(a);
+    }
+    final fuel = fuelStatus;
+    if (fuel != null && fuel.warn && (_fuelWarnedAt == null || now.difference(_fuelWarnedAt!) > const Duration(minutes: 30))) {
+      _fuelWarnedAt = now;
+      final next = fuel.nextFuelKm == null
+          ? 'No fuel stop is planned before the destination'
+          : 'Next fuel is ${fuel.nextFuelName} in ${fuel.nextFuelKm!.round()} km';
+      _raise(ConvoyAlert(
+        kind: AlertKind.fuel,
+        memberId: me?.id,
+        message: '$next; your range is ${fuel.rangeKm.round()} km.',
+        spoken: '$next, and your range is ${fuel.rangeKm.round()} kilometres. Plan a fuel stop.',
+        at: now,
+      ));
+    }
+  }
+
+  void _odometer(VehiclePosition p) {
+    final last = _lastOdoFix;
+    _lastOdoFix = p;
+    if (last == null || p.accuracyM > 50) return;
+    final d = Geo.distanceMeters(last.point, p.point);
+    // Ignore GPS jitter while parked and impossible jumps.
+    final dt = p.timestamp.difference(last.timestamp).inMilliseconds / 1000;
+    if (d < 5 || dt <= 0 || d / dt > 70) return;
+    _odometerM += d;
+  }
+
+  // Weather at each stop, refreshed every 30 minutes while online.
+  Future<void> _refreshWeather() async {
+    final timed = itinerary.waypoints.where((w) => w.plannedArrival != null).toList();
+    final key = [for (final w in timed) '${w.id}@${w.plannedArrival!.millisecondsSinceEpoch}'].join(',');
+    final now = DateTime.now();
+    if (timed.isEmpty || (key == _weatherKey && now.difference(_weatherAt) < const Duration(minutes: 30))) return;
+    if (now.difference(_weatherAt) < const Duration(minutes: 2)) return;
+    _weatherAt = now;
+    try {
+      weather = await WeatherService(_db).forStops(timed);
+      _weatherKey = key;
+      // Warn once about the next stop with bad weather in the next 6 hours.
+      for (final w in timed) {
+        final f = weather[w.id];
+        final worst = f?.worst;
+        if (worst == null || w.plannedArrival!.difference(now) > const Duration(hours: 6)) continue;
+        if (!_weatherAnnounced.add('${w.id}:${worst.name}')) break;
+        _raise(ConvoyAlert(
+          kind: AlertKind.weather,
+          memberId: null,
+          tag: w.id,
+          message: '${worst.label} at ${w.name} around ${_hm(w.plannedArrival!)}.',
+          spoken: '${worst.label} at ${w.name}. Drive carefully.',
+          at: now,
+        ));
+        break;
+      }
+      notifyListeners();
+    } catch (_) {
+      // Offline or the Worker isn't configured: no forecast.
+    }
+  }
+
+  static String _hm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  Future<void> _refreshTolls() async {
+    final route = routeLine;
+    if (route.length < 2 || !identical(route, _road) || _tollsKey == _roadKey) return;
+    if (DateTime.now().difference(_tollsAttempt) < const Duration(minutes: 5)) return;
+    _tollsAttempt = DateTime.now();
+    try {
+      tolls = await TollService(_db).onRoute(route);
+      _tollsKey = _roadKey;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// Fuel and toll estimate for one car over the whole route.
+  TripCost costFor(TripMember m) => TripCost.estimate(
+        distanceKm: Geo.routeLength(routeLine) / 1000,
+        kmpl: m.fuelKmpl,
+        fuelPrice: trip?.fuelPrice,
+        plazas: tolls?.length ?? 0,
+        tollPerPlaza: trip?.tollPerPlaza,
+      );
+
+  // ── raising events ──
+
+  Future<ConvoyEvent?> _raiseEvent(EventKind kind, {GeoPoint? at, Map<String, dynamic> payload = const {}}) async {
+    final m = me;
+    if (m == null) return null;
+    final e = ConvoyEvent(
+      id: _uuid.v4(),
+      tripId: tripId,
+      memberId: m.id,
+      kind: kind,
+      location: at ?? _reported[m.id]?.point,
+      payload: payload,
+      createdAt: DateTime.now(),
+    );
+    _acceptEvent(e, local: true);
+    if (meshSendEvent != null) unawaited(meshSendEvent!(e));
+    await _queue(OutboxItem('trip_events', e.toRow()));
+    return e;
+  }
+
+  /// SOS: the whole convoy is alerted with this car's location, over the
+  /// cloud, push and the radio.
+  Future<ConvoyEvent?> raiseSos({String? note}) async {
+    final e = await _raiseEvent(EventKind.sos, payload: {'note': ?note});
+    if (e != null) {
+      unawaited(PushService.notifyParty(_db,
+          tripId: tripId,
+          kind: 'sos',
+          title: 'SOS: ${_label(e.memberId)} needs help',
+          body: note ?? 'Open DriveSync to see where they are.'));
+    }
+    return e;
+  }
+
+  Future<void> cancelSos() async {
+    final mine = eventState.sos[me?.id];
+    if (mine != null) await _raiseEvent(EventKind.sosClear, payload: {'ref': mine.id});
+  }
+
+  /// Someone else's SOS handled (they're safe, help arrived).
+  Future<void> resolveSos(ConvoyEvent sos) => _raiseEvent(EventKind.sosClear, payload: {'ref': sos.id}).then((_) {});
+
+  Future<void> reportHazard(HazardType type, {GeoPoint? at}) async {
+    final e = await _raiseEvent(EventKind.hazard, at: at, payload: {'type': type.name});
+    if (e != null) {
+      unawaited(PushService.notifyParty(_db,
+          tripId: tripId, kind: 'hazard', title: '${type.label} reported', body: 'By ${_label(e.memberId)}. It is marked on the map.'));
+    }
+  }
+
+  Future<void> clearHazard(ConvoyEvent hazard) => _raiseEvent(EventKind.hazardClear, payload: {'ref': hazard.id}).then((_) {});
+
+  Future<void> setRegroup(GeoPoint at, {String? name}) async {
+    await _raiseEvent(EventKind.regroup, at: at, payload: {'note': ?name});
+    unawaited(PushService.notifyParty(_db,
+        tripId: tripId, kind: 'regroup', title: 'Regroup point set', body: name == null ? 'Open the map for directions.' : 'Meet at $name.'));
+  }
+
+  Future<void> clearRegroup() async {
+    final r = eventState.regroup;
+    if (r != null) await _raiseEvent(EventKind.regroupClear, payload: {'ref': r.id});
+  }
+
+  Future<void> startHeadcount() async {
+    await _raiseEvent(EventKind.headcount);
+    unawaited(PushService.notifyParty(_db,
+        tripId: tripId, kind: 'headcount', title: 'Back in your car?', body: 'Tap "Ready to go" in DriveSync.'));
+  }
+
+  Future<void> markReady() => _raiseEvent(EventKind.ready).then((_) {});
+
+  Future<void> sayGo() => _raiseEvent(EventKind.go).then((_) {});
+
+  Future<void> setConvoyRole(String memberId, ConvoyRole? role) async {
+    await _repo.setConvoyRole(memberId, role);
+    await _loadMembers();
+    notifyListeners();
+  }
+
+  Future<void> updateCosts({double? fuelPrice, double? tollPerPlaza}) async {
+    await _repo.updateCosts(tripId, fuelPrice: fuelPrice, tollPerPlaza: tollPerPlaza);
+    trip = await _repo.trip(tripId);
+    notifyListeners();
+  }
+
+  // ── receiving events ──
+
+  void _acceptEvent(ConvoyEvent e, {bool local = false}) {
+    if (events.any((x) => x.id == e.id)) return;
+    final before = eventState;
+    events.add(e);
+    events.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    if (events.length > 500) events.removeAt(0);
+    if (!local && e.memberId != me?.id) _announceEvent(e, before);
+    notifyListeners();
+  }
+
+  void _announceEvent(ConvoyEvent e, ConvoyEventState before) {
+    final now = DateTime.now();
+    final who = _label(e.memberId);
+    if (now.difference(e.createdAt) > const Duration(hours: 1)) return;
+    switch (e.kind) {
+      case EventKind.sos:
+        final mine = me == null ? null : _reported[me!.id];
+        final where = mine != null && e.location != null
+            ? ', ${Geo.formatDistance(Geo.distanceMeters(mine.point, e.location!))} ${Geo.compass(Geo.bearingDeg(mine.point, e.location!))} of you'
+            : '';
+        final msg = 'SOS: $who needs help$where.${e.note == null ? '' : ' ${e.note}'}';
+        _raise(ConvoyAlert(kind: AlertKind.sos, memberId: e.memberId, message: msg, spoken: 'Emergency. $who needs help.', at: now));
+        unawaited(PushService.show('sos', 'SOS: $who needs help', e.note ?? 'Open DriveSync to see where they are.', tripId: tripId));
+      case EventKind.sosClear:
+        final sos = before.sos.values.where((x) => x.id == e.ref || (e.ref == null && x.memberId == e.memberId)).firstOrNull;
+        if (sos != null) {
+          final name = _label(sos.memberId);
+          _raise(ConvoyAlert(kind: AlertKind.sos, memberId: sos.memberId, message: '$name is OK. SOS cancelled.', at: now));
+        }
+      case EventKind.regroup:
+        _raise(ConvoyAlert(
+          kind: AlertKind.regroup,
+          memberId: e.memberId,
+          message: '$who set a regroup point${e.note == null ? '' : ' at ${e.note}'}.',
+          spoken: 'Regroup point set${e.note == null ? '' : ' at ${e.note}'}.',
+          at: now,
+        ));
+      case EventKind.headcount:
+        _raise(ConvoyAlert(
+          kind: AlertKind.headcount,
+          memberId: e.memberId,
+          message: 'Headcount: tap "Ready to go" when you are back in your car.',
+          spoken: 'Headcount. Tap ready to go when you are back in your car.',
+          at: now,
+        ));
+      case EventKind.go:
+        _raise(ConvoyAlert(kind: AlertKind.headcount, memberId: e.memberId, message: 'Everyone is in. The convoy is moving.', at: now));
+      case EventKind.hazard:
+        // Announced to cars approaching it (HazardAhead), not to everyone.
+        break;
+      case EventKind.hazardClear || EventKind.regroupClear || EventKind.ready:
+        break;
+    }
+  }
+
+  /// Events heard over the radio / phone mesh; relayed into the cloud by
+  /// whichever car has signal.
+  void acceptMeshEvent(ConvoyEvent e) {
+    final known = events.any((x) => x.id == e.id);
+    _acceptEvent(e);
+    if (!known && e.memberId != me?.id) _queue(OutboxItem('relay_event', e.toRow()));
+  }
+
+  Future<void> _loadEvents() async {
+    final since = DateTime.now().subtract(const Duration(days: 3)).toUtc().toIso8601String();
+    final rows = await _db.from('trip_events').select().eq('trip_id', tripId).gte('created_at', since).order('created_at').limit(500);
+    for (final r in rows) {
+      final e = ConvoyEvent.fromRow(r);
+      if (e != null && !events.any((x) => x.id == e.id)) events.add(e);
     }
   }
 
@@ -189,6 +551,9 @@ class TripSession extends ChangeNotifier {
   List<GeoPoint> get routeLine => (_road != null && _roadKey == _stopsKey) ? _road! : itinerary.route;
 
   String? get userId => _db.auth.currentUser?.id;
+
+  /// For services that act on the trip's behalf (Worker calls).
+  SupabaseClient get db => _db;
   bool get isOwner => trip?.ownerId == userId;
 
   /// Positions to draw: fresh reports as-is; cars that went silent are
@@ -292,6 +657,11 @@ class TripSession extends ChangeNotifier {
       _roadKey = cached['road_key'] as String;
       if (cached['road_speeds'] is List) _roadSpeeds = RoadSpeeds.fromJson(cached['road_speeds'] as List);
     }
+    if (cached != null) {
+      _odometerM = (cached['odometer_m'] as num?)?.toDouble() ?? 0;
+      _rangeSetKm = (cached['range_set_km'] as num?)?.toDouble();
+      _rangeSetOdoM = (cached['range_set_odo_m'] as num?)?.toDouble() ?? 0;
+    }
     if (cached?['avg_speed'] is Map) {
       (cached!['avg_speed'] as Map).forEach((k, v) => _avgSpeed[k as String] = AverageSpeed((v as num).toDouble()));
     }
@@ -316,6 +686,7 @@ class TripSession extends ChangeNotifier {
       for (final p in await _repo.lastKnownPositions(tripId)) {
         _reported[p.memberId] = p;
       }
+      await _loadEvents();
       unawaited(_saveSnapshot());
     } catch (e) {
       // Opened with no signal: restore the last snapshot so the map, GPS,
@@ -353,6 +724,10 @@ class TripSession extends ChangeNotifier {
           for (final e in _avgSpeed.entries)
             if (e.value.value != null) e.key: e.value.value,
         },
+        'events': [for (final e in events.take(200)) e.toRow()],
+        'odometer_m': _odometerM,
+        'range_set_km': _rangeSetKm,
+        'range_set_odo_m': _rangeSetOdoM,
       });
 
   void _restoreSnapshot(Map<String, dynamic> snap) {
@@ -368,6 +743,10 @@ class TripSession extends ChangeNotifier {
     for (final r in rows('positions')) {
       final p = VehiclePosition.fromJson(r);
       _reported[p.memberId] = p;
+    }
+    for (final r in rows('events')) {
+      final e = ConvoyEvent.fromRow(r);
+      if (e != null) events.add(e);
     }
   }
 
@@ -392,6 +771,11 @@ class TripSession extends ChangeNotifier {
         if (meshForwardPosition != null) unawaited(meshForwardPosition!(p));
       }),
       ch.waypoints.listen(_mergeRemoteWaypoint),
+      ch.events.listen((e) {
+        _acceptEvent(e);
+        // Gateway: radio-only cars hear an SOS raised by a car with signal.
+        if (meshForwardEvent != null) unawaited(meshForwardEvent!(e));
+      }),
       ch.messages.listen((m) {
         _acceptMessage(m);
         if (meshForwardChat != null) unawaited(meshForwardChat!(m));
@@ -494,6 +878,7 @@ class TripSession extends ChangeNotifier {
   }
 
   Future<void> _onOwnFix(VehiclePosition p) async {
+    _odometer(p);
     _reported[p.memberId] = p;
     _remember(p);
     notifyListeners();
@@ -517,7 +902,11 @@ class TripSession extends ChangeNotifier {
     final live = channel?.isLive ?? false;
     final now = DateTime.now();
     _evaluateWatch();
-    if (live || _cloudReachable) unawaited(_refreshRoad());
+    if (live || _cloudReachable) {
+      unawaited(_refreshRoad());
+      unawaited(_refreshWeather());
+      unawaited(_refreshTolls());
+    }
     if (live) {
       _offlineSince = null;
       if (_toRelay.isNotEmpty) unawaited(_relayPositions());
@@ -588,6 +977,7 @@ class TripSession extends ChangeNotifier {
         _waypointCursor = r['updated_at'] as String?;
       }
 
+      await _loadEvents().timeout(t);
       _lastPollOk = DateTime.now();
       await _flushOutbox();
     } catch (_) {
@@ -652,6 +1042,7 @@ class TripSession extends ChangeNotifier {
     String? afterId,
     DateTime? arrival,
     String notes = '',
+    int? day,
   }) =>
       _publish([
         itinerary.insert(
@@ -662,6 +1053,7 @@ class TripSession extends ChangeNotifier {
           afterId: afterId ?? itinerary.waypoints.lastOrNull?.id,
           plannedArrival: arrival,
           notes: notes,
+          day: day,
           userId: userId,
         ),
       ]);
@@ -721,6 +1113,7 @@ class TripSession extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_alertCtrl.close());
+    crashAlarm.dispose();
     unawaited(_saveSnapshot());
     for (final d in _disposers) {
       unawaited(d());

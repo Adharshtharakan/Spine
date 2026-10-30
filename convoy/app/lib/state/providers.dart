@@ -44,3 +44,12 @@ final myJoinRequestsProvider = FutureProvider<List<JoinRequest>>((ref) {
   ref.watch(currentUserProvider);
   return ref.watch(tripRepositoryProvider).myJoinRequests();
 });
+
+/// An invite code from a tapped link or QR, waiting for the home screen.
+class PendingInvite extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void set(String? code) => state = code;
+}
+
+final pendingInviteProvider = NotifierProvider<PendingInvite, String?>(PendingInvite.new);

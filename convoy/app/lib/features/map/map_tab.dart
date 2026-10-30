@@ -5,17 +5,20 @@ import 'package:intl/intl.dart';
 import '../../core/geo/geo.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/one_ui.dart';
-import '../../data/models/waypoint.dart';
 import '../../services/location/gps_service.dart';
 import '../../services/tracking/convoy_watch.dart';
 import '../../services/tracking/lead_vehicle.dart';
+import '../../services/voice/voice_assistant.dart';
 import '../../state/trip_session.dart';
+import '../itinerary/itinerary_tab.dart';
 import 'convoy_map.dart';
+import 'map_overlays.dart';
 
 class MapTab extends StatefulWidget {
-  const MapTab({super.key, required this.session});
+  const MapTab({super.key, required this.session, this.assistant});
 
   final TripSession session;
+  final VoiceAssistant? assistant;
 
   @override
   State<MapTab> createState() => _MapTabState();
@@ -31,6 +34,8 @@ class _MapTabState extends State<MapTab> {
     final positions = s.positions;
     final lead = s.lead;
     final mq = MediaQuery.of(context);
+    final events = s.eventState;
+    final assistant = widget.assistant;
     return Stack(
       children: [
         ConvoyMap(
@@ -42,7 +47,10 @@ class _MapTabState extends State<MapTab> {
           leadMemberId: lead?.memberId,
           followSelf: _follow,
           dark: Theme.of(context).brightness == Brightness.dark,
-          onWaypointLongPress: (p) => _proposeStop(context, p),
+          hazards: events.hazards,
+          sosMemberIds: events.sos.keys.toSet(),
+          regroup: events.regroup?.location,
+          onWaypointLongPress: (p) => showMapPointMenu(context, s, p, onAddStop: () => editStopDialog(context, s, at: p)),
         ),
         // Top: back, trip name with link state, then alerts.
         Positioned(
@@ -58,8 +66,12 @@ class _MapTabState extends State<MapTab> {
               ),
               const SizedBox(width: 10),
               Expanded(child: _TitlePill(session: s)),
+              const SizedBox(width: 10),
+              SosButton(active: events.sos.containsKey(s.me?.id), onTriggered: () => _raiseSos(context)),
             ]),
             _LinkBanner(session: s),
+            SosBanner(session: s),
+            if (assistant != null) VoiceTranscript(assistant: assistant),
             for (final a in s.alerts) _AlertCard(alert: a, onDismiss: () => s.dismissAlert(a)),
           ]),
         ),
@@ -71,14 +83,25 @@ class _MapTabState extends State<MapTab> {
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Align(
               alignment: Alignment.centerRight,
-              child: _RoundGlassButton(
-                icon: _follow ? Icons.my_location_rounded : Icons.location_searching_rounded,
-                tooltip: _follow ? 'Stop following me' : 'Follow me',
-                active: _follow,
-                onPressed: () => setState(() => _follow = !_follow),
-              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                if (assistant != null) ...[VoiceButton(assistant: assistant), const SizedBox(height: 10)],
+                _RoundGlassButton(
+                  icon: Icons.report_rounded,
+                  tooltip: 'Report a hazard',
+                  onPressed: () => showHazardSheet(context, s),
+                ),
+                const SizedBox(height: 10),
+                _RoundGlassButton(
+                  icon: _follow ? Icons.my_location_rounded : Icons.location_searching_rounded,
+                  tooltip: _follow ? 'Stop following me' : 'Follow me',
+                  active: _follow,
+                  onPressed: () => setState(() => _follow = !_follow),
+                ),
+              ]),
             ),
             const SizedBox(height: 10),
+            RegroupCard(session: s),
+            HeadcountBar(session: s),
             _TalkerPill(session: s),
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Expanded(child: _LeadCard(session: s, lead: lead)),
@@ -91,34 +114,13 @@ class _MapTabState extends State<MapTab> {
     );
   }
 
-  Future<void> _proposeStop(BuildContext context, GeoPoint p) async {
-    final name = TextEditingController();
-    var kind = WaypointKind.restStop;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Add a stop here'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<WaypointKind>(
-              initialValue: kind,
-              items: [
-                for (final k in WaypointKind.values) DropdownMenuItem(value: k, child: Text(k.label)),
-              ],
-              onChanged: (v) => setState(() => kind = v ?? kind),
-            ),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Add for everyone')),
-          ],
-        ),
-      ),
-    );
-    if (ok == true) {
-      await s.addStop(name: name.text.trim().isEmpty ? kind.label : name.text.trim(), location: p, kind: kind);
+  Future<void> _raiseSos(BuildContext context) async {
+    await s.raiseSos();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('SOS sent. Everyone in the convoy can see where you are.'),
+        duration: Duration(seconds: 6),
+      ));
     }
   }
 }
@@ -234,6 +236,15 @@ class _AlertCard extends StatelessWidget {
       AlertKind.unplannedStop => (Icons.car_crash_rounded, c.bad),
       AlertKind.lostContact => (Icons.signal_wifi_connected_no_internet_4_rounded, c.warn),
       AlertKind.planChanged => (Icons.edit_road_rounded, c.accent),
+      AlertKind.sos => (Icons.sos_rounded, c.bad),
+      AlertKind.hazard => (Icons.warning_rounded, c.warn),
+      AlertKind.regroup => (Icons.flag_circle_rounded, c.good),
+      AlertKind.headcount => (Icons.how_to_reg_rounded, c.accent),
+      AlertKind.fatigue => (Icons.coffee_rounded, c.warn),
+      AlertKind.pace => (Icons.speed_rounded, c.warn),
+      AlertKind.fuel => (Icons.local_gas_station_rounded, c.warn),
+      AlertKind.sweep => (Icons.low_priority_rounded, c.accent),
+      AlertKind.weather => (Icons.thunderstorm_rounded, c.warn),
     };
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -352,10 +363,20 @@ class _LeadCard extends StatelessWidget {
         ],
         if (distance != null || next != null) ...[
           const SizedBox(height: 14),
-          Stats([
-            ('Ahead of you', distance),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(
+              child: Stats([
+                ('Ahead of you', distance),
+                if (next != null)
+                  (next.name, next.plannedArrival == null ? 'Next stop' : DateFormat.Hm().format(next.plannedArrival!)),
+              ]),
+            ),
             if (next != null)
-              (next.name, next.plannedArrival == null ? 'Next stop' : DateFormat.Hm().format(next.plannedArrival!)),
+              IconButton.filledTonal(
+                tooltip: 'Directions to ${next.name}',
+                icon: const Icon(Icons.directions_rounded),
+                onPressed: () => navigateTo(context, next.location, name: next.name),
+              ),
           ]),
         ],
       ]),

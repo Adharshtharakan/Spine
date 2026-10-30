@@ -48,6 +48,12 @@ export class Supabase {
     return this.parse<Record<string, unknown>[]>(res);
   }
 
+  /** Service-role delete. */
+  async delete(table: string, query: string): Promise<void> {
+    const res = await fetch(`${this.env.SUPABASE_URL}/rest/v1/${table}?${query}`, { method: "DELETE", headers: this.headers() });
+    await this.parse<unknown>(res);
+  }
+
   private async parse<T>(res: Response): Promise<T> {
     const text = await res.text();
     const body = text ? JSON.parse(text) : null;

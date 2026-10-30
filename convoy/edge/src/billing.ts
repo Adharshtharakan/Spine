@@ -1,4 +1,5 @@
 import { decodeJwt, importPKCS8, SignJWT } from "jose";
+import { googleAccessToken as googleAccessTokenFor, parseServiceAccount } from "./google";
 import { requireUser } from "./auth";
 import type { Env } from "./env";
 import { HttpError, json, readJson } from "./http";
@@ -75,29 +76,9 @@ async function writeEntitlement(env: Env, g: Grant): Promise<void> {
 
 // ─────────────────────────────── Google ───────────────────────────────
 
-let googleToken: { value: string; exp: number } | undefined;
-
 async function googleAccessToken(env: Env): Promise<string> {
-  if (googleToken && googleToken.exp > Date.now() + 60_000) return googleToken.value;
-  if (!env.GOOGLE_SERVICE_ACCOUNT_JSON) throw new HttpError(503, "google_billing_not_configured");
-  const sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON) as { client_email: string; private_key: string };
-  const key = await importPKCS8(sa.private_key, "RS256");
-  const assertion = await new SignJWT({ scope: "https://www.googleapis.com/auth/androidpublisher" })
-    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
-    .setIssuer(sa.client_email)
-    .setAudience("https://oauth2.googleapis.com/token")
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(key);
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${assertion}`,
-  });
-  if (!res.ok) throw new HttpError(502, "google_auth_failed");
-  const t = (await res.json()) as { access_token: string; expires_in: number };
-  googleToken = { value: t.access_token, exp: Date.now() + t.expires_in * 1000 };
-  return t.access_token;
+  const sa = parseServiceAccount(env.GOOGLE_SERVICE_ACCOUNT_JSON, "google_billing_not_configured");
+  return googleAccessTokenFor(sa, "https://www.googleapis.com/auth/androidpublisher");
 }
 
 interface GoogleSubV2 {

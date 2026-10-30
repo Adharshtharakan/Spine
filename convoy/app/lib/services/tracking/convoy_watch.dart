@@ -5,7 +5,22 @@ import '../../data/models/trip.dart';
 import '../../data/models/waypoint.dart';
 import 'lead_vehicle.dart';
 
-enum AlertKind { fallingBehind, offRoute, unplannedStop, lostContact, planChanged }
+enum AlertKind {
+  fallingBehind,
+  offRoute,
+  unplannedStop,
+  lostContact,
+  planChanged,
+  sos,
+  hazard,
+  regroup,
+  headcount,
+  fatigue,
+  pace,
+  fuel,
+  sweep,
+  weather,
+}
 
 class ConvoyAlert {
   const ConvoyAlert({
@@ -14,6 +29,7 @@ class ConvoyAlert {
     required this.message,
     required this.at,
     this.spoken,
+    this.tag,
   });
 
   final AlertKind kind;
@@ -28,7 +44,10 @@ class ConvoyAlert {
   final String? spoken;
   final DateTime at;
 
-  String get key => '${kind.name}:${memberId ?? ''}';
+  /// Distinguishes several alerts of one kind about one member (hazard ids).
+  final String? tag;
+
+  String get key => '${kind.name}:${memberId ?? ''}:${tag ?? ''}';
 }
 
 /// Watches the convoy and raises the alerts that matter while driving, so

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/geo/geo.dart';
 import '../../core/theme/tokens.dart';
@@ -8,12 +9,15 @@ import '../../core/widgets/one_ui.dart';
 import '../../data/models/social.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/trip_repository.dart';
+import '../../services/invite/invite_links.dart';
 import '../../services/offline/offline_maps.dart';
 import '../../services/tracking/lead_vehicle.dart';
 import '../../state/providers.dart';
 import '../../state/trip_session.dart';
 import '../auth/sign_in_screen.dart';
+import '../checklists/checklist_screen.dart';
 import '../paywall/paywall_screen.dart';
+import 'invite_qr.dart';
 
 class ConvoyTab extends ConsumerStatefulWidget {
   const ConvoyTab({super.key, required this.session});
@@ -86,13 +90,28 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
                     Text(trip.inviteCode, style: t.headlineMedium?.copyWith(letterSpacing: 3, color: c.accent)),
                   ]),
                 ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Copy'),
+                IconButton.filledTonal(
+                  tooltip: 'Copy code',
+                  icon: const Icon(Icons.copy_rounded, size: 20),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: trip.inviteCode));
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invite code copied')));
                   },
+                ),
+                const SizedBox(width: 4),
+                IconButton.filledTonal(
+                  tooltip: 'Show QR code',
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 20),
+                  onPressed: () => showInviteQr(context, trip),
+                ),
+                const SizedBox(width: 4),
+                IconButton.filled(
+                  tooltip: 'Share invite link',
+                  icon: const Icon(Icons.share_rounded, size: 20),
+                  onPressed: () => SharePlus.instance.share(ShareParams(
+                    text: InviteLinks.shareText(trip.title, trip.inviteCode),
+                    subject: 'Join my convoy on DriveSync',
+                  )),
                 ),
               ]),
             ),
@@ -124,7 +143,16 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
                 lines: _standingLines(m, standings[m.id], lead?.memberId),
                 state: _state(m),
                 offRoute: standings[m.id]?.offRoute ?? false,
-                onMakeLead: canLead && m.id != trip?.leadMemberId ? () => _guard(() => s.setLead(m.id)) : null,
+                actions: [
+                  if (canLead && m.id != trip?.leadMemberId) ('lead', 'Make lead vehicle'),
+                  if (canLead && m.convoyRole != ConvoyRole.sweep) ('sweep', 'Make sweep (drives last)'),
+                  if (canLead && m.convoyRole == ConvoyRole.sweep) ('unsweep', 'Remove sweep role'),
+                ],
+                onAction: (a) => _guard(() => switch (a) {
+                      'lead' => s.setLead(m.id),
+                      'sweep' => s.setConvoyRole(m.id, ConvoyRole.sweep),
+                      _ => s.setConvoyRole(m.id, null),
+                    }),
               ),
           ],
         ),
@@ -137,8 +165,40 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
                   child: Text(m.displayName.isEmpty ? '?' : m.displayName[0].toUpperCase(), style: t.titleMedium),
                 ),
                 title: m.id == s.me?.id ? '${m.displayName} (you)' : m.displayName,
+                subtitle: m.convoyRole == ConvoyRole.navigator ? 'Navigator: runs the phone for the car' : null,
+                trailing: m.id == s.me?.id || canLead
+                    ? TextButton(
+                        onPressed: () => _guard(() => s.setConvoyRole(
+                            m.id, m.convoyRole == ConvoyRole.navigator ? null : ConvoyRole.navigator)),
+                        child: Text(m.convoyRole == ConvoyRole.navigator ? 'Not navigator' : 'Navigator'),
+                      )
+                    : null,
               ),
           ]),
+        Section(title: 'At a stop', children: [
+          Tile(
+            onTap: s.eventState.headcount != null ? null : () => _guard(s.startHeadcount),
+            leading: TileIcon(Icons.how_to_reg_rounded, color: c.accent),
+            title: s.eventState.headcount == null ? 'Start a headcount' : 'Headcount in progress',
+            subtitle: s.eventState.headcount == null
+                ? 'Everyone taps "Ready to go" when they are back in their car'
+                : '${s.eventState.headcount!.ready.length} of ${vehicles.length} ready. See the map.',
+            trailing: Icon(Icons.chevron_right_rounded, color: c.faint),
+          ),
+          Tile(
+            onTap: () {
+              final here = s.me == null ? null : s.lastReported(s.me!.id)?.point;
+              if (here == null) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waiting for your location.')));
+                return;
+              }
+              _guard(() => s.setRegroup(here, name: 'where ${s.me?.vehicleLabel ?? s.me?.displayName ?? 'I am'} is'));
+            },
+            leading: TileIcon(Icons.flag_circle_rounded, color: c.good),
+            title: s.eventState.regroup == null ? 'Regroup at my location' : 'Move regroup point here',
+            subtitle: 'Long-press the map to pick another spot',
+          ),
+        ]),
         Section(title: 'You', children: [
           if (s.me != null)
             Tile(
@@ -147,9 +207,21 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
                   ? VehicleAvatar(Color(s.me!.vehicleColor), size: 38)
                   : TileIcon(Icons.person_rounded, color: c.faint),
               title: 'My vehicle',
-              subtitle: s.me!.vehicleLabel ?? (s.me!.hasVehicle ? 'Unnamed vehicle' : 'Passenger'),
+              subtitle: [
+                s.me!.vehicleLabel ?? (s.me!.hasVehicle ? 'Unnamed vehicle' : 'Passenger'),
+                if (s.me!.tankRangeKm != null) '${s.me!.tankRangeKm} km per tank',
+                if (s.me!.fuelKmpl != null) '${s.me!.fuelKmpl!.toStringAsFixed(1)} km/l',
+              ].join('  ·  '),
               trailing: Icon(Icons.chevron_right_rounded, color: c.faint),
             ),
+          if (s.me?.hasVehicle ?? false) _fuelTile(c),
+          Tile(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ChecklistScreen(session: s))),
+            leading: TileIcon(Icons.checklist_rounded, color: Color(Tones.vehicleColours[4])),
+            title: 'Checklists',
+            subtitle: 'Documents, vehicle check, packing and group list',
+            trailing: Icon(Icons.chevron_right_rounded, color: c.faint),
+          ),
           Tile(
             onTap: dl != null && !dl.done && dl.error == null ? null : () => _downloadMaps(ent),
             leading: TileIcon(Icons.download_for_offline_rounded, color: c.good),
@@ -285,9 +357,56 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
     return '${d.inMinutes} min ago';
   }
 
+  Widget _fuelTile(Tones c) {
+    final f = s.fuelStatus;
+    final range = s.rangeLeftKm;
+    return Tile(
+      onTap: _setRange,
+      leading: TileIcon(Icons.local_gas_station_rounded, color: f?.warn == true ? c.bad : c.warn),
+      title: range == null ? 'Fuel range' : '${range.round()} km of fuel left',
+      subtitle: range == null
+          ? 'Enter the range your dashboard shows to get fuel warnings'
+          : f == null
+              ? 'Add stops to compare with the next fuel stop'
+              : f.nextFuelKm == null
+                  ? 'No fuel stop planned${f.warn ? '. Not enough to finish the route.' : ''}'
+                  : 'Next fuel: ${f.nextFuelName} in ${f.nextFuelKm!.round()} km',
+      trailing: f?.warn == true ? Pill('Refuel', tone: Tone.bad) : Icon(Icons.chevron_right_rounded, color: c.faint),
+    );
+  }
+
+  Future<void> _setRange() async {
+    final ctl = TextEditingController(text: s.rangeLeftKm?.round().toString() ?? s.me?.tankRangeKm?.toString() ?? '');
+    final km = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Range left'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('The distance to empty your dashboard shows. DriveSync counts down as you drive.'),
+          const SizedBox(height: 14),
+          TextField(
+            controller: ctl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Kilometres', suffixText: 'km'),
+          ),
+        ]),
+        actions: [
+          if (s.me?.tankRangeKm != null)
+            TextButton(onPressed: () => Navigator.pop(ctx, s.me!.tankRangeKm!.toDouble()), child: const Text('Full tank')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, double.tryParse(ctl.text.trim())), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (km != null && km >= 0 && km < 5000) s.setRangeLeft(km);
+  }
+
   Future<void> _editVehicle() async {
     final me = s.me!;
     final label = TextEditingController(text: me.vehicleLabel);
+    final tank = TextEditingController(text: me.tankRangeKm?.toString() ?? '');
+    final kmpl = TextEditingController(text: me.fuelKmpl?.toString() ?? '');
     var color = me.vehicleColor;
     const palette = Tones.vehicleColours;
     final ok = await showDialog<bool>(
@@ -302,6 +421,24 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
                 controller: label,
                 decoration: const InputDecoration(labelText: 'Label (e.g. Blue Jeep)'),
               ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: tank,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Full-tank range', suffixText: 'km'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: kmpl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Mileage', suffixText: 'km/l'),
+                  ),
+                ),
+              ]),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
@@ -342,7 +479,15 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
       ),
     );
     if (ok != true) return;
-    await _guard(() => ref.read(tripRepositoryProvider).updateMyVehicle(me.id, label: label.text.trim(), color: color));
+    final range = int.tryParse(tank.text.trim());
+    final economy = double.tryParse(kmpl.text.trim());
+    await _guard(() => ref.read(tripRepositoryProvider).updateMyVehicle(
+          me.id,
+          label: label.text.trim(),
+          color: color,
+          tankRangeKm: range != null && range >= 50 && range <= 3000 ? range : null,
+          fuelKmpl: economy != null && economy >= 2 && economy <= 80 ? economy : null,
+        ));
   }
 
   Future<void> _downloadMaps(Entitlement ent) async {
@@ -469,14 +614,18 @@ class _VehicleTile extends StatelessWidget {
     required this.lines,
     required this.state,
     required this.offRoute,
-    this.onMakeLead,
+    this.actions = const [],
+    this.onAction,
   });
 
   final TripMember member;
   final bool you, isLead, offRoute;
   final List<String> lines;
   final String? state;
-  final VoidCallback? onMakeLead;
+
+  /// (value, label) entries for the role menu.
+  final List<(String, String)> actions;
+  final ValueChanged<String>? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -491,6 +640,7 @@ class _VehicleTile extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Wrap(spacing: 6, runSpacing: 6, children: [
             if (isLead) const Pill('Lead', filled: true),
+            if (member.convoyRole == ConvoyRole.sweep) const Pill('Sweep', tone: Tone.good, filled: true),
             if (state != null)
               Pill(state!, tone: switch (state) {
                 'Live' => Tone.good,
@@ -504,12 +654,13 @@ class _VehicleTile extends StatelessWidget {
           for (final l in lines) Text(l, style: t.bodyMedium?.copyWith(color: c.sub)),
         ]),
       ),
-      trailing: onMakeLead == null
+      trailing: actions.isEmpty
           ? null
-          : IconButton(
-              tooltip: 'Make lead vehicle',
-              icon: Icon(Icons.star_outline_rounded, color: c.sub),
-              onPressed: onMakeLead,
+          : PopupMenuButton<String>(
+              tooltip: 'Roles',
+              icon: Icon(Icons.more_vert_rounded, color: c.sub),
+              onSelected: onAction,
+              itemBuilder: (_) => [for (final (v, label) in actions) PopupMenuItem(value: v, child: Text(label))],
             ),
     );
   }

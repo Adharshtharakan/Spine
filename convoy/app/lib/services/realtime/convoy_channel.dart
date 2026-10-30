@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/models/convoy_event.dart';
 import '../../data/models/social.dart';
 import '../../data/models/trip.dart';
 import '../../data/models/waypoint.dart';
@@ -17,7 +18,7 @@ enum ChannelStatus { connecting, live, offline }
 /// * `rtc`  — WebRTC offers/answers/ICE for push-to-talk (addressed by member)
 /// * `ptt`  — floor control: who is talking
 /// * presence — who has the app open
-/// * Postgres changes on `waypoints`, `messages`, `trip_members`, `trips`
+/// * Postgres changes on `waypoints`, `messages`, `trip_events`, `trip_members`, `trips`
 class ConvoyChannel implements PttSignaller {
   ConvoyChannel(this._db, {required this.tripId, required this.memberId});
 
@@ -29,6 +30,7 @@ class ConvoyChannel implements PttSignaller {
   final _positions = StreamController<VehiclePosition>.broadcast();
   final _waypoints = StreamController<Waypoint>.broadcast();
   final _messages = StreamController<ChatMessage>.broadcast();
+  final _events = StreamController<ConvoyEvent>.broadcast();
   final _signals = StreamController<Map<String, dynamic>>.broadcast();
   final _ptt = StreamController<Map<String, dynamic>>.broadcast();
   final _members = StreamController<void>.broadcast();
@@ -39,6 +41,7 @@ class ConvoyChannel implements PttSignaller {
   Stream<VehiclePosition> get positions => _positions.stream;
   Stream<Waypoint> get waypoints => _waypoints.stream;
   Stream<ChatMessage> get messages => _messages.stream;
+  Stream<ConvoyEvent> get events => _events.stream;
   @override
   Stream<Map<String, dynamic>> get signals => _signals.stream;
   @override
@@ -101,6 +104,16 @@ class ConvoyChannel implements PttSignaller {
           callback: (c) => _messages.add(ChatMessage.fromRow(c.newRecord)),
         )
         .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'trip_events',
+          filter: filter,
+          callback: (c) {
+            final e = ConvoyEvent.fromRow(c.newRecord);
+            if (e != null) _events.add(e);
+          },
+        )
+        .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'trip_members',
@@ -158,7 +171,7 @@ class ConvoyChannel implements PttSignaller {
     final ch = _channel;
     _channel = null;
     if (ch != null) await _db.removeChannel(ch);
-    for (final c in [_positions, _waypoints, _messages, _signals, _ptt, _members, _trip, _online, _status]) {
+    for (final c in [_positions, _waypoints, _messages, _events, _signals, _ptt, _members, _trip, _online, _status]) {
       await c.close();
     }
   }

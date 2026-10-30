@@ -10,11 +10,21 @@ SUPABASE_ANON_KEY = "YOUR-ANON-KEY"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 # Public demo server: development only. Self-host OSRM for production.
 OSRM_URL = "https://router.project-osrm.org"
+# Place search (Photon) and weather (Open-Meteo): public servers, fair use.
+PHOTON_URL = "https://photon.komoot.io"
+OPEN_METEO_URL = "https://api.open-meteo.com"
+# Invite landing page: store links (optional) and app-link verification.
+# ANDROID_PACKAGE_NAME = "app.convoy.convoy"
+# ANDROID_CERT_SHA256 = "AA:BB:…"   (keytool -list -v -keystore … ; comma-separate several)
+# APPLE_APP_ID = "TEAMID.app.convoy.convoy"
+# PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.convoy.convoy"
 APPLE_ENVIRONMENT = "Production"
 # Secrets (npx wrangler secret put …): SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET,
 # AFFILIATE_SIGNING_KEY, BOOKING_AFFILIATE_ID, HIPCAMP_AFFILIATE_ID,
 # GOOGLE_SERVICE_ACCOUNT_JSON, ANDROID_PACKAGE_NAME, APPLE_ISSUER_ID,
-# APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID
+# APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID,
+# FCM_SERVICE_ACCOUNT_JSON (push notifications; Firebase service account JSON),
+# TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM (optional SOS texts)
 
 # Self-hosted basemap (optional — R2 needs a payment method on the
 # Cloudflare account). Uncomment after `wrangler r2 bucket create convoy-tiles`

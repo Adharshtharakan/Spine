@@ -72,6 +72,7 @@ class ItineraryDoc {
     DateTime? plannedArrival,
     DateTime? plannedDeparture,
     String notes = '',
+    int? day,
     String? userId,
     int? nowMs,
   }) {
@@ -86,6 +87,7 @@ class ItineraryDoc {
       plannedArrival: plannedArrival,
       plannedDeparture: plannedDeparture,
       notes: notes,
+      day: day,
       updatedBy: userId,
     );
     _rows[id] = row;

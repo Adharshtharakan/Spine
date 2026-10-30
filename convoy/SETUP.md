@@ -68,6 +68,13 @@ Flutter, so install that too.
    Run it **once**. A second run fails with `relation "profiles" already
    exists`, which just means it is already set up. (The same SQL also lives
    as the separate files `supabase/migrations/*.sql` + `supabase/seed.sql`.)
+
+   **Already ran `setup_all.sql` before the safety and planning update?**
+   Don't run it again. Instead open
+   `supabase/migrations/20261030000000_safety_and_planning.sql` the same way
+   (Copy raw file → paste → Run) to add SOS/hazard events, checklists,
+   convoy roles, fuel settings, multi-day trips and push tokens. Check
+   **Table Editor** for `trip_events`, `checklist_items` and `device_tokens`.
 3. **Email sign-in with a code.** The app asks for a 6-digit code, but
    Supabase's default emails contain a link instead.
    - **Authentication → Emails → Templates**. Edit both **Confirm signup**
@@ -110,16 +117,24 @@ In the cloned repo, open the `app` folder and copy `env.example.json` to
   "SUPABASE_URL": "https://abcdefghijk.supabase.co",
   "SUPABASE_ANON_KEY": "your anon / publishable key",
   "EDGE_BASE_URL": "",
+  "INVITE_BASE_URL": "",
   "SELF_HOSTED_TILES": "false",
   "TURN_URL": "",
   "TURN_USERNAME": "",
-  "TURN_CREDENTIAL": ""
+  "TURN_CREDENTIAL": "",
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_APP_ID": "",
+  "FIREBASE_SENDER_ID": "",
+  "FIREBASE_PROJECT_ID": ""
 }
 ```
 
-`env.json` is git-ignored, so your keys stay on your PC. With
-`EDGE_BASE_URL` empty, the map uses OpenFreeMap and everything except
-Discover, Stops, road-following routes and purchases works.
+`env.json` is git-ignored, so your keys stay on your PC. Only the two
+Supabase values are required to start. With `EDGE_BASE_URL` empty, the map
+uses OpenFreeMap and everything works except the features that need the
+Worker (step 5): Discover, Stops, place search, weather, tolls, road-following
+routes, invite links and purchases. The `FIREBASE_*` values turn on push
+notifications (step 5b); leave them empty until then.
 
 ---
 
@@ -199,7 +214,54 @@ If something fails, see **Troubleshooting** at the end.
 
 Road routes use the public OSRM demo server by default, which is fine while
 developing. Before launch, self-host OSRM (Docker, one region's OSM extract)
-and set `OSRM_URL` in `wrangler.toml`.
+and set `OSRM_URL` in `wrangler.toml`. Place search (Photon) and weather
+(Open-Meteo) also use public servers by default (`PHOTON_URL`,
+`OPEN_METEO_URL`); both are free with fair-use limits.
+
+**Invite links.** With the Worker deployed, the Convoy tab's **Share** button
+sends `https://convoy-edge.<your-subdomain>.workers.dev/j/CODE`. Anyone
+opening it gets a page with the code and an **Open in DriveSync** button.
+To make the link open the app directly on Android (verified app links):
+1. In `edge/wrangler.toml` set `ANDROID_PACKAGE_NAME = "app.convoy.convoy"` and
+   `ANDROID_CERT_SHA256` to your signing certificate's SHA-256 fingerprint
+   (for debug builds: `keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android`),
+   then `npx wrangler deploy` again.
+2. In `app/android/gradle.properties` add a line
+   `inviteHost=convoy-edge.<your-subdomain>.workers.dev`.
+
+**SOS text messages (optional).** Without this, an SOS opens your SMS app
+with the message and location ready to send to your emergency contacts.
+To send automatically, create a Twilio account and add
+`npx wrangler secret put TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and
+`TWILIO_FROM` (your Twilio number in +E.164 format).
+
+---
+
+## 5b. Push notifications (Firebase, optional)
+
+Without this, alerts still show while DriveSync is open; with it, SOS,
+hazards, regroup points, headcounts and join requests also reach people who
+have the app closed.
+
+1. Go to <https://console.firebase.google.com> → **Add project** (Google
+   Analytics is not needed).
+2. **Add app → Android**, package name `app.convoy.convoy`. You can skip the
+   `google-services.json` download and the SDK steps: DriveSync reads the
+   values from `env.json` instead.
+3. **Project settings → General → Your apps** → the Android app. Copy into
+   `app/env.json`:
+   - `FIREBASE_API_KEY`: **Web API key** (top of the General tab)
+   - `FIREBASE_APP_ID`: **App ID** (`1:1234…:android:abcd…`)
+   - `FIREBASE_SENDER_ID`: **Project number**
+   - `FIREBASE_PROJECT_ID`: **Project ID**
+4. **Project settings → Service accounts → Generate new private key**. It
+   downloads a JSON file. Give it to the Worker (paste the whole file's
+   contents when asked), then redeploy:
+   ```
+   npx wrangler secret put FCM_SERVICE_ACCOUNT_JSON
+   npx wrangler deploy
+   ```
+   Keep that JSON file private; never commit it.
 
 ---
 
@@ -273,6 +335,22 @@ emulator. Sign in on each with a **different email**.
 | Free plan limit | A third vehicle joining a free convoy gets "This convoy is full". Give the organiser Premium (step 2.6) to allow up to 25. |
 | Public trips | Needs the Worker (step 5) and phone verification (step 2.4): Convoy tab → **Publish to Discover**; on another account, home → 🔍 → **Request to join**; accept on the organiser's Convoy tab. |
 | Stops (hotels, fuel…) | Needs the Worker (step 5): the **Stops** tab lists places along the route. |
+| First-run setup | After accepting the guidelines, five short pages ask for location *all the time*, notifications, unrestricted battery use (on Samsung also remove DriveSync from **Sleeping apps**) and emergency contacts. |
+| Place search | Needs the Worker. Plan → **Add stop** → type "Mysore Palace": pick a result and the name, location and stop type fill in. Offline, places you picked before are still found. Long-press on the map → **Add a stop here** fills in the place name. |
+| Invite link / QR | Convoy tab → **Share** (link) or the QR button. On phone B: **Join** → scan icon, point at the QR. |
+| Directions | Map: the ↱ button on the lead card, or tap a stop in **Plan → Directions**. The first time it asks for Google Maps, OsmAnd or Waze. |
+| SOS | Hold the red **SOS** button on the map for 2 seconds. The other phone shows a red banner with distance, **Go** for directions, and a notification. **I'm OK** cancels it. Works over the LoRa radio too. |
+| Crash detection | Hard to test safely; the logic is covered by unit tests. Toggle in Settings → Safety. When it fires you get a red 30-second countdown with **I'm OK**. |
+| Hazards | Map → **!** button (or long-press → **Report a hazard here**). Phone B is warned when it comes within 2 km on the route. |
+| Regroup + headcount | Long-press → **Regroup here**: everyone sees how many cars have arrived and each one's distance/ETA. Convoy tab → **Start a headcount**: each car taps **Ready**, the organiser taps **Let's go**. |
+| Roles | Convoy tab → ⋮ next to a car → **Make sweep**. The sweep car is told when anyone falls behind it. Passengers can tap **Navigator** to unlock typing. |
+| Voice commands | Map → the speaking-head button, then say "tell everyone fuel stop in 10 minutes", "where is the lead", "next stop", "report a pothole", "I'm ready". Settings → Voice → **Listen for "Hey DriveSync"** for hands-free. |
+| Break and pace reminders | After 2 hours of driving without a 10-minute stop you're reminded to take a break; driving 25+ km/h faster than the rest of the convoy gets a gentle nudge. |
+| Multi-day trips | Plan → **+ Day**, then add stops; or edit a stop and pick its day. Each day shows its distance and where the night is spent. |
+| Weather | Needs the Worker; stops with an arrival time in the next 16 days show the forecast, and rain, fog, storms or strong wind are announced. |
+| Fuel range | Convoy → **My vehicle**: enter full-tank range and mileage. Then **Fuel range**: enter what the dashboard shows; DriveSync counts down as you drive and warns before you run short of the next fuel stop. |
+| Costs and tolls | Plan → **Cost estimate**: fuel for your car and toll plazas on the route. The organiser sets fuel price and average toll per plaza under **Prices**. |
+| Checklists | Convoy → **Checklists**: documents, vehicle check and packing (private), plus a group list everyone shares. |
 
 Bluetooth phone-to-phone and the LoRa radio need two **real** phones; they
 don't work on emulators.
@@ -290,3 +368,6 @@ don't work on emulators.
 | `flutter doctor` says the Android license status is unknown | Run `flutter doctor --android-licenses`. |
 | Gradle build error | Copy the **first** red error from the Build window and send it over. The native mesh code (Kotlin/Swift) hasn't been compiled on a real machine yet, so the first build may surface a small fix. |
 | Can't see other cars | Both phones need location permission set to "Allow all the time". Check that Realtime is enabled in Supabase (it is by default). |
+| Location sharing stops after a while | Battery saving killed the app. Settings → Apps → DriveSync → Battery → **Unrestricted**; on Samsung also Battery → Background usage limits → remove DriveSync from Sleeping apps. |
+| No push notifications | Check the four `FIREBASE_*` values in `env.json`, the `FCM_SERVICE_ACCOUNT_JSON` Worker secret (step 5b), and that notifications are allowed for DriveSync. |
+| `relation "trip_events" does not exist` | Run the safety and planning migration (step 2.2, last paragraph). |

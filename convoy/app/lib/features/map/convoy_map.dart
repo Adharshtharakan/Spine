@@ -4,6 +4,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../core/config/env.dart';
 import '../../core/geo/geo.dart';
 import '../../core/theme/tokens.dart';
+import '../../data/models/convoy_event.dart';
 import '../../data/models/trip.dart';
 import '../../data/models/waypoint.dart';
 
@@ -22,6 +23,9 @@ class ConvoyMap extends StatefulWidget {
     this.followSelf = true,
     this.onWaypointLongPress,
     this.dark = false,
+    this.hazards = const [],
+    this.sosMemberIds = const {},
+    this.regroup,
   });
 
   final Map<String, VehiclePosition> positions;
@@ -34,6 +38,11 @@ class ConvoyMap extends StatefulWidget {
   final String? leadMemberId;
   final bool followSelf;
   final bool dark;
+
+  /// Live hazard reports, members with an active SOS, and the regroup point.
+  final List<ConvoyEvent> hazards;
+  final Set<String> sosMemberIds;
+  final GeoPoint? regroup;
 
   /// Long-press on the map to propose a new stop at that point.
   final void Function(GeoPoint point)? onWaypointLongPress;
@@ -106,7 +115,47 @@ class _ConvoyMapState extends State<ConvoyMap> {
       ),
     );
 
+    // Hazards and the regroup point.
+    await map.addGeoJsonSource('marks', _marksGeoJson());
+    await map.addCircleLayer(
+      'marks',
+      'marks-circle',
+      CircleLayerProperties(
+        circleRadius: ['case', ['==', ['get', 'kind'], 'regroup'], 11, 9],
+        circleColor: ['match', ['get', 'kind'], 'regroup', Tones.css(_w.good), 'police', Tones.css(_w.accent), 'accident', Tones.css(_w.bad), Tones.css(_w.warn)],
+        circleStrokeColor: Tones.css(_w.card),
+        circleStrokeWidth: 3,
+      ),
+    );
+    await map.addSymbolLayer(
+      'marks',
+      'marks-label',
+      SymbolLayerProperties(
+        textField: const ['get', 'label'],
+        textFont: _font,
+        textSize: 12,
+        textOffset: const [0, 1.5],
+        textAnchor: 'top',
+        textColor: _labelColor,
+        textHaloColor: _haloColor,
+        textHaloWidth: 1.5,
+        textOptional: true,
+      ),
+    );
+
     await map.addGeoJsonSource('vehicles', _vehiclesGeoJson());
+    // Members who raised an SOS: a wide red ring.
+    await map.addCircleLayer(
+      'vehicles',
+      'vehicles-sos-ring',
+      CircleLayerProperties(
+        circleRadius: 24,
+        circleColor: 'rgba(0,0,0,0)',
+        circleStrokeColor: Tones.css(_w.bad),
+        circleStrokeWidth: 5,
+      ),
+      filter: ['==', ['get', 'sos'], true],
+    );
     // Uncertainty halo: grows for estimated (dead-reckoned) and mesh fixes.
     await map.addCircleLayer(
       'vehicles',
@@ -171,6 +220,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.setGeoJsonSource('route', _routeGeoJson());
     await map.setGeoJsonSource('stops', _stopsGeoJson());
     await map.setGeoJsonSource('vehicles', _vehiclesGeoJson());
+    await map.setGeoJsonSource('marks', _marksGeoJson());
 
     if (!_framed) {
       final pts = [
@@ -238,6 +288,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
               'label': _label(p),
               'color': _hex(widget.members[p.memberId]?.vehicleColor ?? Tones.vehicleColours.first),
               'lead': p.memberId == widget.leadMemberId,
+              'sos': widget.sosMemberIds.contains(p.memberId),
               'self': p.memberId == widget.selfMemberId,
               'stale': p.age(now) > const Duration(seconds: 90),
               'source': p.source.name,
@@ -248,6 +299,27 @@ class _ConvoyMapState extends State<ConvoyMap> {
       ],
     };
   }
+
+  Map<String, dynamic> _marksGeoJson() => {
+        'type': 'FeatureCollection',
+        'features': [
+          for (final h in widget.hazards)
+            if (h.location != null)
+              {
+                'type': 'Feature',
+                'id': h.id,
+                'properties': {'kind': h.hazard.name, 'label': h.hazard.label},
+                'geometry': {'type': 'Point', 'coordinates': [h.location!.lng, h.location!.lat]},
+              },
+          if (widget.regroup != null)
+            {
+              'type': 'Feature',
+              'id': 'regroup',
+              'properties': {'kind': 'regroup', 'label': 'Regroup'},
+              'geometry': {'type': 'Point', 'coordinates': [widget.regroup!.lng, widget.regroup!.lat]},
+            },
+        ],
+      };
 
   String _label(VehiclePosition p) {
     final m = widget.members[p.memberId];

@@ -5,8 +5,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Durable queue of writes made while offline: itinerary edits and chat
-/// messages. Both are safe to replay — waypoints are guarded by their HLC
+/// Durable queue of writes made while offline: itinerary edits, chat
+/// messages and convoy events. All are safe to replay — waypoints are guarded by their HLC
 /// on the server, messages carry client-generated ids — so the outbox can
 /// simply retry until each write lands.
 class Outbox {
@@ -66,6 +66,11 @@ class Outbox {
               await _db.from('waypoints').upsert(item.row);
             case 'messages':
               await _db.from('messages').upsert(item.row, ignoreDuplicates: true);
+            case 'trip_events':
+              await _db.from('trip_events').upsert(item.row, ignoreDuplicates: true);
+            case 'relay_event':
+              // An SOS or hazard from a car with no signal, heard on the radio.
+              await _db.rpc('relay_event', params: {'p_row': item.row});
             case 'relay_message':
               // Another car's message heard over the radio; it may have no
               // signal for hours, so whoever reaches the cloud first posts it.

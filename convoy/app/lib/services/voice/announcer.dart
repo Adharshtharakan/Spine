@@ -28,6 +28,15 @@ void attachAnnouncer(WidgetRef ref, TripSession session) {
 
   unawaited(init());
 
+  // Voice command replies are spoken regardless of the alerts setting: the
+  // driver just asked a question.
+  session.speak = (text) async {
+    if (!ready) return;
+    try {
+      await tts.speak(text);
+    } catch (_) {}
+  };
+
   final sub = session.alertStream.listen((ConvoyAlert a) async {
     unawaited(HapticFeedback.mediumImpact());
     if (!ready || !ref.read(spokenAlertsProvider)) return;

@@ -11,7 +11,7 @@ import '../../data/models/trip.dart';
 ///
 /// ```
 /// 0      u8   version (1)
-/// 1      u8   type (1 = position, 2 = chat, 3 = itinerary row)
+/// 1      u8   type (1 = position, 2 = chat, 3 = itinerary row, 4 = convoy event)
 /// 2      u8   ttl (remaining relay hops)
 /// 3      u8   hops travelled
 /// 4..19  16B  member id (UUID bytes)
@@ -24,13 +24,14 @@ import '../../data/models/trip.dart';
 /// 38..39 u16  sequence (de-duplication)
 /// ```
 ///
-/// Chat and itinerary frames ([DataFrame]) share the same first 20 bytes,
+/// Chat, itinerary and event frames ([DataFrame]) share the same first 20 bytes,
 /// then a u16 sequence and a UTF-8 JSON body.
 class MeshFrame {
   static const int version = 1;
   static const int typePosition = 1;
   static const int typeChat = 2;
   static const int typeItinerary = 3;
+  static const int typeEvent = 4;
   static const int positionLength = 40;
 }
 
@@ -160,7 +161,7 @@ class DataFrame {
     final b = ByteData.sublistView(bytes);
     final type = b.getUint8(1);
     if (b.getUint8(0) != MeshFrame.version ||
-        (type != MeshFrame.typeChat && type != MeshFrame.typeItinerary)) {
+        (type != MeshFrame.typeChat && type != MeshFrame.typeItinerary && type != MeshFrame.typeEvent)) {
       return null;
     }
     return DataFrame(

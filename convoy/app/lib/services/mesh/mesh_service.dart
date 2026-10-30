@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/geo/geo.dart';
+import '../../data/models/convoy_event.dart';
 import '../../data/models/social.dart';
 import '../../data/models/trip.dart';
 import '../../data/models/waypoint.dart';
@@ -52,11 +53,13 @@ class MeshService {
   final _positions = StreamController<VehiclePosition>.broadcast();
   final _chat = StreamController<ChatMessage>.broadcast();
   final _waypoints = StreamController<Waypoint>.broadcast();
+  final _events = StreamController<ConvoyEvent>.broadcast();
   final Map<String, int> _peers = {};
 
   Stream<VehiclePosition> get positions => _positions.stream;
   Stream<ChatMessage> get chat => _chat.stream;
   Stream<Waypoint> get waypoints => _waypoints.stream;
+  Stream<ConvoyEvent> get events => _events.stream;
 
   int get peers => _peers.values.fold(0, (a, b) => a + b);
   int peersOn(String transport) => _peers[transport] ?? 0;
@@ -133,8 +136,27 @@ class MeshService {
 
   Future<void> sendWaypoint(Waypoint w) => _sendData(MeshFrame.typeItinerary, _compact(w.toRow()));
 
-  Future<void> _sendData(int type, Map<String, dynamic> row, {Iterable<MeshTransport>? only}) async {
-    final f = DataFrame(type: type, originId: memberId, ttl: _ttl, hops: 0, sequence: _nextSeq(), json: jsonEncode(row));
+  /// Convoy events. Safety is never a Premium feature: SOS and hazards are
+  /// relayed across several hops on every plan.
+  Future<void> sendEvent(ConvoyEvent e, {Iterable<MeshTransport>? only}) =>
+      _sendData(MeshFrame.typeEvent, _compact(e.toRow()), only: only, ttl: _eventTtl(e));
+
+  /// Gateway duty for events from the cloud (an SOS raised by a car with
+  /// signal reaches cars on the radio).
+  Future<void> forwardEventFromCloud(ConvoyEvent e) async {
+    if (e.memberId == memberId) return;
+    final row = _compact(e.toRow());
+    if (_seen.contains(_dataKey(MeshFrame.typeEvent, row))) return;
+    await sendEvent(e, only: transports.where((t) => t.floods));
+  }
+
+  int _eventTtl(ConvoyEvent e) => switch (e.kind) {
+        EventKind.sos || EventKind.sosClear || EventKind.hazard => 4,
+        _ => _ttl,
+      };
+
+  Future<void> _sendData(int type, Map<String, dynamic> row, {Iterable<MeshTransport>? only, int? ttl}) async {
+    final f = DataFrame(type: type, originId: memberId, ttl: ttl ?? _ttl, hops: 0, sequence: _nextSeq(), json: jsonEncode(row));
     _remember(_dataKey(type, row));
     for (final tr in only ?? transports) {
       await _send(tr, f.encode(), reliable: true);
@@ -185,8 +207,11 @@ class MeshService {
 
   /// Content identity, so the same message arriving from its author and
   /// from a gateway is only delivered once.
-  static String _dataKey(int type, Map<String, dynamic> row) =>
-      type == MeshFrame.typeChat ? 'chat:${row['id']}' : 'wp:${row['id']}:${row['hlc']}';
+  static String _dataKey(int type, Map<String, dynamic> row) => switch (type) {
+        MeshFrame.typeChat => 'chat:${row['id']}',
+        MeshFrame.typeEvent => 'ev:${row['id']}',
+        _ => 'wp:${row['id']}:${row['hlc']}',
+      };
 
   // ───────────────────────────── inbound ──────────────────────────────
 
@@ -218,7 +243,7 @@ class MeshService {
         _positions.add(f.position);
         final r = f.relayed();
         if (r != null) await _bridge(r.encode(), from, reliable: false);
-      case MeshFrame.typeChat || MeshFrame.typeItinerary:
+      case MeshFrame.typeChat || MeshFrame.typeItinerary || MeshFrame.typeEvent:
         final f = DataFrame.decode(raw);
         if (f == null) return;
         final Map<String, dynamic> row;
@@ -229,10 +254,14 @@ class MeshService {
         }
         if (row['trip_id'] != tripId || !_remember(_dataKey(f.type, row))) return;
         try {
-          if (f.type == MeshFrame.typeChat) {
-            _chat.add(ChatMessage.fromRow(row).copyWith(viaMesh: true));
-          } else {
-            _waypoints.add(Waypoint.fromRow(row));
+          switch (f.type) {
+            case MeshFrame.typeChat:
+              _chat.add(ChatMessage.fromRow(row).copyWith(viaMesh: true));
+            case MeshFrame.typeEvent:
+              final e = ConvoyEvent.fromRow(row, viaMesh: true);
+              if (e != null) _events.add(e);
+            default:
+              _waypoints.add(Waypoint.fromRow(row));
           }
         } catch (_) {
           return;
@@ -275,6 +304,7 @@ class MeshService {
     await _positions.close();
     await _chat.close();
     await _waypoints.close();
+    await _events.close();
   }
 }
 

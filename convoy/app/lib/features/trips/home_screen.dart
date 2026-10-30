@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -6,12 +8,15 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/one_ui.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/trip_repository.dart';
+import '../../services/invite/invite_links.dart';
+import '../../services/push/push_service.dart';
 import '../../state/providers.dart';
-import '../../state/settings.dart';
 import '../discovery/discover_screen.dart';
 import '../offline_maps/offline_maps_screen.dart';
 import '../paywall/paywall_screen.dart';
 import '../radio/radio_screen.dart';
+import '../settings/settings_sheet.dart';
+import 'invite_qr.dart';
 import 'trip_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -19,6 +24,12 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // An invite link or QR opened from outside the app.
+    ref.listen(pendingInviteProvider, (_, code) {
+      if (code == null) return;
+      ref.read(pendingInviteProvider.notifier).set(null);
+      _join(context, ref, prefill: code);
+    });
     final trips = ref.watch(myTripsProvider);
     final ent = ref.watch(entitlementProvider).value;
     final cutoff = DateTime.now().subtract(const Duration(days: 2));
@@ -52,6 +63,7 @@ class HomeScreen extends ConsumerWidget {
               case 'premium':
                 await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
               case 'signout':
+                await PushService.stop(ref.read(supabaseProvider));
                 await ref.read(supabaseProvider).auth.signOut();
             }
           },
@@ -140,14 +152,17 @@ class HomeScreen extends ConsumerWidget {
             vehicleLabel: vehicle.text.trim().isEmpty ? null : vehicle.text.trim(),
           );
       ref.invalidate(myTripsProvider);
+      final who = vehicle.text.trim().isNotEmpty ? vehicle.text.trim() : 'Someone';
+      unawaited(PushService.notifyParty(ref.read(supabaseProvider),
+          tripId: trip.id, kind: 'member_joined', title: '$who joined ${trip.title}', body: 'They are now on the convoy map.'));
       if (context.mounted) {
         await Navigator.push(context, MaterialPageRoute(builder: (_) => TripScreen(tripId: trip.id)));
       }
     });
   }
 
-  Future<void> _join(BuildContext context, WidgetRef ref) async {
-    final code = TextEditingController();
+  Future<void> _join(BuildContext context, WidgetRef ref, {String? prefill}) async {
+    final code = TextEditingController(text: prefill);
     final vehicle = TextEditingController();
     var driving = true;
     final ok = await showDialog<bool>(
@@ -161,7 +176,18 @@ class HomeScreen extends ConsumerWidget {
               TextField(
                 controller: code,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'Invite code'),
+                decoration: InputDecoration(
+                  labelText: 'Invite code or link',
+                  suffixIcon: IconButton(
+                    tooltip: 'Scan QR code',
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    onPressed: () async {
+                      final scanned = await Navigator.push<String>(
+                          ctx, MaterialPageRoute(builder: (_) => const InviteScanner(), fullscreenDialog: true));
+                      if (scanned != null) setState(() => code.text = scanned);
+                    },
+                  ),
+                ),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -188,11 +214,14 @@ class HomeScreen extends ConsumerWidget {
       final trip = await ref
           .read(tripRepositoryProvider)
           .joinByInvite(
-            code.text,
+            InviteLinks.codeFrom(code.text) ?? code.text.trim(),
             vehicleLabel: vehicle.text.trim().isEmpty ? null : vehicle.text.trim(),
             hasVehicle: driving,
           );
       ref.invalidate(myTripsProvider);
+      final who = vehicle.text.trim().isNotEmpty ? vehicle.text.trim() : 'Someone';
+      unawaited(PushService.notifyParty(ref.read(supabaseProvider),
+          tripId: trip.id, kind: 'member_joined', title: '$who joined ${trip.title}', body: 'They are now on the convoy map.'));
       if (context.mounted) {
         await Navigator.push(context, MaterialPageRoute(builder: (_) => TripScreen(tripId: trip.id)));
       }

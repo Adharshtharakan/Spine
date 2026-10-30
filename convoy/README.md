@@ -54,6 +54,27 @@ application id and iOS bundle id to your own before publishing.
   (2–10 km car to car, relayed between radios) keep sharing encrypted
   positions and chat, and any car with signal acts as a gateway.
   Phone-to-phone Bluetooth/Wi-Fi covers cars that are bunched together.
+- **Safety.** A two-second hold on SOS alerts the whole convoy with your
+  location over the cloud, push and the LoRa radio, and can text
+  emergency contacts. Crash detection (hard impact, then a stop) starts a
+  30-second countdown before raising an SOS. Hazard reports (pothole,
+  police, accident, flooding) are pinned on the map and announced to cars
+  approaching them. Drivers are nudged to take a break after two hours and
+  to ease off when far above the convoy's pace.
+- **Coordination.** Regroup points with each car's distance and ETA;
+  headcounts at stops ("Ready to go" per car); a sweep car that is told
+  about stragglers; a navigator role for passengers; voice commands
+  ("tell everyone…", "where is the lead", "next stop") with optional
+  "Hey DriveSync" hands-free listening; one-tap directions in Google Maps,
+  OsmAnd or Waze.
+- **Planning.** Place search for stops, multi-day trips with per-day
+  distance and overnight stops, weather at each stop's arrival time, fuel
+  range warnings against the next fuel stop, toll plazas and a fuel and
+  toll cost estimate per car, and checklists (documents, vehicle check,
+  packing, a shared group list).
+- **Getting people in.** Invite links with a landing page and app links,
+  QR codes to scan at the meeting point, push notifications, and a
+  first-run setup that asks for the permissions that keep tracking alive.
 - **Public trip discovery.** Verified organisers (confirmed phone plus
   current terms) publish trips. A traveller accepts the guidelines and
   driver terms (licensed, insured, roadworthy) and requests to join; the
@@ -112,7 +133,8 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 wrangler secret put AFFILIATE_SIGNING_KEY
 # optional: SUPABASE_JWT_SECRET (legacy HS256 projects), BOOKING_AFFILIATE_ID,
 # HIPCAMP_AFFILIATE_ID, GOOGLE_SERVICE_ACCOUNT_JSON, ANDROID_PACKAGE_NAME,
-# APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID
+# APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID,
+# FCM_SERVICE_ACCOUNT_JSON (push), TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM (SOS texts)
 npm run deploy
 ```
 

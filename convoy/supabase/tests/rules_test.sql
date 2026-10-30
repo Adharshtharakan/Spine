@@ -165,4 +165,68 @@ select pg_temp.as_user(:bob);
 select pg_temp.expect_error(format($$select public.relay_message(jsonb_build_object('id', gen_random_uuid(),
   'trip_id', %L, 'sender_id', 'c0000000-0000-4000-8000-000000000003', 'body', 'spoof'))$$, (select id from bt)), 'sender_not_in_trip');
 
+-- ───────────── safety and planning ─────────────
+-- Convoy events: members raise their own; nobody can raise one as someone else.
+select pg_temp.as_user(:bob);
+insert into public.trip_events (id, trip_id, member_id, kind, lat, lng)
+values ('f1000000-0000-4000-8000-000000000001', (select id from t),
+        (select id from public.trip_members where user_id = 'b0000000-0000-4000-8000-000000000002' and trip_id = (select id from t)),
+        'sos', 12.9, 77.6);
+select pg_temp.expect_error(format($$insert into public.trip_events (id, trip_id, member_id, kind) values (gen_random_uuid(), %L, %L, 'sos')$$,
+  (select id from t), (select id from public.trip_members where user_id = 'a0000000-0000-4000-8000-000000000001' and trip_id = (select id from t))),
+  'row-level security');
+-- Gateway relay of an event from a radio-only car, stored once.
+select public.relay_event(jsonb_build_object('id', 'f1000000-0000-4000-8000-000000000002', 'trip_id', (select id from t),
+  'member_id', (select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004'),
+  'kind', 'hazard', 'lat', 12.95, 'lng', 77.7, 'payload', '{"type":"pothole"}'));
+select public.relay_event(jsonb_build_object('id', 'f1000000-0000-4000-8000-000000000002', 'trip_id', (select id from t),
+  'member_id', (select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004'),
+  'kind', 'hazard', 'lat', 12.95, 'lng', 77.7));
+do $$ begin
+  if (select count(*) from public.trip_events) <> 2 then raise exception 'events not stored exactly once'; end if;
+end $$;
+select pg_temp.as_user('e0000000-0000-4000-8000-00000000000f');
+do $$ begin
+  if exists (select 1 from public.trip_events) then raise exception 'outsider sees events'; end if;
+end $$;
+select pg_temp.expect_error(format($$select public.relay_event(jsonb_build_object('id', gen_random_uuid(), 'trip_id', %L,
+  'member_id', gen_random_uuid(), 'kind', 'sos'))$$, (select id from t)), 'not_a_member');
+
+-- Convoy roles: only owner/lead assigns sweep; anyone can be their own navigator.
+select pg_temp.as_user(:dave);
+select pg_temp.expect_error(format($$select public.set_convoy_role(%L, 'sweep')$$,
+  (select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004')), 'not_allowed');
+select public.set_convoy_role((select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004'), 'navigator');
+select pg_temp.as_user(:alice);
+select public.set_convoy_role((select id from public.trip_members where user_id = 'd0000000-0000-4000-8000-000000000004'), 'sweep');
+select public.set_convoy_role((select id from public.trip_members where user_id = 'a0000000-0000-4000-8000-000000000001' and trip_id = (select id from t)), 'sweep');
+do $$ begin
+  if (select count(*) from public.trip_members where convoy_role = 'sweep') <> 1 then raise exception 'more than one sweep'; end if;
+end $$;
+
+-- Checklists: personal items stay private; shared items are visible to the party.
+select pg_temp.as_user(:bob);
+insert into public.checklist_items (id, trip_id, member_id, category, title)
+values ('f2000000-0000-4000-8000-000000000001', (select id from t),
+        (select id from public.trip_members where user_id = 'b0000000-0000-4000-8000-000000000002' and trip_id = (select id from t)),
+        'documents', 'Driving licence'),
+       ('f2000000-0000-4000-8000-000000000002', (select id from t), null, 'group', 'Tent');
+select pg_temp.as_user(:alice);
+do $$ begin
+  if (select count(*) from public.checklist_items) <> 1 then raise exception 'personal checklist leaked'; end if;
+end $$;
+update public.checklist_items set done = true, done_by = 'a0000000-0000-4000-8000-000000000001' where id = 'f2000000-0000-4000-8000-000000000002';
+select pg_temp.expect_error(format($$insert into public.checklist_items (id, trip_id, member_id, category, title) values (gen_random_uuid(), %L, %L, 'documents', 'x')$$,
+  (select id from t), (select id from public.trip_members where user_id = 'b0000000-0000-4000-8000-000000000002' and trip_id = (select id from t))),
+  'row-level security');
+
+-- Device tokens move to whoever signs in on the phone.
+select public.register_device_token('token-abcdefghij', 'android');
+select pg_temp.as_user(:bob);
+select public.register_device_token('token-abcdefghij', 'android');
+select pg_temp.as_user(:alice);
+do $$ begin
+  if exists (select 1 from public.device_tokens) then raise exception 'token still visible to previous user'; end if;
+end $$;
+
 \echo 'ALL RULE TESTS PASSED'

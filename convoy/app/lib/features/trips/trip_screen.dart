@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/widgets/one_ui.dart';
+import '../../services/voice/voice_assistant.dart';
 import '../../state/providers.dart';
+import '../../state/settings.dart';
 import '../../state/trip_session.dart';
+import '../safety/crash_countdown.dart';
 import '../chat/chat_tab.dart';
 import '../itinerary/itinerary_tab.dart';
 import '../map/map_tab.dart';
@@ -21,22 +24,33 @@ class TripScreen extends ConsumerStatefulWidget {
 
 class _TripScreenState extends ConsumerState<TripScreen> {
   late final TripSession session;
+  late final VoiceAssistant assistant;
   int _tab = 0;
 
   @override
   void initState() {
     super.initState();
     session = createTripSession(ref, widget.tripId)..open();
+    assistant = VoiceAssistant(session);
+    session.crashAlarm.addListener(_onCrashAlarm);
+    if (ref.read(handsFreeVoiceProvider)) assistant.setHandsFree(true);
+  }
+
+  void _onCrashAlarm() {
+    if (session.crashAlarm.value != null && mounted) CrashCountdown.show(context, session);
   }
 
   @override
   void dispose() {
+    session.crashAlarm.removeListener(_onCrashAlarm);
+    assistant.dispose();
     session.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(handsFreeVoiceProvider, (_, on) => assistant.setHandsFree(on));
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
@@ -45,7 +59,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         }
         final unread = session.messages.length;
         final tabs = [
-          MapTab(session: session),
+          MapTab(session: session, assistant: assistant),
           ItineraryTab(session: session),
           ChatTab(session: session),
           ConvoyTab(session: session),

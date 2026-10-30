@@ -33,6 +33,27 @@ export interface Env {
   APPLE_BUNDLE_ID?: string;
   APPLE_ENVIRONMENT?: "Production" | "Sandbox";
 
+  /** Photon geocoder (place search). Self-host in production. */
+  PHOTON_URL?: string;
+  /** Open-Meteo forecast API base (weather along the route). */
+  OPEN_METEO_URL?: string;
+
+  /** Firebase service account (JSON) for push notifications; falls back to GOOGLE_SERVICE_ACCOUNT_JSON. */
+  FCM_SERVICE_ACCOUNT_JSON?: string;
+
+  /** Optional Twilio account for SOS text messages to emergency contacts. */
+  TWILIO_ACCOUNT_SID?: string;
+  TWILIO_AUTH_TOKEN?: string;
+  TWILIO_FROM?: string;
+
+  /** App links: the signing certificate's SHA-256 fingerprint(s), comma separated. */
+  ANDROID_CERT_SHA256?: string;
+  /** Apple team id + bundle id for universal links, e.g. "ABCDE12345.com.example.drivesync". */
+  APPLE_APP_ID?: string;
+  /** Store pages shown on the invite landing page. */
+  PLAY_STORE_URL?: string;
+  APP_STORE_URL?: string;
+
   /** Public base for fonts/sprites when they are not mirrored in R2. */
   ASSETS_FALLBACK_URL?: string;
 }

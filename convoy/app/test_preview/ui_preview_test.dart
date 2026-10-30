@@ -13,6 +13,10 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:convoy/data/models/convoy_event.dart';
+import 'package:convoy/features/onboarding/onboarding_screen.dart';
+import 'package:convoy/features/safety/crash_countdown.dart';
+import 'package:convoy/services/planning/planning_services.dart';
 import 'package:convoy/core/geo/geo.dart';
 import 'package:convoy/core/theme/theme.dart';
 import 'package:convoy/core/theme/tokens.dart';
@@ -399,6 +403,26 @@ class MapPreview extends CustomPainter {
     final lead = s.lead?.memberId;
     final pos = s.positions;
     final placed = <Rect>[];
+    // Hazard reports and the regroup point, as the real map draws them.
+    final ev = s.eventState;
+    for (final h in ev.hazards) {
+      if (h.location == null) continue;
+      final o = p(h.location!);
+      final color = switch (h.hazard) {
+        HazardType.police => _wf.accent,
+        HazardType.accident => _wf.bad,
+        _ => _wf.warn,
+      };
+      canvas.drawCircle(o, 9, Paint()..color = color);
+      canvas.drawCircle(o, 9, Paint()..color = _wf.card..style = PaintingStyle.stroke..strokeWidth = 3);
+      _text(canvas, h.hazard.label, Offset(o.dx, o.dy + 14), 12, top: true);
+    }
+    if (ev.regroup?.location != null) {
+      final o = p(ev.regroup!.location!);
+      canvas.drawCircle(o, 11, Paint()..color = _wf.good);
+      canvas.drawCircle(o, 11, Paint()..color = _wf.card..style = PaintingStyle.stroke..strokeWidth = 3);
+      _text(canvas, 'Regroup', Offset(o.dx, o.dy + 16), 12, top: true);
+    }
     for (final v in pos.values) {
       final o = p(v.point);
       final color = Color(s.members[v.memberId]?.vehicleColor ?? 0xFF2E7DF6);
@@ -746,4 +770,89 @@ void main() {
   testWidgets('12 premium', (t) => shoot(t, '12_premium', const PaywallScreen()));
   testWidgets('13 radio pairing', (t) => shoot(t, '13_radio', const RadioScreen()));
   testWidgets('14 offline maps', (t) => shoot(t, '14_offline_maps', const OfflineMapsScreen()));
+
+  // ───────────── safety and planning ─────────────
+  ConvoyEvent event(String id, EventKind kind, String member, int minsAgo, {GeoPoint? at, Map<String, dynamic> payload = const {}}) =>
+      ConvoyEvent(id: id, tripId: tripId, memberId: member, kind: kind, location: at, payload: payload,
+          createdAt: now.subtract(Duration(minutes: minsAgo)));
+
+  List<ConvoyEvent> safetyEvents() => [
+        event('sos1', EventKind.sos, mArjun, 2, at: liveTracks[mArjun]!.last.point, payload: {'note': 'Flat tyre, no spare'}),
+        event('hz1', EventKind.hazard, mRavi, 6, at: ConvoyPredictor.pointAlong(road, leadAlong - 1500), payload: {'type': 'pothole'}),
+        event('hz2', EventKind.hazard, mPriya, 3, at: ConvoyPredictor.pointAlong(road, leadAlong + 3000), payload: {'type': 'police'}),
+        event('rg1', EventKind.regroup, mRavi, 4, at: road[320], payload: {'note': 'Lunch: Mysuru'}),
+        event('hc1', EventKind.headcount, mRavi, 1),
+        event('rd1', EventKind.ready, mPriya, 1),
+      ];
+
+  testWidgets('17 map safety', (t) async {
+    final s = PreviewSession(liveTracks);
+    s.events.addAll(safetyEvents());
+    s.alerts.add(ConvoyAlert(kind: AlertKind.hazard, memberId: mRavi, tag: 'hz1', message: 'Pothole reported 1.4 km ahead.', at: now));
+    await shoot(t, '17_map_safety', tripShell(s, 0, MapTab(session: s), backdrop: CustomPaint(painter: MapPreview(s, focus: convoyFocus(s)))),
+        premium: true);
+  });
+
+  testWidgets('d17 map safety dark', (t) async {
+    final s = PreviewSession(liveTracks);
+    s.events.addAll(safetyEvents());
+    await shoot(t, 'd17_map_safety_dark',
+        tripShell(s, 0, MapTab(session: s), backdrop: CustomPaint(painter: MapPreview(s, focus: convoyFocus(s), dark: true))),
+        premium: true, dark: true);
+  });
+
+  PreviewSession planningSession() {
+    final s = PreviewSession(liveTracks);
+    final days = {'w1': 1, 'w2': 1, 'w3': 1, 'w4': 1, 'w5': 1, 'w6': 2};
+    s.itinerary = ItineraryDoc(tripId, nodeId: 'days')
+      ..mergeAll([for (final w in itinerary.waypoints) w.copyWith(day: days[w.id])]);
+    s.weather = {
+      'w2': const StopForecast(tempC: 22, precipProb: 10, code: 1),
+      'w3': const StopForecast(tempC: 24, precipProb: 20, code: 2),
+      'w4': const StopForecast(tempC: 27, precipProb: 75, code: 63, warnings: [WeatherWarning.rain]),
+      'w5': const StopForecast(tempC: 25, precipProb: 30, visibilityM: 600, code: 45, warnings: [WeatherWarning.fog]),
+    };
+    s.tolls = [
+      TollPlaza(name: 'Kaniminike toll plaza', location: road[40], alongKm: 14),
+      TollPlaza(name: 'Sheshagirihalli toll plaza', location: road[90], alongKm: 33),
+      TollPlaza(name: 'Ganalu toll plaza', location: road[170], alongKm: 62),
+    ];
+    s.trip = Trip(
+      id: tripId, ownerId: uAngith, title: 'Coorg weekend', inviteCode: 'K7Q2M9XP', visibility: TripVisibility.public,
+      leadMemberId: mRavi, startsAt: today(7, 0), fuelPrice: 102.5, tollPerPlaza: 115,
+    );
+    s.members = {
+      ...s.members,
+      mAngith: const TripMember(id: mAngith, tripId: tripId, userId: uAngith, displayName: 'Angith', role: MemberRole.owner,
+          vehicleLabel: 'Swift', vehicleColor: 0xFFE5484D, tankRangeKm: 520, fuelKmpl: 18),
+      mPriya: const TripMember(id: mPriya, tripId: tripId, userId: 'u3', displayName: 'Priya', role: MemberRole.driver,
+          vehicleLabel: 'Thar', vehicleColor: 0xFF30A46C, convoyRole: ConvoyRole.sweep),
+      mKavya: const TripMember(id: mKavya, tripId: tripId, userId: 'u5', displayName: 'Kavya', role: MemberRole.passenger,
+          hasVehicle: false, convoyRole: ConvoyRole.navigator),
+    };
+    s.me = s.members[mAngith];
+    return s;
+  }
+
+  testWidgets('18 plan multi-day', (t) async {
+    final s = planningSession();
+    await shoot(t, '18_plan_days', tripShell(s, 1, ItineraryTab(session: s)), premium: true);
+  });
+
+  testWidgets('d18 plan multi-day dark', (t) async {
+    final s = planningSession();
+    await shoot(t, 'd18_plan_days_dark', tripShell(s, 1, ItineraryTab(session: s)), premium: true, dark: true);
+  });
+
+  testWidgets('19 convoy roles', (t) async {
+    final s = planningSession()..events.addAll(safetyEvents().where((e) => e.kind == EventKind.headcount || e.kind == EventKind.ready));
+    await shoot(t, '19_convoy_roles', tripShell(s, 3, ConvoyTab(session: s)), premium: true);
+  });
+
+  testWidgets('20 onboarding', (t) => shoot(t, '20_onboarding', const OnboardingScreen()));
+
+  testWidgets('21 crash countdown', (t) async {
+    final s = PreviewSession(liveTracks);
+    await shoot(t, '21_crash', CrashCountdown(session: s));
+  });
 }

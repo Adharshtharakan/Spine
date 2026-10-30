@@ -48,6 +48,7 @@ class Waypoint {
     this.deleted = false,
     this.updatedBy,
     this.affiliateOfferId,
+    this.day,
   });
 
   final String id;
@@ -67,6 +68,10 @@ class Waypoint {
   final String? updatedBy;
   final String? affiliateOfferId;
 
+  /// Trip day this stop belongs to (1-based) on multi-day trips; null on
+  /// single-day trips or when not yet assigned.
+  final int? day;
+
   Waypoint copyWith({
     String? name,
     GeoPoint? location,
@@ -80,6 +85,8 @@ class Waypoint {
     String? notes,
     bool? deleted,
     String? updatedBy,
+    int? day,
+    bool clearDay = false,
   }) =>
       Waypoint(
         id: id,
@@ -96,6 +103,7 @@ class Waypoint {
         deleted: deleted ?? this.deleted,
         updatedBy: updatedBy ?? this.updatedBy,
         affiliateOfferId: affiliateOfferId,
+        day: clearDay ? null : day ?? this.day,
       );
 
   Map<String, dynamic> toRow() => {
@@ -113,6 +121,7 @@ class Waypoint {
         'deleted': deleted,
         'updated_by': updatedBy,
         'affiliate_offer_id': affiliateOfferId,
+        'day': day,
       };
 
   factory Waypoint.fromRow(Map<String, dynamic> r) => Waypoint(
@@ -129,6 +138,7 @@ class Waypoint {
         deleted: (r['deleted'] as bool?) ?? false,
         updatedBy: r['updated_by'] as String?,
         affiliateOfferId: r['affiliate_offer_id'] as String?,
+        day: (r['day'] as num?)?.toInt(),
       );
 
   static DateTime? _date(Object? v) =>

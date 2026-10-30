@@ -20,6 +20,9 @@ class Trip {
     this.endsAt,
     this.maxVehicles,
     this.publishedAt,
+    this.fuelPrice,
+    this.tollPerPlaza,
+    this.currency = 'INR',
   });
 
   final String id;
@@ -36,6 +39,12 @@ class Trip {
   final int? maxVehicles;
   final DateTime? publishedAt;
 
+  /// Fuel price per litre and an average toll per plaza, set by the
+  /// organiser, for the trip cost estimate.
+  final double? fuelPrice;
+  final double? tollPerPlaza;
+  final String currency;
+
   factory Trip.fromRow(Map<String, dynamic> r) => Trip(
         id: r['id'] as String,
         ownerId: r['owner_id'] as String,
@@ -48,6 +57,9 @@ class Trip {
         endsAt: _d(r['ends_at']),
         maxVehicles: r['max_vehicles'] as int?,
         publishedAt: _d(r['published_at']),
+        fuelPrice: (r['fuel_price'] as num?)?.toDouble(),
+        tollPerPlaza: (r['toll_per_plaza'] as num?)?.toDouble(),
+        currency: (r['currency'] as String?) ?? 'INR',
       );
 
   static DateTime? _d(Object? v) => v == null ? null : DateTime.parse(v as String).toLocal();
@@ -64,8 +76,17 @@ class Trip {
         'ends_at': endsAt?.toUtc().toIso8601String(),
         'max_vehicles': maxVehicles,
         'published_at': publishedAt?.toUtc().toIso8601String(),
+        'fuel_price': fuelPrice,
+        'toll_per_plaza': tollPerPlaza,
+        'currency': currency,
       };
 }
+
+/// Sweep drives last and watches for stragglers; the navigator is a
+/// passenger who runs the phone. (The lead is `trips.lead_member_id`.)
+enum ConvoyRole { sweep, navigator }
+
+ConvoyRole? convoyRoleFromWire(String? s) => ConvoyRole.values.where((r) => r.name == s).firstOrNull;
 
 /// A participant. Every member with a vehicle appears on the convoy map.
 class TripMember {
@@ -78,6 +99,9 @@ class TripMember {
     this.vehicleLabel,
     this.vehicleColor = 0xFF2E7DF6,
     this.hasVehicle = true,
+    this.convoyRole,
+    this.tankRangeKm,
+    this.fuelKmpl,
   });
 
   final String id;
@@ -88,6 +112,11 @@ class TripMember {
   final String? vehicleLabel;
   final int vehicleColor;
   final bool hasVehicle;
+  final ConvoyRole? convoyRole;
+
+  /// Range on a full tank and fuel economy, for range warnings and costs.
+  final int? tankRangeKm;
+  final double? fuelKmpl;
 
   Map<String, dynamic> toRow() => {
         'id': id,
@@ -98,6 +127,9 @@ class TripMember {
         'vehicle_label': vehicleLabel,
         'vehicle_color': vehicleColor,
         'has_vehicle': hasVehicle,
+        'convoy_role': convoyRole?.name,
+        'tank_range_km': tankRangeKm,
+        'fuel_kmpl': fuelKmpl,
       };
 
   factory TripMember.fromRow(Map<String, dynamic> r) {
@@ -113,6 +145,9 @@ class TripMember {
       vehicleLabel: r['vehicle_label'] as String?,
       vehicleColor: (r['vehicle_color'] as int?)?.toUnsigned(32) ?? 0xFF2E7DF6,
       hasVehicle: (r['has_vehicle'] as bool?) ?? true,
+      convoyRole: convoyRoleFromWire(r['convoy_role'] as String?),
+      tankRangeKm: (r['tank_range_km'] as num?)?.toInt(),
+      fuelKmpl: (r['fuel_kmpl'] as num?)?.toDouble(),
     );
   }
 }
