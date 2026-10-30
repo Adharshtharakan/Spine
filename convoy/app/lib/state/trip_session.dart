@@ -679,7 +679,7 @@ class TripSession extends ChangeNotifier {
     await _publish(changed);
     if (changed.isNotEmpty) {
       final mins = delta.inMinutes;
-      await sendMessage('${mins >= 0 ? 'Running $mins min late' : 'Running ${-mins} min early'} — schedule updated',
+      await sendMessage('${mins >= 0 ? 'Running $mins min late' : 'Running ${-mins} min early'}. Schedule updated.',
           kind: 'quick');
     }
   }

@@ -113,10 +113,10 @@ void main() {
         sortKey: 1, hlc: 'a', plannedArrival: DateTime(2026, 10, 23, 11, 30));
     final later = before.copyWith(plannedArrival: DateTime(2026, 10, 23, 12, 10), hlc: 'b');
     expect(ConvoyWatch.describePlanChange(before, later, by: 'Ravi', now: t0)!.message,
-        'Plan updated — Ravi: Lunch: Mysuru now at 12:10');
-    expect(ConvoyWatch.describePlanChange(null, before, by: null, now: t0)!.message, 'Plan updated — New stop Lunch: Mysuru at 11:30');
+        'Plan updated. Ravi: Lunch: Mysuru now at 12:10');
+    expect(ConvoyWatch.describePlanChange(null, before, by: null, now: t0)!.message, 'Plan updated. New stop Lunch: Mysuru at 11:30');
     expect(ConvoyWatch.describePlanChange(before, before.copyWith(deleted: true, hlc: 'c'), by: 'Priya', now: t0)!.message,
-        'Plan updated — Priya: Lunch: Mysuru removed from the plan');
+        'Plan updated. Priya: Lunch: Mysuru removed from the plan');
     expect(ConvoyWatch.describePlanChange(before, before.copyWith(notes: 'veg thali', hlc: 'd'), by: 'Ravi', now: t0), isNull,
         reason: 'notes are not worth interrupting a driver for');
   });

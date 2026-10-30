@@ -15,6 +15,7 @@ import 'dart:ui' as ui;
 
 import 'package:convoy/core/geo/geo.dart';
 import 'package:convoy/core/theme/theme.dart';
+import 'package:convoy/core/theme/tokens.dart';
 import 'package:convoy/data/models/social.dart';
 import 'package:convoy/data/models/trip.dart';
 import 'package:convoy/data/models/waypoint.dart';
@@ -230,7 +231,7 @@ List<ChatMessage> sampleMessages() {
   return [
     m('c1', 'u3', 'Priya', 'joined the convoy', 95, kind: 'system'),
     m('c2', 'u2', 'Ravi', 'Leaving Bidadi now, 5 min behind plan', 62),
-    m('c3', uAngith, 'Angith', 'Running late — schedule updated', 61, kind: 'quick'),
+    m('c3', uAngith, 'Angith', 'Running 10 min late. Schedule updated.', 61, kind: 'quick'),
     m('c4', 'u3', 'Priya', 'Fuel soon', 34, kind: 'quick'),
     m('c5', uAngith, 'Angith', 'HP at Maddur is on the left, everyone fill up there', 33),
     m('c6', 'u2', 'Ravi', 'Ok, indicator on 500 m before', 32),
@@ -281,7 +282,7 @@ class FakeEdge extends EdgeRepository {
 
   @override
   Future<List<AffiliateOffer>> offersAlongRoute(List<GeoPoint> route, {Set<OfferCategory>? categories, String? tripId}) async => [
-        AffiliateOffer(id: 's1', category: OfferCategory.hotel, name: 'Heritage stay, Srirangapatna — Karnataka Tourism', location: road[300], provider: 'Karnataka Tourism', detourKm: 1.8, alongKm: 128, sponsored: true, bookingUrl: 'https://x', priceHint: 'from ₹3,400'),
+        AffiliateOffer(id: 's1', category: OfferCategory.hotel, name: 'Heritage stay, Srirangapatna', location: road[300], provider: 'Karnataka Tourism', detourKm: 1.8, alongKm: 128, sponsored: true, bookingUrl: 'https://x', priceHint: 'from ₹3,400'),
         AffiliateOffer(id: 'o1', category: OfferCategory.fuel, name: 'Indian Oil, Mandya bypass', location: road[240], provider: 'openstreetmap', detourKm: 0.2, alongKm: 102),
         AffiliateOffer(id: 'o2', category: OfferCategory.restArea, name: 'Highway rest area, Srirangapatna', location: road[290], provider: 'openstreetmap', detourKm: 0.1, alongKm: 121),
         AffiliateOffer(id: 'o3', category: OfferCategory.hotel, name: 'Royal Orchid Metropole, Mysuru', location: road[320], provider: 'openstreetmap', detourKm: 1.2, alongKm: 140, bookingUrl: 'https://x', rating: 4.4),
@@ -296,7 +297,7 @@ class FakeEdge extends EdgeRepository {
         PublicTrip(id: 't2', title: 'Spiti in 10 days (4x4 only)', summary: 'High passes, river crossings. Recovery gear mandatory.', ownerName: 'Off-road Bengaluru', ownerVerified: true, start: const GeoPoint(12.95, 77.6), end: const GeoPoint(32.2, 78.0), vehicleCount: 6, openSlots: 2, startsAt: now.add(const Duration(days: 30)), tags: const ['4x4', 'mountains'], distanceKm: 7),
         PublicTrip(id: 't3', title: 'Nandi Hills sunrise ride', summary: 'Bikes and cars, back by 10 am.', ownerName: 'Karthik', ownerVerified: false, start: const GeoPoint(13.03, 77.6), end: const GeoPoint(13.37, 77.68), vehicleCount: 9, openSlots: 0, startsAt: now.add(const Duration(days: 2)), tags: const ['bikes'], distanceKm: 9),
       ], const [
-        SponsoredPlacement(name: 'Coorg monsoon trails — official guide', partner: 'Karnataka Tourism', category: 'attraction', url: 'https://x', distanceKm: 210),
+        SponsoredPlacement(name: 'Coorg monsoon trails: official guide', partner: 'Karnataka Tourism', category: 'attraction', url: 'https://x', distanceKm: 210),
         SponsoredPlacement(name: 'Kamat Lokaruchi highway dining', partner: 'Kamat Hotels', category: 'rest_area', url: 'https://x', distanceKm: 38),
       ]);
 }
@@ -332,6 +333,7 @@ class MapPreview extends CustomPainter {
 
   final TripSession s;
   final bool dark;
+  Wayfind get _wf => dark ? Wayfind.night : Wayfind.platform;
   final List<GeoPoint> focus;
   final double topPad, bottomPad;
 
@@ -383,13 +385,13 @@ class MapPreview extends CustomPainter {
       i == 0 ? route.moveTo(o.dx, o.dy) : route.lineTo(o.dx, o.dy);
     }
     canvas.drawPath(route, Paint()..color = dark ? const Color(0xFF6B4A22) : const Color(0xFFF9B26B)..style = PaintingStyle.stroke..strokeWidth = 11..strokeJoin = StrokeJoin.round);
-    canvas.drawPath(route, Paint()..color = const Color(0xBF1F6FEB)..style = PaintingStyle.stroke..strokeWidth = 5..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.round);
+    canvas.drawPath(route, Paint()..color = _wf.live..style = PaintingStyle.stroke..strokeWidth = 5..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.butt);
 
     for (final w in s.itinerary.waypoints) {
       final o = p(w.location);
       if (o.dx < -50 || o.dx > size.width + 50 || o.dy < -50 || o.dy > size.height + 50) continue;
-      canvas.drawCircle(o, 7, Paint()..color = Colors.white);
-      canvas.drawCircle(o, 7, Paint()..color = const Color(0xFF1F6FEB)..style = PaintingStyle.stroke..strokeWidth = 3);
+      canvas.drawCircle(o, 7, Paint()..color = _wf.paper3);
+      canvas.drawCircle(o, 7, Paint()..color = _wf.ink..style = PaintingStyle.stroke..strokeWidth = 3);
       _text(canvas, w.name, o + const Offset(0, 12), 12, top: true);
     }
 
@@ -406,10 +408,10 @@ class MapPreview extends CustomPainter {
         canvas.drawCircle(o, halo, Paint()..color = color.withValues(alpha: 0.5)..style = PaintingStyle.stroke..strokeWidth = 1.2);
       }
       if (v.memberId == lead) {
-        canvas.drawCircle(o, 16, Paint()..color = const Color(0xFFF5A524)..style = PaintingStyle.stroke..strokeWidth = 4);
+        canvas.drawCircle(o, 16, Paint()..color = _wf.figure..style = PaintingStyle.stroke..strokeWidth = 4);
       }
       canvas.drawCircle(o, 10, Paint()..color = color.withValues(alpha: stale && v.source != PositionSource.estimated ? 0.45 : 1));
-      canvas.drawCircle(o, 10, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 3);
+      canvas.drawCircle(o, 10, Paint()..color = _wf.paper3..style = PaintingStyle.stroke..strokeWidth = 3);
       final m = s.members[v.memberId];
       final name = v.memberId == s.me?.id ? 'You' : (m?.vehicleLabel ?? m?.displayName ?? 'Vehicle');
       final via = switch (v.source) {
@@ -419,7 +421,7 @@ class MapPreview extends CustomPainter {
       };
       // Like MapLibre's variable anchors: above, below, left or right of
       // the dot, whichever is free.
-      final label = '${v.memberId == lead ? 'Lead · ' : ''}$name$via';
+      final label = '$name${v.memberId == lead ? ', lead' : ''}$via';
       final w = _measure(label, 13).width + 8, h = 20.0;
       final candidates = [
         Rect.fromCenter(center: o - const Offset(0, 28), width: w, height: h),
@@ -438,12 +440,12 @@ class MapPreview extends CustomPainter {
 
   void _text(Canvas c, String t, Offset at, double size, {bool top = false, bool bold = false}) {
     final style = TextStyle(
-        fontFamily: 'Roboto', fontSize: size, color: dark ? const Color(0xFFE7ECF5) : const Color(0xFF1B1B1F), fontWeight: bold ? FontWeight.w600 : FontWeight.w500);
+        fontFamily: 'Roboto', fontSize: size, color: _wf.ink, fontWeight: bold ? FontWeight.w600 : FontWeight.w500);
     final halo = TextPainter(
       text: TextSpan(
           text: t,
           style: style.copyWith(
-              foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = dark ? const Color(0xFF0D121C) : Colors.white)),
+              foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = _wf.paper)),
       textDirection: TextDirection.ltr,
     )..layout();
     final tp = TextPainter(text: TextSpan(text: t, style: style), textDirection: TextDirection.ltr)..layout();
@@ -465,18 +467,17 @@ Future<void> loadFonts() async {
     roboto.addFont(Future.value(ByteData.sublistView(File('$dir/$f').readAsBytesSync())));
   }
   await roboto.load();
+  final chivo = FontLoader(ConvoyTheme.fontFamily);
+  for (final f in ['Regular', 'Medium', 'ExtraBold']) {
+    chivo.addFont(Future.value(ByteData.sublistView(File('assets/fonts/ChivoMono-$f.ttf').readAsBytesSync())));
+  }
+  await chivo.load();
   final icons = FontLoader('MaterialIcons')
     ..addFont(Future.value(ByteData.sublistView(File('$dir/MaterialIcons-Regular.otf').readAsBytesSync())));
   await icons.load();
 }
 
-ThemeData theme({bool dark = false}) {
-  final t = dark ? ConvoyTheme.dark() : ConvoyTheme.light();
-  return t.copyWith(
-    textTheme: t.textTheme.apply(fontFamily: 'Roboto'),
-    primaryTextTheme: t.primaryTextTheme.apply(fontFamily: 'Roboto'),
-  );
-}
+ThemeData theme({bool dark = false}) => dark ? ConvoyTheme.dark() : ConvoyTheme.light();
 
 /// Android-style status bar painted over the top inset.
 class StatusBar extends StatelessWidget {
@@ -519,7 +520,9 @@ Widget tripShell(TripSession s, int tab, Widget body, {Widget? backdrop}) => Sta
         backgroundColor: backdrop != null ? Colors.transparent : null,
         appBar: AppBar(title: Text(s.trip!.title)),
         body: body,
-        bottomNavigationBar: NavigationBar(
+        bottomNavigationBar: Builder(builder: (context) => DecoratedBox(
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: context.wf.ink, width: Rules.bar))),
+          child: NavigationBar(
           selectedIndex: tab,
           destinations: const [
             NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
@@ -528,7 +531,7 @@ Widget tripShell(TripSession s, int tab, Widget body, {Widget? backdrop}) => Sta
             NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Convoy'),
             NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Stops'),
           ],
-        ),
+        ))),
       ),
     ]);
 
@@ -554,7 +557,7 @@ Future<void> shoot(WidgetTester tester, String name, Widget screen,
         myTripsProvider.overrideWith((ref) async => [
               trip,
               Trip(id: 't2', ownerId: 'x', title: 'Gokarna beach run', inviteCode: 'B3HV8WQE', visibility: TripVisibility.private, startsAt: now.add(const Duration(days: 21))),
-              Trip(id: 't3', ownerId: 'x', title: 'Diwali family drive — Ooty', inviteCode: 'P2LM4KAD', visibility: TripVisibility.private, startsAt: now.subtract(const Duration(days: 40))),
+              Trip(id: 't3', ownerId: 'x', title: 'Diwali family drive to Ooty', inviteCode: 'P2LM4KAD', visibility: TripVisibility.private, startsAt: now.subtract(const Duration(days: 40))),
             ]),
         currentUserProvider.overrideWithValue(User(
             id: uAngith, appMetadata: const {}, userMetadata: const {}, aud: 'authenticated',
@@ -717,7 +720,7 @@ void main() {
   // Convoy Watch.
   List<ConvoyAlert> sampleAlerts() => [
         ConvoyAlert(kind: AlertKind.fallingBehind, memberId: mArjun, message: 'Ertiga is 3.4 km behind Swift', at: now),
-        ConvoyAlert(kind: AlertKind.planChanged, memberId: null, message: 'Plan updated — Ravi: Lunch: Mysuru now at 12:10', at: now),
+        ConvoyAlert(kind: AlertKind.planChanged, memberId: null, message: 'Plan updated. Ravi: Lunch: Mysuru now at 12:10', at: now),
       ];
   testWidgets('15 map alerts', (t) async {
     final s = PreviewSession(liveTracks);
@@ -732,7 +735,7 @@ void main() {
   testWidgets('d15 map alerts dark', (t) async {
     final s = PreviewSession(liveTracks);
     s.alerts.addAll([
-      ConvoyAlert(kind: AlertKind.unplannedStop, memberId: mArjun, message: 'Ertiga has stopped for 4 min — not a planned stop', at: now),
+      ConvoyAlert(kind: AlertKind.unplannedStop, memberId: mArjun, message: 'Ertiga has stopped for 4 min. Not a planned stop.', at: now),
     ]);
     await shoot(t, 'd15_map_alerts_dark',
         tripShell(s, 0, MapTab(session: s), backdrop: CustomPaint(painter: MapPreview(s, focus: convoyFocus(s), dark: true))),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/tokens.dart';
 import '../../state/providers.dart';
 import '../../state/trip_session.dart';
 import '../chat/chat_tab.dart';
@@ -53,20 +54,43 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         return Scaffold(
           appBar: AppBar(title: Text(session.trip?.title ?? 'DriveSync')),
           body: IndexedStack(index: _tab, children: tabs),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
-            destinations: [
-              const NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
-              const NavigationDestination(icon: Icon(Icons.route_outlined), selectedIcon: Icon(Icons.route), label: 'Plan'),
-              NavigationDestination(
-                icon: Badge(isLabelVisible: unread > 0 && _tab != 2, smallSize: 8, child: const Icon(Icons.forum_outlined)),
-                selectedIcon: const Icon(Icons.forum),
-                label: 'Chat',
+          bottomNavigationBar: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: context.wf.ink, width: Rules.bar),
               ),
-              const NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Convoy'),
-              ...extraTripDestinations(),
-            ],
+            ),
+            child: NavigationBar(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              destinations: [
+                const NavigationDestination(
+                  icon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map),
+                  label: 'Map',
+                ),
+                const NavigationDestination(
+                  icon: Icon(Icons.route_outlined),
+                  selectedIcon: Icon(Icons.route),
+                  label: 'Plan',
+                ),
+                NavigationDestination(
+                  icon: Badge.count(
+                    count: unread,
+                    isLabelVisible: unread > 0 && _tab != 2,
+                    child: const Icon(Icons.forum_outlined),
+                  ),
+                  selectedIcon: const Icon(Icons.forum),
+                  label: 'Chat',
+                ),
+                const NavigationDestination(
+                  icon: Icon(Icons.groups_outlined),
+                  selectedIcon: Icon(Icons.groups),
+                  label: 'Convoy',
+                ),
+                ...extraTripDestinations(),
+              ],
+            ),
           ),
         );
       },

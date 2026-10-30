@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/brand/logo.dart';
+import '../../core/theme/tokens.dart';
+import '../../core/widgets/wayfind.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../state/providers.dart';
 
@@ -56,122 +58,64 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final s = t.colorScheme;
-    final dark = t.brightness == Brightness.dark;
+    final w = context.wf;
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: dark
-                ? [const Color(0xFF12234A), s.surface]
-                : [const Color(0xFFE3EDFF), s.surface],
-            stops: const [0, 0.55],
-          ),
-        ),
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-            children: [
-              const Center(child: DriveSyncLogo(size: 44, vertical: true)),
-              const SizedBox(height: 14),
-              Text('One map, one plan, one channel\nfor every car in your group.',
-                  style: t.textTheme.titleMedium?.copyWith(color: s.onSurfaceVariant, height: 1.35),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 28),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: const [
-                  _Feature(Icons.my_location, 'Live group map'),
-                  _Feature(Icons.mic, 'Push-to-talk'),
-                  _Feature(Icons.cloud_off, 'Works offline'),
-                ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          children: [
+            const Align(alignment: Alignment.centerLeft, child: DriveSyncLogo(size: 30)),
+            const SizedBox(height: 56),
+            Text('One map, one plan, one channel for every car in your group.', style: t.textTheme.headlineMedium),
+            const SizedBox(height: 32),
+            Container(height: Rules.bar, color: w.ink),
+            const SizedBox(height: 20),
+            Text(_sent ? 'Check your email' : 'Sign in or create an account', style: t.textTheme.titleLarge),
+            const SizedBox(height: 6),
+            Text(
+              _sent ? 'We sent a 6-digit code to ${_email.text.trim()}.' : 'No password needed. We email you a one-time code.',
+              style: t.textTheme.bodyMedium?.copyWith(color: w.muted),
+            ),
+            const SizedBox(height: 20),
+            if (!_sent) ...[
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Your name', helperText: 'Shown to your convoy'),
               ),
-              const SizedBox(height: 28),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(_sent ? 'Check your email' : 'Sign in or create an account', style: t.textTheme.titleLarge),
-                      const SizedBox(height: 6),
-                      Text(
-                        _sent
-                            ? 'We sent a 6-digit code to ${_email.text.trim()}.'
-                            : 'No password needed — we email you a one-time code.',
-                        style: t.textTheme.bodyMedium?.copyWith(color: s.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 20),
-                      if (!_sent) ...[
-                        TextField(
-                          controller: _name,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
-                              labelText: 'Your name', hintText: 'Shown to your convoy', prefixIcon: Icon(Icons.person_outline)),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton(onPressed: _busy ? null : _send, child: const Text('Email me a code')),
-                      ] else ...[
-                        TextField(
-                          controller: _code,
-                          keyboardType: TextInputType.number,
-                          autofillHints: const [AutofillHints.oneTimeCode],
-                          textAlign: TextAlign.center,
-                          style: t.textTheme.headlineSmall?.copyWith(letterSpacing: 8),
-                          decoration: const InputDecoration(hintText: '••••••'),
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton(onPressed: _busy ? null : _verify, child: const Text('Sign in')),
-                        TextButton(
-                            onPressed: _busy ? null : () => setState(() => _sent = false), child: const Text('Use a different email')),
-                      ],
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(_error!, style: TextStyle(color: s.error)),
-                      ],
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(onPressed: _busy ? null : _send, child: const Text('Email me a code')),
+            ] else ...[
+              TextField(
+                controller: _code,
+                keyboardType: TextInputType.number,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                style: t.textTheme.headlineMedium?.copyWith(letterSpacing: 10),
+                decoration: const InputDecoration(labelText: 'Code'),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(onPressed: _busy ? null : _verify, child: const Text('Sign in')),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                    onPressed: _busy ? null : () => setState(() => _sent = false), child: const Text('Use a different email')),
               ),
             ],
-          ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Note(_error!),
+            ],
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _Feature extends StatelessWidget {
-  const _Feature(this.icon, this.label);
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: s.surfaceContainerLowest.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: s.outlineVariant),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 16, color: s.primary),
-        const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: s.onSurface)),
-      ]),
     );
   }
 }
@@ -233,10 +177,7 @@ class _VerifyPhoneSheetState extends ConsumerState<VerifyPhoneSheet> {
                 decoration: const InputDecoration(labelText: 'SMS code'),
               ),
             ],
-            if (_error != null) Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ),
+            if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Note(_error!)),
             const SizedBox(height: 16),
             FilledButton(onPressed: _go, child: Text(_sent ? 'Confirm' : 'Send code')),
           ],

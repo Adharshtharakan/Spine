@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/geo/geo.dart';
+import '../../core/theme/tokens.dart';
+import '../../core/widgets/wayfind.dart';
 import '../../data/models/waypoint.dart';
 import '../../state/trip_session.dart';
 
@@ -14,64 +16,78 @@ class ItineraryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final w = context.wf;
+    final t = Theme.of(context).textTheme;
     final stops = session.itinerary.waypoints;
     final byRoad = !identical(session.routeLine, session.itinerary.route) &&
         session.routeLine.length > session.itinerary.route.length;
     final total = Geo.routeLength(session.routeLine);
+    final nextId = session.nextStop?.id;
     return Scaffold(
       body: stops.isEmpty
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('No stops yet. Add the start, the destination and any rest stops — '
-                    'or long-press the map to drop one.', textAlign: TextAlign.center),
-              ),
-            )
-          : Column(children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(children: [
-                  Text('${stops.length} stops · ${Geo.formatDistance(total)} ${byRoad ? 'by road' : 'straight-line'}',
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const Spacer(),
-                  TextButton.icon(
-                    icon: const Icon(Icons.schedule),
-                    label: const Text('Running late'),
-                    onPressed: () => _shift(context),
-                  ),
+          ? ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
+              const BoardHead('Route', padding: EdgeInsets.fromLTRB(0, 24, 0, 0)),
+              const SizedBox(height: 24),
+              Text('No stops yet', style: t.headlineSmall),
+              const SizedBox(height: 10),
+              Text('Add the start, the destination and any rest stops, or long-press the map to drop one.',
+                  style: t.bodyLarge?.copyWith(color: w.muted)),
+            ])
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              // The route's summary, read like the head of a timetable.
+              Container(
+                color: w.paper2,
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Meta([
+                  ('Stops', '${stops.length}'),
+                  (byRoad ? 'By road' : 'Straight-line', Geo.formatDistance(total)),
+                  if (session.nextStop != null) ('Next', session.nextStop!.name),
                 ]),
               ),
+              Divider(height: Rules.bar, thickness: Rules.bar, color: w.ink),
               Expanded(
                 child: ReorderableListView.builder(
+                  padding: const EdgeInsets.only(bottom: 16),
                   itemCount: stops.length,
                   onReorderItem: (from, insertAt) {
                     final id = stops[from].id;
                     final list = [...stops]..removeAt(from);
                     session.moveStop(id, insertAt == 0 ? null : list[insertAt - 1].id);
                   },
-                  itemBuilder: (context, i) {
-                    final w = stops[i];
-                    return ListTile(
-                      key: ValueKey(w.id),
-                      leading: CircleAvatar(child: Icon(_icon(w.kind))),
-                      title: Text(w.name),
-                      subtitle: Text([
-                        w.kind.label,
-                        if (w.plannedArrival != null) 'arrive ${DateFormat.MMMd().add_Hm().format(w.plannedArrival!)}',
-                        if (w.plannedDeparture != null) 'leave ${DateFormat.Hm().format(w.plannedDeparture!)}',
-                        if (w.notes.isNotEmpty) w.notes,
-                      ].join(' · ')),
-                      onTap: () => editStopDialog(context, session, existing: w),
-                    );
-                  },
+                  itemBuilder: (context, i) => _StopRow(
+                    key: ValueKey(stops[i].id),
+                    stop: stops[i],
+                    index: i,
+                    first: i == 0,
+                    last: i == stops.length - 1,
+                    next: stops[i].id == nextId,
+                    onTap: () => editStopDialog(context, session, existing: stops[i]),
+                  ),
                 ),
               ),
             ]),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'add-stop',
-        icon: const Icon(Icons.add_location_alt),
-        label: const Text('Add stop'),
-        onPressed: () => editStopDialog(context, session),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(color: w.paper, border: Border(top: BorderSide(color: w.ink, width: Rules.bar))),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.schedule, size: 20),
+                label: const Text('Running late'),
+                onPressed: stops.isEmpty ? null : () => _shift(context),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                icon: const Icon(Icons.add_location_alt_outlined, size: 20),
+                label: const Text('Add stop'),
+                onPressed: () => editStopDialog(context, session),
+              ),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -97,6 +113,101 @@ class ItineraryTab extends StatelessWidget {
       ),
     );
     if (minutes != null) await session.shiftSchedule(next.id, Duration(minutes: minutes));
+  }
+}
+
+/// One stop on the line diagram: planned time on the left, the cobalt route
+/// line with a square stop marker, then the stop itself.
+class _StopRow extends StatelessWidget {
+  const _StopRow({
+    super.key,
+    required this.stop,
+    required this.index,
+    required this.first,
+    required this.last,
+    required this.next,
+    required this.onTap,
+  });
+
+  final Waypoint stop;
+  final int index;
+  final bool first, last, next;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = context.wf;
+    final t = Theme.of(context).textTheme;
+    final arrive = stop.plannedArrival, leave = stop.plannedDeparture;
+    final terminus = stop.kind == WaypointKind.origin || stop.kind == WaypointKind.destination;
+    return Material(
+      color: next ? w.paper3 : w.paper,
+      child: InkWell(
+        onTap: onTap,
+        child: IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // Time column.
+            SizedBox(
+              width: 72,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 0, 16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (arrive != null) Text(DateFormat.Hm().format(arrive), style: t.titleMedium),
+                  if (arrive != null) Text(DateFormat.MMMd().format(arrive), style: t.labelSmall),
+                ]),
+              ),
+            ),
+            // Line diagram: the route runs through every stop; the ends stop at the termini.
+            SizedBox(
+              width: 40,
+              child: Stack(alignment: Alignment.topCenter, children: [
+                Positioned(
+                  top: first ? 22 : 0,
+                  bottom: last ? null : 0,
+                  height: last ? 22 : null,
+                  child: Container(width: 5, color: w.live),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: terminus ? w.ink : w.paper3,
+                      border: Border.all(color: w.ink, width: Rules.bar),
+                    ),
+                    child: Text('${index + 1}',
+                        style: t.labelSmall?.copyWith(color: terminus ? w.paper : w.ink, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ]),
+            ),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 14, 16, 14),
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: w.rule, width: Rules.hair))),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Icon(_icon(stop.kind), size: 18, color: w.ink2),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(stop.name, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    if (next) Text('Next', style: t.labelMedium?.copyWith(color: w.live, fontWeight: FontWeight.w800)),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(stop.kind.label, style: t.bodySmall),
+                  if (leave != null) Text('Leaves ${DateFormat.Hm().format(leave)}', style: t.bodySmall),
+                  if (stop.notes.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(stop.notes, style: t.bodyMedium),
+                  ],
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
   }
 }
 

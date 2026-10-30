@@ -3,6 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../core/config/env.dart';
 import '../../core/geo/geo.dart';
+import '../../core/theme/tokens.dart';
 import '../../data/models/trip.dart';
 import '../../data/models/waypoint.dart';
 
@@ -50,8 +51,10 @@ class _ConvoyMapState extends State<ConvoyMap> {
 
   String get _style => Env.mapStyleUrlFor(dark: widget.dark);
 
-  String get _labelColor => widget.dark ? '#E7ECF5' : '#1B1B1F';
-  String get _haloColor => widget.dark ? '#0D121C' : '#FFFFFF';
+  /// The theme's tokens, refreshed on every build; MapLibre takes CSS strings.
+  Wayfind _w = Wayfind.platform;
+  String get _labelColor => Wayfind.css(_w.ink);
+  String get _haloColor => Wayfind.css(_w.paper);
 
   @override
   void didUpdateWidget(covariant ConvoyMap old) {
@@ -68,12 +71,12 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addLineLayer(
       'route',
       'route-line',
-      const LineLayerProperties(
-        lineColor: '#1F6FEB',
+      // The planned line in cobalt, like a route on a transit map.
+      LineLayerProperties(
+        lineColor: Wayfind.css(_w.live),
         lineWidth: 5,
-        lineOpacity: 0.75,
         lineJoin: 'round',
-        lineCap: 'round',
+        lineCap: 'butt',
       ),
     );
 
@@ -81,10 +84,10 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addCircleLayer(
       'stops',
       'stops-circle',
-      const CircleLayerProperties(
+      CircleLayerProperties(
         circleRadius: 7,
-        circleColor: '#FFFFFF',
-        circleStrokeColor: '#1F6FEB',
+        circleColor: Wayfind.css(_w.paper3),
+        circleStrokeColor: Wayfind.css(_w.ink),
         circleStrokeWidth: 3,
       ),
     );
@@ -121,10 +124,10 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addCircleLayer(
       'vehicles',
       'vehicles-lead-ring',
-      const CircleLayerProperties(
+      CircleLayerProperties(
         circleRadius: 16,
         circleColor: 'rgba(0,0,0,0)',
-        circleStrokeColor: '#F5A524',
+        circleStrokeColor: Wayfind.css(_w.figure),
         circleStrokeWidth: 4,
       ),
       filter: ['==', ['get', 'lead'], true],
@@ -132,12 +135,12 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addCircleLayer(
       'vehicles',
       'vehicles-dot',
-      const CircleLayerProperties(
+      CircleLayerProperties(
         circleRadius: 10,
-        circleColor: ['get', 'color'],
-        circleStrokeColor: '#FFFFFF',
+        circleColor: const ['get', 'color'],
+        circleStrokeColor: Wayfind.css(_w.paper3),
         circleStrokeWidth: 3,
-        circleOpacity: ['case', ['get', 'stale'], 0.45, 1.0],
+        circleOpacity: const ['case', ['get', 'stale'], 0.45, 1.0],
       ),
     );
     await map.addSymbolLayer(
@@ -233,7 +236,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
             'id': p.memberId,
             'properties': {
               'label': _label(p),
-              'color': _hex(widget.members[p.memberId]?.vehicleColor ?? 0xFF2E7DF6),
+              'color': _hex(widget.members[p.memberId]?.vehicleColor ?? Wayfind.vehicleColours.first),
               'lead': p.memberId == widget.leadMemberId,
               'self': p.memberId == widget.selfMemberId,
               'stale': p.age(now) > const Duration(seconds: 90),
@@ -250,19 +253,20 @@ class _ConvoyMapState extends State<ConvoyMap> {
     final m = widget.members[p.memberId];
     final name = p.memberId == widget.selfMemberId ? 'You' : (m?.vehicleLabel ?? m?.displayName ?? 'Vehicle');
     // Plain text: map label fonts don't reliably include symbols like ★.
-    final lead = p.memberId == widget.leadMemberId ? 'Lead · ' : '';
+    final lead = p.memberId == widget.leadMemberId ? ', lead' : '';
     final via = switch (p.source) {
       PositionSource.mesh => ' (off-grid)',
       PositionSource.estimated => ' (est.)',
       _ => '',
     };
-    return '$lead$name$via';
+    return '$name$lead$via';
   }
 
   static String _hex(int argb) => '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
   @override
   Widget build(BuildContext context) {
+    _w = context.wf;
     return MapLibreMap(
       styleString: _style,
       initialCameraPosition: const CameraPosition(target: LatLng(20, 0), zoom: 2),

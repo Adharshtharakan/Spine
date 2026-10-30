@@ -136,14 +136,14 @@ class ConvoyWatch {
       final atPlannedStop = near != null && Geo.distanceMeters(near.location, p.point) <= nearStopMeters;
       final stopped = id != selfId && !s.stale && p.speedMps < 1 && stoppedFor >= stopHold && !atPlannedStop;
       _check(out, AlertKind.unplannedStop, id, stopped, Duration.zero, now,
-          '${name(id)} has stopped for ${stoppedFor.inMinutes} min — not a planned stop',
+          '${name(id)} has stopped for ${stoppedFor.inMinutes} min. Not a planned stop.',
           '${name(id)} has stopped. Not a planned stop.');
 
       // Lost contact.
       final silent = now.difference(p.timestamp);
       final lost = id != selfId && selfOnline && _wasLive.contains(id) && silent >= lostAfter;
       _check(out, AlertKind.lostContact, id, lost, Duration.zero, now,
-          'Lost contact with ${name(id)} — last heard ${silent.inMinutes} min ago',
+          'Lost contact with ${name(id)}. Last heard ${silent.inMinutes} min ago',
           'Lost contact with ${name(id)}.');
     }
     return out;
@@ -211,7 +211,7 @@ class ConvoyWatch {
       }
     }
     if (msg == null) return null;
-    final text = 'Plan updated — ${msg[0].toUpperCase()}${msg.substring(1)}';
+    final text = 'Plan updated. ${msg[0].toUpperCase()}${msg.substring(1)}';
     return ConvoyAlert(kind: AlertKind.planChanged, memberId: null, message: text, at: now, spoken: 'Plan updated. $msg.');
   }
 }

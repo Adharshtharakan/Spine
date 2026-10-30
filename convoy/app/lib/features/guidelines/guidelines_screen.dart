@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/widgets/wayfind.dart';
 import '../../data/models/social.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../state/providers.dart';
@@ -38,10 +39,12 @@ class _GuidelinesScreenState extends ConsumerState<GuidelinesScreen> {
     try {
       final repo = ref.read(guidelineRepositoryProvider);
       for (final d in docs) {
-        await repo.accept(d,
-            attestation: d.kind == 'driver_terms'
-                ? {'licensed': _licensed, 'insured': _insured, 'roadworthy': _roadworthy}
-                : const {});
+        await repo.accept(
+          d,
+          attestation: d.kind == 'driver_terms'
+              ? {'licensed': _licensed, 'insured': _insured, 'roadworthy': _roadworthy}
+              : const {},
+        );
       }
       ref.invalidate(acceptedGuidelinesProvider);
       ref.invalidate(verifiedPartyProvider);
@@ -60,59 +63,57 @@ class _GuidelinesScreenState extends ConsumerState<GuidelinesScreen> {
       appBar: AppBar(title: const Text('Before you drive')),
       body: docs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(friendlyError(e))),
+        error: (e, _) => ListView(padding: const EdgeInsets.all(16), children: [Note(friendlyError(e))]),
         data: (list) => ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
           children: [
-            Text('A few promises before the road', style: t.textTheme.headlineSmall),
-            const SizedBox(height: 6),
-            Text('Everyone in a DriveSync convoy accepts the same rules. Read them once; we ask again only if they change.',
-                style: t.textTheme.bodyMedium?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            Text('A few promises before the road', style: t.textTheme.headlineMedium),
+            const SizedBox(height: 10),
+            Text(
+              'Everyone in a DriveSync convoy accepts the same rules. Read them once; we ask again only if they change.',
+              style: t.textTheme.bodyMedium?.copyWith(color: t.colorScheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
             for (final d in list) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Icon(d.kind == 'driver_terms' ? Icons.badge_outlined : Icons.handshake_outlined, color: t.colorScheme.primary),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(d.title, style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
-                      Text('v${d.version}', style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-                    ]),
-                    const SizedBox(height: 10),
-                    Text(d.body.trim(), style: t.textTheme.bodyMedium?.copyWith(height: 1.45)),
-                  ]),
-                ),
+              BoardHead(
+                d.title,
+                padding: const EdgeInsets.only(top: 20),
+                trailing: Text('Version ${d.version}', style: t.textTheme.labelMedium),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
+              Text(d.body.trim(), style: t.textTheme.bodyMedium),
+              const SizedBox(height: 8),
             ],
+            BoardHead('Your promises', padding: const EdgeInsets.only(top: 24, bottom: 4)),
             CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
               value: _readGuidelines,
               onChanged: (v) => setState(() => _readGuidelines = v ?? false),
               title: const Text('I have read and accept the community guidelines'),
             ),
-            const Divider(),
             CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
               value: _licensed,
               onChanged: (v) => setState(() => _licensed = v ?? false),
               title: const Text('I hold a valid licence for the vehicle I drive'),
             ),
             CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
               value: _insured,
               onChanged: (v) => setState(() => _insured = v ?? false),
               title: const Text('My vehicle is insured where I travel'),
             ),
             CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
               value: _roadworthy,
               onChanged: (v) => setState(() => _roadworthy = v ?? false),
               title: const Text('My vehicle is roadworthy for the planned route'),
             ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(_error!, style: TextStyle(color: t.colorScheme.error)),
-              ),
+            if (_error != null) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Note(_error!)),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: _ready && !_busy ? () => _accept(list) : null,
