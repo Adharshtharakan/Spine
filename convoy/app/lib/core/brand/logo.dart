@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
-/// DriveSync brand colours: the mark is a sign plate in the Wayfind palette.
+/// DriveSync brand colours: a blue tile, a white D and an amber car.
 abstract final class Brand {
-  static final plate = Wayfind.platform.plate;
-  static final paper = Wayfind.platform.paper;
-  static final amber = Wayfind.platform.figure;
+  static const blueLight = Color(0xFF5B8CFF);
+  static const blue = Color(0xFF2F6BFF);
+  static const blueDeep = Color(0xFF1C47C9);
+  static const paper = Color(0xFFFFFFFF);
+  static const amber = Color(0xFFFFB020);
 }
 
-/// The DriveSync mark: a sign plate (flat ink, square) carrying a bold "D"
-/// with a car in its curve. Drawn in code so the in-app logo and every
-/// launcher icon (generated from this painter by `tool/gen_icons_test.dart`)
-/// are identical and stay crisp at any size. No gradient, no gloss.
+/// The DriveSync mark: a blue rounded tile carrying a bold "D" with a car in
+/// its curve. Drawn in code so the in-app logo and every launcher icon
+/// (generated from this painter by `tool/gen_icons_test.dart`) are identical
+/// and stay crisp at any size.
 class DriveSyncMarkPainter extends CustomPainter {
   const DriveSyncMarkPainter({
     this.background = true,
-    this.roundedTile = false,
+    this.roundedTile = true,
     this.monochrome = false,
     this.glyphScale = 1.0,
     this.glyph = true,
@@ -25,11 +27,11 @@ class DriveSyncMarkPainter extends CustomPainter {
   /// Paint the D-and-car glyph (off for an adaptive icon's background layer).
   final bool glyph;
 
-  /// Paint the ink plate behind the glyph.
+  /// Paint the blue tile behind the glyph.
   final bool background;
 
-  /// Slightly round the plate's corners like a pressed sign (legacy Android
-  /// launcher icons only; in the app and on iOS the plate is square).
+  /// Round the tile's corners (off for iOS, which masks icons itself, and
+  /// for an adaptive icon's full-bleed background layer).
   final bool roundedTile;
 
   /// Single-colour white glyph (Android 13 themed icons).
@@ -46,9 +48,15 @@ class DriveSyncMarkPainter extends CustomPainter {
 
     if (background) {
       final tile = Offset.zero & Size(s, s);
-      final paint = Paint()..color = Brand.plate;
+      final paint = Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Brand.blueLight, Brand.blue, Brand.blueDeep],
+          stops: [0, 0.45, 1],
+        ).createShader(tile);
       if (roundedTile) {
-        canvas.drawRRect(RRect.fromRectAndRadius(tile, Radius.circular(s * 0.1)), paint);
+        canvas.drawRRect(RRect.fromRectAndRadius(tile, Radius.circular(s * 0.3)), paint);
       } else {
         canvas.drawRect(tile, paint);
       }
@@ -117,7 +125,7 @@ class DriveSyncMarkPainter extends CustomPainter {
     canvas.drawPath(body, Paint()..color = bodyColor);
 
     // Windows (cut out in monochrome).
-    final glass = monochrome ? (Paint()..blendMode = BlendMode.clear) : (Paint()..color = Brand.plate);
+    final glass = monochrome ? (Paint()..blendMode = BlendMode.clear) : (Paint()..color = Brand.blueDeep);
     {
       canvas.drawPath(
         Path()
@@ -138,14 +146,14 @@ class DriveSyncMarkPainter extends CustomPainter {
         glass,
       );
       // Headlight.
-      if (!monochrome) canvas.drawRect(const Rect.fromLTWH(66.6, 53.8, 1.6, 1.6), Paint()..color = Brand.paper);
+      if (!monochrome) canvas.drawCircle(const Offset(67.4, 54.6), 0.9, Paint()..color = Brand.paper);
     }
 
     // Wheels.
     for (final x in [43.2, 62.0]) {
       canvas.drawCircle(Offset(x, 61.4), 3.9, Paint()..color = monochrome ? Colors.white : Brand.paper);
       canvas.drawCircle(
-          Offset(x, 61.4), 1.6, monochrome ? (Paint()..blendMode = BlendMode.clear) : (Paint()..color = Brand.plate));
+          Offset(x, 61.4), 1.6, monochrome ? (Paint()..blendMode = BlendMode.clear) : (Paint()..color = Brand.blueDeep));
     }
     if (monochrome) canvas.restore();
     canvas.restore();
@@ -170,7 +178,7 @@ class DriveSyncMark extends StatelessWidget {
       );
 }
 
-/// Mark + "DriveSync" wordmark, one ink colour.
+/// Mark + "DriveSync" wordmark.
 class DriveSyncLogo extends StatelessWidget {
   const DriveSyncLogo({super.key, this.size = 40});
   final double size;
@@ -181,10 +189,10 @@ class DriveSyncLogo extends StatelessWidget {
       'DriveSync',
       style: TextStyle(
         fontSize: size * 0.56,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.03 * size * 0.56,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.02 * size * 0.56,
         height: 1,
-        color: context.wf.ink,
+        color: context.tones.ink,
       ),
     );
     return Row(mainAxisSize: MainAxisSize.min, children: [DriveSyncMark(size: size), SizedBox(width: size * 0.3), word]);

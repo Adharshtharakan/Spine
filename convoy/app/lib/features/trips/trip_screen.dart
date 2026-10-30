@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/tokens.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../state/providers.dart';
 import '../../state/trip_session.dart';
 import '../chat/chat_tab.dart';
@@ -51,46 +51,20 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ConvoyTab(session: session),
           ...extraTripTabs(session),
         ];
+        // Tabs draw their own headers; the tab bar floats over the content.
         return Scaffold(
-          appBar: AppBar(title: Text(session.trip?.title ?? 'DriveSync')),
+          extendBody: true,
           body: IndexedStack(index: _tab, children: tabs),
-          bottomNavigationBar: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: context.wf.ink, width: Rules.bar),
-              ),
-            ),
-            child: NavigationBar(
-              selectedIndex: _tab,
-              onDestinationSelected: (i) => setState(() => _tab = i),
-              destinations: [
-                const NavigationDestination(
-                  icon: Icon(Icons.map_outlined),
-                  selectedIcon: Icon(Icons.map),
-                  label: 'Map',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.route_outlined),
-                  selectedIcon: Icon(Icons.route),
-                  label: 'Plan',
-                ),
-                NavigationDestination(
-                  icon: Badge.count(
-                    count: unread,
-                    isLabelVisible: unread > 0 && _tab != 2,
-                    child: const Icon(Icons.forum_outlined),
-                  ),
-                  selectedIcon: const Icon(Icons.forum),
-                  label: 'Chat',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.groups_outlined),
-                  selectedIcon: Icon(Icons.groups),
-                  label: 'Convoy',
-                ),
-                ...extraTripDestinations(),
-              ],
-            ),
+          bottomNavigationBar: FloatingNavBar(
+            index: _tab,
+            onTap: (i) => setState(() => _tab = i),
+            items: [
+              const FloatingNavItem(Icons.map_outlined, Icons.map_rounded, 'Map'),
+              const FloatingNavItem(Icons.route_outlined, Icons.route_rounded, 'Plan'),
+              FloatingNavItem(Icons.forum_outlined, Icons.forum_rounded, 'Chat', badge: _tab == 2 ? 0 : unread),
+              const FloatingNavItem(Icons.groups_outlined, Icons.groups_rounded, 'Convoy'),
+              ...extraTripDestinations(),
+            ],
           ),
         );
       },
@@ -112,12 +86,12 @@ TripSession createTripSession(WidgetRef ref, String tripId) {
 /// into the trip without this screen depending on them directly.
 final List<void Function(WidgetRef ref, TripSession s)> tripSessionHooks = [];
 final List<Widget Function(TripSession s)> _extraTabs = [];
-final List<NavigationDestination> _extraDestinations = [];
+final List<FloatingNavItem> _extraDestinations = [];
 
-void registerTripTab(NavigationDestination destination, Widget Function(TripSession s) build) {
+void registerTripTab(FloatingNavItem destination, Widget Function(TripSession s) build) {
   _extraDestinations.add(destination);
   _extraTabs.add(build);
 }
 
 List<Widget> extraTripTabs(TripSession s) => [for (final b in _extraTabs) b(s)];
-List<NavigationDestination> extraTripDestinations() => List.of(_extraDestinations);
+List<FloatingNavItem> extraTripDestinations() => List.of(_extraDestinations);

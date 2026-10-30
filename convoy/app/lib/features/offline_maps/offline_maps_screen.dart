@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/geo/geo.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../data/models/social.dart';
 import '../../services/offline/offline_maps.dart';
 import '../../state/providers.dart';
@@ -31,93 +31,60 @@ class _OfflineMapsScreenState extends ConsumerState<OfflineMapsScreen> {
   @override
   Widget build(BuildContext context) {
     final ent = ref.watch(entitlementProvider).value ?? Entitlement.free;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Offline maps')),
-      body: FutureBuilder<List<OfflinePack>>(
-        future: _packs,
-        builder: (context, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-          final packs = snap.data!;
-          final total = packs.fold<double>(0, (a, p) => a + p.areaKm2);
-          final w = context.wf;
-          final t = Theme.of(context).textTheme;
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              Container(
-                color: w.paper2,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Meta([('Areas', '${packs.length}'), ('Cached', '${total.round()} km²')]),
-                    const SizedBox(height: 10),
-                    Text(
-                      ent.advancedOffline
-                          ? 'Premium: street-level detail, unlimited trips.'
-                          : 'Free plan: one trip at overview detail.',
-                      style: t.bodySmall,
-                    ),
-                  ],
-                ),
+    final c = context.tones;
+    return FutureBuilder<List<OfflinePack>>(
+      future: _packs,
+      builder: (context, snap) {
+        final packs = snap.data ?? const <OfflinePack>[];
+        final total = packs.fold<double>(0, (a, p) => a + p.areaKm2);
+        return LargeTitleScaffold(
+          title: 'Offline maps',
+          subtitle: snap.hasData
+              ? '${packs.length} ${packs.length == 1 ? 'area' : 'areas'}  ·  ${total.round()} km² saved'
+              : null,
+          children: [
+            if (!snap.hasData)
+              const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
+            else ...[
+              InfoBanner(
+                ent.advancedOffline
+                    ? 'Premium: street-level detail and unlimited trips.'
+                    : 'Free plan: one trip at overview detail.',
+                icon: Icons.workspace_premium_rounded,
+                tone: Tone.info,
               ),
-              Divider(height: Rules.bar, thickness: Rules.bar, color: w.ink),
               if (packs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Nothing cached yet. Open a trip, go to the Convoy tab, and download maps along the route '
-                    'before you leave coverage. GPS keeps working without signal; the map needs these tiles.',
-                    style: t.bodyLarge?.copyWith(color: w.muted),
-                  ),
-                ),
-              for (final p in packs)
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: w.rule, width: Rules.hair),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p.name, style: t.titleMedium),
-                            const SizedBox(height: 8),
-                            Meta([
-                              ('Area', '${p.areaKm2.round()} km²'),
-                              ('Detail', 'Zoom ${p.maxZoom.round()}'),
-                              (
-                                'Across',
-                                Geo.formatDistance(
-                                  Geo.distanceMeters(
-                                    GeoPoint(p.bounds.south, p.bounds.west),
-                                    GeoPoint(p.bounds.north, p.bounds.east),
-                                  ),
-                                ),
-                              ),
-                            ]),
-                          ],
-                        ),
-                      ),
-                      IconButton(
+                const EmptyState(
+                  icon: Icons.download_for_offline_rounded,
+                  title: 'Nothing saved yet',
+                  text: 'Open a trip, go to Convoy and download maps along the route before you leave coverage. '
+                      'GPS keeps working without signal; the map needs these tiles.',
+                )
+              else
+                Section(title: 'Saved areas', children: [
+                  for (final p in packs)
+                    Tile(
+                      leading: TileIcon(Icons.map_rounded, color: c.good),
+                      title: p.name,
+                      subtitle: [
+                        '${p.areaKm2.round()} km²',
+                        'zoom ${p.maxZoom.round()}',
+                        '${Geo.formatDistance(Geo.distanceMeters(GeoPoint(p.bounds.south, p.bounds.west), GeoPoint(p.bounds.north, p.bounds.east)))} across',
+                      ].join('  ·  '),
+                      trailing: IconButton(
                         tooltip: 'Delete ${p.name}',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: Icon(Icons.delete_outline_rounded, color: c.bad),
                         onPressed: () async {
                           await _service.delete(p.id);
                           _reload();
                         },
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                ]),
             ],
-          );
-        },
-      ),
+          ],
+        );
+      },
     );
   }
 }

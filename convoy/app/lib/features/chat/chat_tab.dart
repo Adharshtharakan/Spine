@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../state/trip_session.dart';
 import '../map/map_tab.dart';
 
@@ -26,146 +26,155 @@ class _ChatTabState extends State<ChatTab> {
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final t = Theme.of(context);
-    final w = context.wf;
+    final t = Theme.of(context).textTheme;
+    final c = context.tones;
+    final mq = MediaQuery.of(context);
     final msgs = s.messages.reversed.toList();
-    return Column(
-      children: [
+    // Clear the floating tab bar, unless the keyboard is up and hides it.
+    final bottom = mq.viewInsets.bottom > 0 ? 8.0 : mq.padding.bottom + 4;
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 64,
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Chat'),
+          Text('${s.trip?.title ?? 'Trip'}  ·  ${s.members.length} people', style: t.bodySmall),
+        ]),
+      ),
+      body: Column(children: [
         Expanded(
           child: msgs.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Text(
-                      'No messages yet. Only people on this trip can read them.',
-                      style: t.textTheme.bodyMedium?.copyWith(color: w.muted),
-                    ),
+              ? const SingleChildScrollView(
+                  child: EmptyState(
+                    icon: Icons.forum_rounded,
+                    title: 'No messages yet',
+                    text: 'Only people on this trip can read them. Quick replies are one tap.',
                   ),
                 )
               : ListView.builder(
                   reverse: true,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
                   itemCount: msgs.length,
                   itemBuilder: (_, i) {
                     final m = msgs[i];
                     final mine = m.senderId == s.userId;
                     if (m.kind == 'system') {
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(
-                          '${m.senderName ?? 'Someone'} ${m.body}',
-                          textAlign: TextAlign.center,
-                          style: t.textTheme.bodySmall,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(99)),
+                            child: Text('${m.senderName ?? 'Someone'} ${m.body}', style: t.labelMedium),
+                          ),
                         ),
                       );
                     }
-                    // Square slips: yours on the ink plate, everyone else's on paper with an ink rule.
-                    final fg = mine ? w.onPlate : w.ink;
-                    final sub = mine ? w.plateMuted : w.muted;
+                    final fg = mine ? c.onAccent : c.ink;
+                    final sub = mine ? c.onAccent.withValues(alpha: 0.75) : c.faint;
+                    const r = Radius.circular(22), tail = Radius.circular(6);
                     return Align(
                       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
-                        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-                        decoration: BoxDecoration(
-                          color: mine ? w.plate : w.paper3,
-                          border: Border.all(color: mine ? w.plateRule : w.ink, width: Rules.bar),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!mine)
-                              Text(
-                                m.senderName ?? 'Driver',
-                                style: t.textTheme.labelMedium?.copyWith(color: w.ink, fontWeight: FontWeight.w800),
-                              ),
-                            Text(
-                              m.body,
-                              style: (m.kind == 'quick' ? t.textTheme.titleMedium : t.textTheme.bodyLarge)?.copyWith(
-                                color: fg,
+                      child: Column(
+                        crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        children: [
+                          if (!mine)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 6, 0, 3),
+                              child: Text(m.senderName ?? 'Driver', style: t.labelMedium),
+                            ),
+                          Container(
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.fromLTRB(15, 10, 15, 8),
+                            constraints: BoxConstraints(maxWidth: mq.size.width * 0.78),
+                            decoration: BoxDecoration(
+                              color: mine ? c.accent : c.card,
+                              borderRadius: BorderRadius.only(
+                                topLeft: r,
+                                topRight: r,
+                                bottomLeft: mine ? r : tail,
+                                bottomRight: mine ? tail : r,
                               ),
                             ),
-                            const SizedBox(height: 3),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  DateFormat.Hm().format(m.createdAt),
-                                  style: t.textTheme.labelSmall?.copyWith(color: sub),
-                                ),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(m.body,
+                                  style: (m.kind == 'quick' ? t.titleMedium : t.bodyLarge)?.copyWith(color: fg)),
+                              const SizedBox(height: 3),
+                              Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text(DateFormat.Hm().format(m.createdAt), style: t.labelSmall?.copyWith(color: sub)),
                                 if (m.viaMesh) ...[
-                                  const SizedBox(width: 8),
-                                  Text('by radio', style: t.textTheme.labelSmall?.copyWith(color: sub)),
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.settings_input_antenna, size: 12, color: sub),
+                                  const SizedBox(width: 2),
+                                  Text('radio', style: t.labelSmall?.copyWith(color: sub)),
                                 ],
                                 if (m.pending) ...[
-                                  const SizedBox(width: 8),
-                                  Text('sending', style: t.textTheme.labelSmall?.copyWith(color: sub)),
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.schedule_rounded, size: 12, color: sub),
                                 ],
-                              ],
-                            ),
-                          ],
-                        ),
+                              ]),
+                            ]),
+                          ),
+                        ],
                       ),
                     );
                   },
                 ),
         ),
-        // Quick replies: one tap, square keys in a row along the rule.
-        Container(
-          height: 56,
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: w.ink, width: Rules.bar),
-            ),
-          ),
+        // Quick replies: one tap.
+        SizedBox(
+          height: 50,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 6),
             children: [
               for (final q in quick)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      textStyle: t.textTheme.titleSmall,
-                      backgroundColor: w.paper3,
-                    ),
+                  child: ActionChip(
+                    label: Text(q),
+                    labelStyle: t.titleSmall?.copyWith(color: c.accent),
+                    backgroundColor: c.accentSoft,
                     onPressed: () => s.sendMessage(q, kind: 'quick'),
-                    child: Text(q),
                   ),
                 ),
             ],
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 8, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  // Typing is paused while this phone is in a moving car that
-                  // someone is driving: quick replies and push-to-talk remain.
-                  child: s.drivingLock
-                      ? _DrivingLock(onPassenger: () => setState(() => s.passengerMode = true))
-                      : TextField(
-                          controller: _text,
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: const InputDecoration(hintText: 'Message the convoy', isDense: true),
-                          onSubmitted: (_) => _send(),
+        Padding(
+          padding: EdgeInsets.fromLTRB(14, 4, 14, bottom),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(
+              // Typing is paused while this phone is in a moving car that
+              // someone is driving: quick replies and push-to-talk remain.
+              child: s.drivingLock
+                  ? _DrivingLock(onPassenger: () => setState(() => s.passengerMode = true))
+                  : TextField(
+                      controller: _text,
+                      textCapitalization: TextCapitalization.sentences,
+                      minLines: 1,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Message the convoy',
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
+                        enabledBorder:
+                            OutlineInputBorder(borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
+                        focusedBorder:
+                            OutlineInputBorder(borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
+                        suffixIcon: IconButton(
+                          tooltip: 'Send',
+                          icon: Icon(Icons.send_rounded, color: c.accent),
+                          onPressed: _send,
                         ),
-                ),
-                if (!s.drivingLock) IconButton(tooltip: 'Send', icon: const Icon(Icons.send), onPressed: _send),
-                Transform.scale(scale: 0.7, child: PttButton(session: s)),
-              ],
+                      ),
+                      onSubmitted: (_) => _send(),
+                    ),
             ),
-          ),
+            const SizedBox(width: 10),
+            PttButton(session: s, size: 52),
+          ]),
         ),
-      ],
+      ]),
     );
   }
 
@@ -181,14 +190,13 @@ class _DrivingLock extends StatelessWidget {
   final VoidCallback onPassenger;
 
   @override
-  Widget build(BuildContext context) => Note(
-    'Typing is paused while you drive. Use a quick reply or hold to talk.',
-    icon: Icons.directions_car,
-    actionBelow: true,
-    action: TextButton(
-      style: TextButton.styleFrom(foregroundColor: context.wf.onFigure),
-      onPressed: onPassenger,
-      child: const Text("I'm a passenger"),
-    ),
-  );
+  Widget build(BuildContext context) => InfoBanner(
+        'Typing is paused while you drive. Use a quick reply or hold to talk.',
+        icon: Icons.directions_car_rounded,
+        action: TextButton(
+          style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36)),
+          onPressed: onPassenger,
+          child: const Text("I'm a passenger"),
+        ),
+      );
 }

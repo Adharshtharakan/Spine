@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../data/models/social.dart';
 import '../../services/billing/billing_service.dart';
 import '../../services/edge/edge_client.dart';
@@ -64,90 +64,51 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   @override
   Widget build(BuildContext context) {
     final ent = ref.watch(entitlementProvider).value ?? Entitlement.free;
-    final w = context.wf;
+    final c = context.tones;
     final t = Theme.of(context).textTheme;
-    // The plan comparison as a fare table: one row per feature, free and Premium side by side.
     final rows = [
-      ('Vehicles per convoy', '${Entitlement.freeVehicleCap}', '${Entitlement.premiumVehicleCap}'),
-      ('Offline map detail', 'Overview, z12', 'Street level, z14'),
-      ('Offline trips stored', '${Entitlement.freeOfflineRegions}', 'Unlimited'),
-      ('Mesh relay through other cars', 'Direct only', 'Multi-hop'),
-      ('Text and push-to-talk', 'Included', 'Included'),
+      (Icons.directions_car_rounded, c.accent, 'Vehicles per convoy', '${Entitlement.freeVehicleCap}', '${Entitlement.premiumVehicleCap}'),
+      (Icons.map_rounded, c.good, 'Offline map detail', 'Overview', 'Street level'),
+      (Icons.layers_rounded, c.warn, 'Offline trips stored', '${Entitlement.freeOfflineRegions}', 'Unlimited'),
+      (Icons.hub_rounded, Color(Tones.vehicleColours[4]), 'Relay through other cars', 'Direct only', 'Multi-hop'),
+      (Icons.forum_rounded, Color(Tones.vehicleColours[5]), 'Chat and push-to-talk', 'Included', 'Included'),
     ];
-    TableRow row(List<Widget> cells, {Color? color}) => TableRow(
-      decoration: BoxDecoration(
-        color: color,
-        border: Border(
-          bottom: BorderSide(color: w.rule, width: Rules.hair),
-        ),
-      ),
-      children: [for (final c in cells) Padding(padding: const EdgeInsets.fromLTRB(0, 12, 12, 12), child: c)],
-    );
-    return Scaffold(
-      appBar: AppBar(title: const Text('DriveSync Premium')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-        children: [
-          Text(
-            ent.isPremium ? 'You are on Premium.' : 'Bigger convoys and stronger offline tools.',
-            style: t.headlineMedium,
-          ),
-          const SizedBox(height: 24),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: w.ink, width: Rules.bar),
-              ),
+    return LargeTitleScaffold(
+      title: 'Premium',
+      subtitle: ent.isPremium ? 'You are on Premium. Thank you!' : 'Bigger convoys and stronger offline tools',
+      children: [
+        Section(top: 0, title: 'Free compared with Premium', children: [
+          for (final (icon, color, label, free, premium) in rows)
+            Tile(
+              leading: TileIcon(icon, color: color),
+              title: label,
+              subtitle: 'Free: $free',
+              trailing: Text(premium, style: t.titleSmall?.copyWith(color: c.accent)),
             ),
-            child: Table(
-              columnWidths: const {0: FlexColumnWidth(1.5), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1.1)},
-              defaultVerticalAlignment: TableCellVerticalAlignment.top,
-              children: [
-                row([
-                  const SizedBox.shrink(),
-                  Text('Free', style: t.labelMedium),
-                  Text(
-                    'Premium',
-                    style: t.labelMedium?.copyWith(color: w.ink, fontWeight: FontWeight.w800),
-                  ),
-                ]),
-                for (final (label, free, premium) in rows)
-                  row([
-                    Text(label, style: t.bodyMedium),
-                    Text(free, style: t.bodyMedium?.copyWith(color: w.muted)),
-                    Text(premium, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                  ]),
-              ],
+        ]),
+        const SizedBox(height: 24),
+        if (_loading) const Center(child: CircularProgressIndicator()),
+        if (!_loading && _products.isEmpty)
+          const InfoBanner('Subscriptions are not available on this device right now.', icon: Icons.storefront_rounded),
+        for (final p in _products)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 58)),
+              onPressed: ent.isPremium ? null : () => _billing?.buy(p),
+              child: Row(children: [
+                Expanded(child: Text(p.title.replaceAll(RegExp(r'\s*\(.*\)$'), ''))),
+                Text(p.price),
+              ]),
             ),
           ),
-          const SizedBox(height: 28),
-          if (_loading) const Center(child: CircularProgressIndicator()),
-          if (!_loading && _products.isEmpty)
-            const Note('Subscriptions are not available on this device right now.', icon: Icons.storefront_outlined),
-          for (final p in _products)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: FilledButton(
-                onPressed: ent.isPremium ? null : () => _billing?.buy(p),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(p.title.replaceAll(RegExp(r'\s*\(.*\)$'), ''))),
-                    Text(p.price),
-                  ],
-                ),
-              ),
-            ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(onPressed: () => _billing?.restore(), child: const Text('Restore purchases')),
+        Center(child: TextButton(onPressed: () => _billing?.restore(), child: const Text('Restore purchases'))),
+        if (_status != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_status!, textAlign: TextAlign.center, style: t.bodyMedium),
           ),
-          if (_status != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_status!, style: t.bodyMedium),
-            ),
-        ],
-      ),
+      ],
     );
   }
 }

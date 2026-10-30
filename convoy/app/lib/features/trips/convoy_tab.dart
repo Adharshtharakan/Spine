@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/geo/geo.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../data/models/social.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/trip_repository.dart';
@@ -55,7 +55,7 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
   @override
   Widget build(BuildContext context) {
     final trip = s.trip;
-    final w = context.wf;
+    final c = context.tones;
     final t = Theme.of(context).textTheme;
     final standings = {for (final x in s.standings) x.memberId: x};
     final lead = s.lead;
@@ -65,204 +65,192 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
     final ent = ref.watch(entitlementProvider).value ?? Entitlement.free;
     final canLead = s.isOwner || trip?.leadMemberId == s.me?.id;
     final dl = _download;
-    const head = EdgeInsets.fromLTRB(16, 28, 16, 0);
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
+    return LargeTitleScaffold(
+      title: 'Convoy',
+      subtitle: trip == null
+          ? null
+          : s.isOwner
+              ? '${vehicles.length} of ${ent.vehicleCap} vehicles'
+              : '${vehicles.length} ${vehicles.length == 1 ? 'vehicle' : 'vehicles'}',
       children: [
         if (trip != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Plate(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Invite code', style: t.labelSmall?.copyWith(color: w.plateMuted)),
-                        const SizedBox(height: 4),
-                        Text(trip.inviteCode, style: t.headlineMedium?.copyWith(color: w.figure, letterSpacing: 2)),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.isOwner
-                              ? '${vehicles.length} of ${ent.vehicleCap} vehicles'
-                              : '${vehicles.length} ${vehicles.length == 1 ? 'vehicle' : 'vehicles'}',
-                          style: t.bodySmall?.copyWith(color: w.plateMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: w.onPlate,
-                      side: BorderSide(color: w.onPlate, width: Rules.bar),
-                    ),
-                    icon: const Icon(Icons.copy, size: 18),
-                    label: const Text('Copy'),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: trip.inviteCode));
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invite code copied')));
-                    },
-                  ),
-                ],
-              ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 14, 18),
+              child: Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Invite code', style: t.bodySmall),
+                    const SizedBox(height: 4),
+                    Text(trip.inviteCode, style: t.headlineMedium?.copyWith(letterSpacing: 3, color: c.accent)),
+                  ]),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text('Copy'),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: trip.inviteCode));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invite code copied')));
+                  },
+                ),
+              ]),
             ),
           ),
         if (s.isOwner && !ent.isPremium && vehicles.length >= Entitlement.freeVehicleCap)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Note(
+            padding: const EdgeInsets.only(top: 12),
+            child: InfoBanner(
               'The free plan carries 2 vehicles. Premium takes convoys of up to 25 and adds street-level offline maps.',
-              icon: Icons.workspace_premium_outlined,
+              icon: Icons.workspace_premium_rounded,
+              tone: Tone.info,
               action: TextButton(
-                style: TextButton.styleFrom(foregroundColor: w.onFigure),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36)),
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen())),
-                child: const Text('Upgrade'),
+                child: const Text('See Premium'),
               ),
             ),
           ),
-        BoardHead(
-          'Vehicles',
-          padding: head,
+        Section(
+          title: 'Vehicles',
           trailing: Text('In road order', style: t.labelMedium),
-        ),
-        if (vehicles.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('No vehicles yet.', style: t.bodyMedium),
-          ),
-        for (final (i, m) in vehicles.indexed)
-          _VehicleRow(
-            order: i + 1,
-            member: m,
-            you: m.id == s.me?.id,
-            isLead: m.id == lead?.memberId,
-            lines: _standingLines(m, standings[m.id], lead?.memberId),
-            state: _state(m),
-            offRoute: standings[m.id]?.offRoute ?? false,
-            onMakeLead: canLead && m.id != trip?.leadMemberId ? () => _guard(() => s.setLead(m.id)) : null,
-          ),
-        if (passengers.isNotEmpty) ...[
-          BoardHead('Passengers', padding: head),
-          for (final m in passengers)
-            _Row(child: Text(m.id == s.me?.id ? '${m.displayName} (you)' : m.displayName, style: t.titleSmall)),
-        ],
-        if (s.me != null)
-          _Row(
-            onTap: _editVehicle,
-            child: Row(
-              children: [
-                if (s.me!.hasVehicle) ...[Swatch(Color(s.me!.vehicleColor), size: 18), const SizedBox(width: 12)],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('My vehicle', style: t.labelSmall),
-                      Text(
-                        s.me!.vehicleLabel ?? (s.me!.hasVehicle ? 'Unnamed vehicle' : 'Passenger'),
-                        style: t.titleSmall,
-                      ),
-                    ],
-                  ),
-                ),
-                Text('Edit', style: t.labelLarge?.copyWith(decoration: TextDecoration.underline)),
-              ],
-            ),
-          ),
-        BoardHead('Offline', padding: head),
-        _Row(
-          onTap: dl != null && !dl.done && dl.error == null ? null : () => _downloadMaps(ent),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.download_for_offline_outlined, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text('Download maps along this route', style: t.titleSmall)),
-                  if (dl != null && !dl.done && dl.error == null)
-                    Text('${(dl.overall * 100).round()}%', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                ],
+          children: [
+            if (vehicles.isEmpty) const Tile(title: 'No vehicles yet'),
+            for (final m in vehicles)
+              _VehicleTile(
+                member: m,
+                you: m.id == s.me?.id,
+                isLead: m.id == lead?.memberId,
+                lines: _standingLines(m, standings[m.id], lead?.memberId),
+                state: _state(m),
+                offRoute: standings[m.id]?.offRoute ?? false,
+                onMakeLead: canLead && m.id != trip?.leadMemberId ? () => _guard(() => s.setLead(m.id)) : null,
               ),
-              const SizedBox(height: 4),
-              if (dl == null)
-                Text(
-                  ent.advancedOffline
-                      ? 'Full detail, included with Premium.'
-                      : 'Overview detail. Premium adds street level.',
-                  style: t.bodySmall,
-                )
-              else if (dl.error != null)
-                Text(dl.error!, style: t.bodySmall?.copyWith(color: w.ink))
-              else if (dl.done)
-                Text('Ready for offline use.', style: t.bodySmall)
-              else
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: LinearProgressIndicator(value: dl.overall, minHeight: 6, borderRadius: Rules.square),
-                ),
-            ],
-          ),
+          ],
         ),
+        if (passengers.isNotEmpty)
+          Section(title: 'Passengers', children: [
+            for (final m in passengers)
+              Tile(
+                leading: CircleAvatar(
+                  backgroundColor: c.cardHigh,
+                  child: Text(m.displayName.isEmpty ? '?' : m.displayName[0].toUpperCase(), style: t.titleMedium),
+                ),
+                title: m.id == s.me?.id ? '${m.displayName} (you)' : m.displayName,
+              ),
+          ]),
+        Section(title: 'You', children: [
+          if (s.me != null)
+            Tile(
+              onTap: _editVehicle,
+              leading: s.me!.hasVehicle
+                  ? VehicleAvatar(Color(s.me!.vehicleColor), size: 38)
+                  : TileIcon(Icons.person_rounded, color: c.faint),
+              title: 'My vehicle',
+              subtitle: s.me!.vehicleLabel ?? (s.me!.hasVehicle ? 'Unnamed vehicle' : 'Passenger'),
+              trailing: Icon(Icons.chevron_right_rounded, color: c.faint),
+            ),
+          Tile(
+            onTap: dl != null && !dl.done && dl.error == null ? null : () => _downloadMaps(ent),
+            leading: TileIcon(Icons.download_for_offline_rounded, color: c.good),
+            title: 'Offline maps for this route',
+            subtitle: dl == null
+                ? (ent.advancedOffline ? 'Full detail, included with Premium' : 'Overview detail. Premium adds street level.')
+                : dl.error ?? (dl.done ? 'Ready for offline use' : 'Downloading ${(dl.overall * 100).round()}%'),
+            below: dl != null && !dl.done && dl.error == null
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(value: dl.overall, minHeight: 6),
+                    ),
+                  )
+                : null,
+            trailing: dl?.done == true ? Icon(Icons.check_circle_rounded, color: c.good) : null,
+          ),
+        ]),
         if (s.isOwner) ...[
-          BoardHead('Public trip', padding: head),
-          if (trip?.visibility == TripVisibility.public)
-            _Row(
-              onTap: () => _guard(() async {
-                await ref.read(tripRepositoryProvider).unpublish(s.tripId);
-                s.trip = await ref.read(tripRepositoryProvider).trip(s.tripId);
-                setState(() {});
-              }),
-              child: _TwoLine(Icons.public, 'Listed in Discover', 'Tap to unlist.'),
-            )
-          else
-            _Row(
-              onTap: _publish,
-              child: _TwoLine(Icons.public_off, 'Publish to Discover', 'Let other travellers request to join.'),
-            ),
-          if (_requests.isNotEmpty)
-            BoardHead(
-              'Requests to join',
-              padding: head,
-              trailing: Text('${_requests.length}', style: t.titleSmall),
-            ),
-          for (final r in _requests)
-            _Row(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(r.requesterName, style: t.titleMedium),
-                  Text(r.vehicleLabel, style: t.bodySmall),
-                  if (r.message.isNotEmpty) ...[const SizedBox(height: 6), Text(r.message, style: t.bodyMedium)],
-                  const SizedBox(height: 6),
-                  Text(
-                    r.requesterAcceptedTerms
-                        ? 'Accepted the guidelines and driver terms.'
-                        : 'Has not accepted the current terms.',
-                    style: t.bodySmall,
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      OutlinedButton(
-                        onPressed: () => _guard(() async {
-                          await ref.read(tripRepositoryProvider).decide(r.id, approve: false);
-                          await _loadRequests();
-                        }),
-                        child: const Text('Decline'),
-                      ),
-                      const SizedBox(width: 10),
-                      FilledButton(onPressed: () => _acceptRequest(r), child: const Text('Accept')),
-                    ],
-                  ),
-                ],
+          Section(title: 'Public trip', children: [
+            if (trip?.visibility == TripVisibility.public)
+              Tile(
+                leading: TileIcon(Icons.public_rounded, color: c.accent),
+                title: 'Listed in Discover',
+                subtitle: 'Travellers can request to join',
+                trailing: Switch(
+                  value: true,
+                  onChanged: (_) => _guard(() async {
+                    await ref.read(tripRepositoryProvider).unpublish(s.tripId);
+                    s.trip = await ref.read(tripRepositoryProvider).trip(s.tripId);
+                    setState(() {});
+                  }),
+                ),
+              )
+            else
+              Tile(
+                leading: TileIcon(Icons.public_off_rounded, color: c.faint),
+                title: 'Publish to Discover',
+                subtitle: 'Let other travellers request to join',
+                trailing: Switch(value: false, onChanged: (_) => _publish()),
               ),
+          ]),
+          if (_requests.isNotEmpty)
+            Section(
+              title: 'Requests to join',
+              trailing: Pill('${_requests.length}', filled: true),
+              children: [for (final r in _requests) _requestTile(r, c, t)],
             ),
         ],
       ],
     );
   }
+
+  Widget _requestTile(JoinRequest r, Tones c, TextTheme t) => Tile(
+        leading: CircleAvatar(
+          backgroundColor: c.accentSoft,
+          child: Text(r.requesterName.isEmpty ? '?' : r.requesterName[0].toUpperCase(),
+              style: t.titleMedium?.copyWith(color: c.accent)),
+        ),
+        title: r.requesterName,
+        subtitle: r.vehicleLabel,
+        below: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (r.message.isNotEmpty)
+            Padding(padding: const EdgeInsets.only(top: 8), child: Text(r.message, style: t.bodyMedium)),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(children: [
+              Icon(r.requesterAcceptedTerms ? Icons.verified_rounded : Icons.error_outline_rounded,
+                  size: 16, color: r.requesterAcceptedTerms ? c.good : c.warn),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  r.requesterAcceptedTerms ? 'Accepted the guidelines and driver terms' : 'Has not accepted the current terms',
+                  style: t.bodySmall,
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => _guard(() async {
+                  await ref.read(tripRepositoryProvider).decide(r.id, approve: false);
+                  await _loadRequests();
+                }),
+                child: const Text('Decline'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: () => _acceptRequest(r),
+                child: const Text('Accept'),
+              ),
+            ),
+          ]),
+        ]),
+      );
 
   /// What we know about a vehicle's place in the convoy, one fact per line.
   List<String> _standingLines(TripMember m, ConvoyStanding? standing, String? leadId) {
@@ -301,7 +289,7 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
     final me = s.me!;
     final label = TextEditingController(text: me.vehicleLabel);
     var color = me.vehicleColor;
-    const palette = Wayfind.vehicleColours;
+    const palette = Tones.vehicleColours;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -318,8 +306,8 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
                     for (final c in palette)
                       Semantics(
@@ -327,13 +315,17 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
                         selected: c == color,
                         label: 'Vehicle colour',
                         child: InkWell(
+                          customBorder: const CircleBorder(),
                           onTap: () => setState(() => color = c),
                           child: Container(
-                            padding: const EdgeInsets.all(3),
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
-                              border: Border.all(color: c == color ? ctx.wf.ink : Colors.transparent, width: 3),
+                              color: Color(c),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: c == color ? ctx.tones.ink : Colors.transparent, width: 3),
                             ),
-                            child: Swatch(Color(c), size: 30),
+                            child: c == color ? const Icon(Icons.check_rounded, color: Colors.white) : null,
                           ),
                         ),
                       ),
@@ -467,59 +459,10 @@ class _ConvoyTabState extends ConsumerState<ConvoyTab> {
   }
 }
 
-/// A board row: full width, a hairline under it.
-class _Row extends StatelessWidget {
-  const _Row({required this.child, this.onTap});
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: context.wf.rule, width: Rules.hair),
-        ),
-      ),
-      child: child,
-    ),
-  );
-}
-
-class _TwoLine extends StatelessWidget {
-  const _TwoLine(this.icon, this.title, this.subtitle);
-  final IconData icon;
-  final String title, subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Row(
-      children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: t.titleSmall),
-              Text(subtitle, style: t.bodySmall),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// One vehicle on the roster: road order, its line colour, who is in it, what
-/// we know, and how fresh that is at the right edge.
-class _VehicleRow extends StatelessWidget {
-  const _VehicleRow({
-    required this.order,
+/// One vehicle: its colour avatar, who is in it, what we know, and how fresh
+/// that is.
+class _VehicleTile extends StatelessWidget {
+  const _VehicleTile({
     required this.member,
     required this.you,
     required this.isLead,
@@ -529,7 +472,6 @@ class _VehicleRow extends StatelessWidget {
     this.onMakeLead,
   });
 
-  final int order;
   final TripMember member;
   final bool you, isLead, offRoute;
   final List<String> lines;
@@ -538,55 +480,37 @@ class _VehicleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = context.wf;
+    final c = context.tones;
     final t = Theme.of(context).textTheme;
-    return _Row(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 28, child: Text('$order', style: t.titleLarge)),
-          Padding(padding: const EdgeInsets.only(top: 4), child: Swatch(Color(member.vehicleColor), size: 16)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(member.vehicleLabel ?? 'Vehicle', style: t.titleMedium),
-                Text(you ? 'You' : member.displayName, style: t.bodySmall),
-                const SizedBox(height: 6),
-                for (final l in lines) Text(l, style: t.bodyMedium),
-                if (offRoute)
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    color: w.figure,
-                    child: Text(
-                      'Off route',
-                      style: t.labelMedium?.copyWith(color: w.onFigure, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (isLead) Text('Lead', style: t.labelLarge?.copyWith(color: w.live)),
-              if (state != null) Text(state!, style: t.labelMedium?.copyWith(color: state == 'Live' ? w.ink : w.muted)),
-              if (onMakeLead != null)
-                TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: const Size(0, 36),
-                  ),
-                  onPressed: onMakeLead,
-                  child: const Text('Make lead'),
-                ),
-            ],
-          ),
-        ],
+    return Tile(
+      leading: VehicleAvatar(Color(member.vehicleColor), lead: isLead),
+      title: member.vehicleLabel ?? 'Vehicle',
+      subtitle: you ? 'You' : member.displayName,
+      below: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            if (isLead) const Pill('Lead', filled: true),
+            if (state != null)
+              Pill(state!, tone: switch (state) {
+                'Live' => Tone.good,
+                'Estimated' => Tone.warn,
+                'Online' => Tone.good,
+                _ => Tone.info,
+              }),
+            if (offRoute) const Pill('Off route', tone: Tone.bad),
+          ]),
+          const SizedBox(height: 6),
+          for (final l in lines) Text(l, style: t.bodyMedium?.copyWith(color: c.sub)),
+        ]),
       ),
+      trailing: onMakeLead == null
+          ? null
+          : IconButton(
+              tooltip: 'Make lead vehicle',
+              icon: Icon(Icons.star_outline_rounded, color: c.sub),
+              onPressed: onMakeLead,
+            ),
     );
   }
 }

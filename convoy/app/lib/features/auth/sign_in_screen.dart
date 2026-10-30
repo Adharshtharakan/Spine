@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/brand/logo.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../state/providers.dart';
 
@@ -57,61 +57,86 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final w = context.wf;
+    final t = Theme.of(context).textTheme;
+    final c = context.tones;
+    final h = MediaQuery.sizeOf(context).height;
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
           children: [
-            const Align(alignment: Alignment.centerLeft, child: DriveSyncLogo(size: 30)),
-            const SizedBox(height: 56),
-            Text('One map, one plan, one channel for every car in your group.', style: t.textTheme.headlineMedium),
-            const SizedBox(height: 32),
-            Container(height: Rules.bar, color: w.ink),
-            const SizedBox(height: 20),
-            Text(_sent ? 'Check your email' : 'Sign in or create an account', style: t.textTheme.titleLarge),
-            const SizedBox(height: 6),
+            SizedBox(height: h * 0.08),
+            const Center(child: DriveSyncMark(size: 84)),
+            const SizedBox(height: 22),
+            Text(_sent ? 'Check your email' : 'Welcome to DriveSync', textAlign: TextAlign.center, style: t.headlineLarge),
+            const SizedBox(height: 10),
             Text(
-              _sent ? 'We sent a 6-digit code to ${_email.text.trim()}.' : 'No password needed. We email you a one-time code.',
-              style: t.textTheme.bodyMedium?.copyWith(color: w.muted),
+              _sent
+                  ? 'Enter the 6-digit code we sent to ${_email.text.trim()}.'
+                  : 'One map, one plan and one channel for every car in your group.',
+              textAlign: TextAlign.center,
+              style: t.bodyLarge?.copyWith(color: c.sub),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: h * 0.05),
             if (!_sent) ...[
               TextField(
                 controller: _name,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Your name', helperText: 'Shown to your convoy'),
+                decoration: const InputDecoration(
+                    labelText: 'Your name', helperText: 'Shown to your convoy', prefixIcon: Icon(Icons.person_rounded)),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               TextField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_rounded)),
               ),
               const SizedBox(height: 20),
-              FilledButton(onPressed: _busy ? null : _send, child: const Text('Email me a code')),
+              FilledButton(onPressed: _busy ? null : _send, child: const Text('Continue')),
+              const SizedBox(height: 10),
+              Text('No password needed. We email you a one-time code.',
+                  textAlign: TextAlign.center, style: t.bodySmall),
+              const SizedBox(height: 28),
+              Card(
+                child: Column(children: [
+                  Tile(
+                    leading: TileIcon(Icons.map_rounded, color: c.accent),
+                    title: 'Live group map',
+                    subtitle: 'See every car and who is leading',
+                  ),
+                  const Divider(indent: 20, endIndent: 20),
+                  Tile(
+                    leading: TileIcon(Icons.mic_rounded, color: c.warn),
+                    title: 'Push-to-talk',
+                    subtitle: 'Talk to the convoy without typing',
+                  ),
+                  const Divider(indent: 20, endIndent: 20),
+                  Tile(
+                    leading: TileIcon(Icons.cloud_off_rounded, color: c.good),
+                    title: 'Works offline',
+                    subtitle: 'Offline maps, radio link and predictions',
+                  ),
+                ]),
+              ),
             ] else ...[
               TextField(
                 controller: _code,
                 keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
                 autofillHints: const [AutofillHints.oneTimeCode],
-                style: t.textTheme.headlineMedium?.copyWith(letterSpacing: 10),
-                decoration: const InputDecoration(labelText: 'Code'),
+                style: t.headlineMedium?.copyWith(letterSpacing: 12),
+                decoration: const InputDecoration(hintText: '000000'),
               ),
               const SizedBox(height: 20),
               FilledButton(onPressed: _busy ? null : _verify, child: const Text('Sign in')),
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                    onPressed: _busy ? null : () => setState(() => _sent = false), child: const Text('Use a different email')),
-              ),
+              TextButton(
+                  onPressed: _busy ? null : () => setState(() => _sent = false), child: const Text('Use a different email')),
             ],
             if (_error != null) ...[
               const SizedBox(height: 16),
-              Note(_error!),
+              InfoBanner(_error!, tone: Tone.bad, icon: Icons.error_rounded),
             ],
           ],
         ),
@@ -177,7 +202,7 @@ class _VerifyPhoneSheetState extends ConsumerState<VerifyPhoneSheet> {
                 decoration: const InputDecoration(labelText: 'SMS code'),
               ),
             ],
-            if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Note(_error!)),
+            if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: InfoBanner(_error!, tone: Tone.bad, icon: Icons.error_rounded)),
             const SizedBox(height: 16),
             FilledButton(onPressed: _go, child: Text(_sent ? 'Confirm' : 'Send code')),
           ],

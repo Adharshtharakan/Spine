@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../data/models/social.dart';
 import '../../data/models/waypoint.dart';
 import '../../state/trip_session.dart';
@@ -37,74 +37,72 @@ class _StopsTabState extends ConsumerState<StopsTab> {
   @override
   Widget build(BuildContext context) {
     if (_offers == null || Object.hashAll(widget.session.itinerary.route) != _routeHash) _load();
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: context.wf.ink, width: Rules.bar),
-            ),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-            child: Row(
-              children: [
-                for (final c in OfferCategory.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(_label(c)),
-                      selected: _cats.contains(c),
-                      onSelected: (v) => setState(() {
-                        _cats = v ? {..._cats, c} : (_cats.toSet()..remove(c));
-                        _load();
-                      }),
+    return FutureBuilder<List<AffiliateOffer>>(
+      future: _offers,
+      builder: (context, snap) {
+        final noRoute = widget.session.itinerary.route.length < 2;
+        final offers = snap.data ?? const <AffiliateOffer>[];
+        return LargeTitleScaffold(
+          title: 'Stops',
+          subtitle: noRoute ? null : 'Places along your route',
+          children: [
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final cat in OfferCategory.values)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        avatar: Icon(_icon(cat), size: 18),
+                        label: Text(_label(cat)),
+                        selected: _cats.contains(cat),
+                        showCheckmark: false,
+                        onSelected: (v) => setState(() {
+                          _cats = v ? {..._cats, cat} : (_cats.toSet()..remove(cat));
+                          _load();
+                        }),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<AffiliateOffer>>(
-            future: _offers,
-            builder: (context, snap) {
-              final t = Theme.of(context).textTheme;
-              Widget say(String text) => ListView(
-                padding: const EdgeInsets.all(16),
-                children: [Text(text, style: t.bodyLarge?.copyWith(color: context.wf.muted))],
-              );
-              if (widget.session.itinerary.route.length < 2) {
-                return say('Add a start and a destination to see stops along the way.');
-              }
-              if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-              if (snap.hasError) {
-                return ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: const [
-                    Note('Stops along the route need a connection. Your plan and offline maps still work.'),
-                  ],
-                );
-              }
-              final offers = snap.data!;
-              if (offers.isEmpty) return say('Nothing found along this route for these categories.');
-              return ListView.builder(
-                itemCount: offers.length,
-                itemBuilder: (_, i) => _OfferTile(offer: offers[i], session: widget.session),
-              );
-            },
-          ),
-        ),
-      ],
+            const SizedBox(height: 8),
+            if (noRoute)
+              const EmptyState(
+                icon: Icons.storefront_rounded,
+                title: 'No route yet',
+                text: 'Add a start and a destination to see fuel, food and places to stay along the way.',
+              )
+            else if (snap.connectionState != ConnectionState.done)
+              const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
+            else if (snap.hasError)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: InfoBanner('Stops along the route need a connection. Your plan and offline maps still work.',
+                    icon: Icons.cloud_off_rounded),
+              )
+            else if (offers.isEmpty)
+              const EmptyState(
+                icon: Icons.search_off_rounded,
+                title: 'Nothing found',
+                text: 'Try other categories, or check again further along the route.',
+              )
+            else
+              for (final o in offers)
+                Padding(padding: const EdgeInsets.only(top: 12), child: _OfferCard(offer: o, session: widget.session)),
+          ],
+        );
+      },
     );
   }
 }
 
-/// One place along the route, read like a timetable row: how far along, what
-/// it is, how far off the line, and what you can do with it.
-class _OfferTile extends StatelessWidget {
-  const _OfferTile({required this.offer, required this.session});
+/// One place along the route: what it is, how far along and off the route,
+/// and what you can do with it.
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({required this.offer, required this.session});
 
   final AffiliateOffer offer;
   final TripSession session;
@@ -112,86 +110,78 @@ class _OfferTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final o = offer;
-    final w = context.wf;
+    final c = context.tones;
     final t = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: w.rule, width: Rules.hair),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 64,
-            child: o.alongKm == null
-                ? Icon(_icon(o.category), color: w.ink2)
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Km', style: t.labelSmall),
-                      Text(o.alongKm!.toStringAsFixed(0), style: t.titleLarge),
-                    ],
-                  ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(_icon(o.category), size: 18, color: w.ink2),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(o.name, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
+    final color = switch (o.category) {
+      OfferCategory.hotel => c.accent,
+      OfferCategory.campsite => c.good,
+      OfferCategory.fuel => c.warn,
+      OfferCategory.restArea => Color(Tones.vehicleColours[4]),
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            TileIcon(_icon(o.category), color: color, size: 44),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(o.name, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
-                Text('${o.detourKm.toStringAsFixed(1)} km off route', style: t.bodySmall),
-                if (o.priceHint != null) Text(o.priceHint!, style: t.bodySmall),
-                if (o.sponsored) Text('Sponsored listing', style: t.labelMedium?.copyWith(color: w.ink)),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
-                      icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-                      label: const Text('Add to plan'),
-                      onPressed: () async {
-                        await session.addStop(name: o.name, location: o.location, kind: _kind(o.category));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(SnackBar(content: Text('${o.name} added to the plan')));
-                        }
-                      },
-                    ),
-                    if (o.bookingUrl != null) ...[
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-                        onPressed: () => launchUrl(Uri.parse(o.bookingUrl!), mode: LaunchMode.externalApplication),
-                        child: const Text('Book'),
-                      ),
-                    ],
-                  ],
+                Text(
+                  [
+                    if (o.alongKm != null) 'At km ${o.alongKm!.toStringAsFixed(0)}',
+                    '${o.detourKm.toStringAsFixed(1)} km off route',
+                  ].join('  ·  '),
+                  style: t.bodySmall,
                 ),
-              ],
+                if (o.priceHint != null || o.sponsored) ...[
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 6, runSpacing: 6, children: [
+                    if (o.priceHint != null) Pill(o.priceHint!, tone: Tone.good),
+                    if (o.sponsored) const Pill('Sponsored', tone: Tone.warn),
+                  ]),
+                ],
+              ]),
             ),
-          ),
-        ],
+          ]),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                label: const Text('Add to plan'),
+                onPressed: () async {
+                  await session.addStop(name: o.name, location: o.location, kind: _kind(o.category));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${o.name} added to the plan')));
+                  }
+                },
+              ),
+            ),
+            if (o.bookingUrl != null) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                  onPressed: () => launchUrl(Uri.parse(o.bookingUrl!), mode: LaunchMode.externalApplication),
+                  child: const Text('Book'),
+                ),
+              ),
+            ],
+          ]),
+        ]),
       ),
     );
   }
 }
 
 IconData _icon(OfferCategory c) => switch (c) {
-  OfferCategory.hotel => Icons.hotel,
-  OfferCategory.campsite => Icons.cabin,
-  OfferCategory.fuel => Icons.local_gas_station,
-  OfferCategory.restArea => Icons.local_cafe,
+  OfferCategory.hotel => Icons.hotel_rounded,
+  OfferCategory.campsite => Icons.cabin_rounded,
+  OfferCategory.fuel => Icons.local_gas_station_rounded,
+  OfferCategory.restArea => Icons.local_cafe_rounded,
 };
 
 String _label(OfferCategory c) => switch (c) {

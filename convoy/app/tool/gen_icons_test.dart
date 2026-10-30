@@ -29,7 +29,7 @@ void main() {
     const adaptiveGlyph = 0.68;
     for (final e in densities.entries) {
       final dir = '$res/mipmap-${e.key}';
-      await render(const DriveSyncMarkPainter(roundedTile: true), (48 * e.value).round(), '$dir/ic_launcher.png');
+      await render(const DriveSyncMarkPainter(), (48 * e.value).round(), '$dir/ic_launcher.png');
       final layer = (108 * e.value).round();
       await render(const DriveSyncMarkPainter(roundedTile: false, glyph: false), layer, '$dir/ic_launcher_background.png');
       await render(const DriveSyncMarkPainter(background: false, glyphScale: adaptiveGlyph), layer, '$dir/ic_launcher_foreground.png');

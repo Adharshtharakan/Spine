@@ -52,9 +52,9 @@ class _ConvoyMapState extends State<ConvoyMap> {
   String get _style => Env.mapStyleUrlFor(dark: widget.dark);
 
   /// The theme's tokens, refreshed on every build; MapLibre takes CSS strings.
-  Wayfind _w = Wayfind.platform;
-  String get _labelColor => Wayfind.css(_w.ink);
-  String get _haloColor => Wayfind.css(_w.paper);
+  Tones _w = Tones.light;
+  String get _labelColor => Tones.css(_w.ink);
+  String get _haloColor => Tones.css(_w.card);
 
   @override
   void didUpdateWidget(covariant ConvoyMap old) {
@@ -71,12 +71,12 @@ class _ConvoyMapState extends State<ConvoyMap> {
     await map.addLineLayer(
       'route',
       'route-line',
-      // The planned line in cobalt, like a route on a transit map.
+      // The planned route in the accent blue.
       LineLayerProperties(
-        lineColor: Wayfind.css(_w.live),
+        lineColor: Tones.css(_w.accent),
         lineWidth: 5,
         lineJoin: 'round',
-        lineCap: 'butt',
+        lineCap: 'round',
       ),
     );
 
@@ -86,8 +86,8 @@ class _ConvoyMapState extends State<ConvoyMap> {
       'stops-circle',
       CircleLayerProperties(
         circleRadius: 7,
-        circleColor: Wayfind.css(_w.paper3),
-        circleStrokeColor: Wayfind.css(_w.ink),
+        circleColor: Tones.css(_w.card),
+        circleStrokeColor: Tones.css(_w.accent),
         circleStrokeWidth: 3,
       ),
     );
@@ -127,7 +127,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
       CircleLayerProperties(
         circleRadius: 16,
         circleColor: 'rgba(0,0,0,0)',
-        circleStrokeColor: Wayfind.css(_w.figure),
+        circleStrokeColor: Tones.css(_w.warn),
         circleStrokeWidth: 4,
       ),
       filter: ['==', ['get', 'lead'], true],
@@ -138,7 +138,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
       CircleLayerProperties(
         circleRadius: 10,
         circleColor: const ['get', 'color'],
-        circleStrokeColor: Wayfind.css(_w.paper3),
+        circleStrokeColor: Tones.css(_w.card),
         circleStrokeWidth: 3,
         circleOpacity: const ['case', ['get', 'stale'], 0.45, 1.0],
       ),
@@ -236,7 +236,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
             'id': p.memberId,
             'properties': {
               'label': _label(p),
-              'color': _hex(widget.members[p.memberId]?.vehicleColor ?? Wayfind.vehicleColours.first),
+              'color': _hex(widget.members[p.memberId]?.vehicleColor ?? Tones.vehicleColours.first),
               'lead': p.memberId == widget.leadMemberId,
               'self': p.memberId == widget.selfMemberId,
               'stale': p.age(now) > const Duration(seconds: 90),
@@ -266,7 +266,7 @@ class _ConvoyMapState extends State<ConvoyMap> {
 
   @override
   Widget build(BuildContext context) {
-    _w = context.wf;
+    _w = context.tones;
     return MapLibreMap(
       styleString: _style,
       initialCameraPosition: const CameraPosition(target: LatLng(20, 0), zoom: 2),

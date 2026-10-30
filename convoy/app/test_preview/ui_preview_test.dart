@@ -16,6 +16,7 @@ import 'dart:ui' as ui;
 import 'package:convoy/core/geo/geo.dart';
 import 'package:convoy/core/theme/theme.dart';
 import 'package:convoy/core/theme/tokens.dart';
+import 'package:convoy/core/widgets/one_ui.dart';
 import 'package:convoy/data/models/social.dart';
 import 'package:convoy/data/models/trip.dart';
 import 'package:convoy/data/models/waypoint.dart';
@@ -333,7 +334,7 @@ class MapPreview extends CustomPainter {
 
   final TripSession s;
   final bool dark;
-  Wayfind get _wf => dark ? Wayfind.night : Wayfind.platform;
+  Tones get _wf => dark ? Tones.dark : Tones.light;
   final List<GeoPoint> focus;
   final double topPad, bottomPad;
 
@@ -385,13 +386,13 @@ class MapPreview extends CustomPainter {
       i == 0 ? route.moveTo(o.dx, o.dy) : route.lineTo(o.dx, o.dy);
     }
     canvas.drawPath(route, Paint()..color = dark ? const Color(0xFF6B4A22) : const Color(0xFFF9B26B)..style = PaintingStyle.stroke..strokeWidth = 11..strokeJoin = StrokeJoin.round);
-    canvas.drawPath(route, Paint()..color = _wf.live..style = PaintingStyle.stroke..strokeWidth = 5..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.butt);
+    canvas.drawPath(route, Paint()..color = _wf.accent..style = PaintingStyle.stroke..strokeWidth = 5..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.round);
 
     for (final w in s.itinerary.waypoints) {
       final o = p(w.location);
       if (o.dx < -50 || o.dx > size.width + 50 || o.dy < -50 || o.dy > size.height + 50) continue;
-      canvas.drawCircle(o, 7, Paint()..color = _wf.paper3);
-      canvas.drawCircle(o, 7, Paint()..color = _wf.ink..style = PaintingStyle.stroke..strokeWidth = 3);
+      canvas.drawCircle(o, 7, Paint()..color = _wf.card);
+      canvas.drawCircle(o, 7, Paint()..color = _wf.accent..style = PaintingStyle.stroke..strokeWidth = 3);
       _text(canvas, w.name, o + const Offset(0, 12), 12, top: true);
     }
 
@@ -408,10 +409,10 @@ class MapPreview extends CustomPainter {
         canvas.drawCircle(o, halo, Paint()..color = color.withValues(alpha: 0.5)..style = PaintingStyle.stroke..strokeWidth = 1.2);
       }
       if (v.memberId == lead) {
-        canvas.drawCircle(o, 16, Paint()..color = _wf.figure..style = PaintingStyle.stroke..strokeWidth = 4);
+        canvas.drawCircle(o, 16, Paint()..color = _wf.warn..style = PaintingStyle.stroke..strokeWidth = 4);
       }
       canvas.drawCircle(o, 10, Paint()..color = color.withValues(alpha: stale && v.source != PositionSource.estimated ? 0.45 : 1));
-      canvas.drawCircle(o, 10, Paint()..color = _wf.paper3..style = PaintingStyle.stroke..strokeWidth = 3);
+      canvas.drawCircle(o, 10, Paint()..color = _wf.card..style = PaintingStyle.stroke..strokeWidth = 3);
       final m = s.members[v.memberId];
       final name = v.memberId == s.me?.id ? 'You' : (m?.vehicleLabel ?? m?.displayName ?? 'Vehicle');
       final via = switch (v.source) {
@@ -445,7 +446,7 @@ class MapPreview extends CustomPainter {
       text: TextSpan(
           text: t,
           style: style.copyWith(
-              foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = _wf.paper)),
+              foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = _wf.card)),
       textDirection: TextDirection.ltr,
     )..layout();
     final tp = TextPainter(text: TextSpan(text: t, style: style), textDirection: TextDirection.ltr)..layout();
@@ -467,17 +468,13 @@ Future<void> loadFonts() async {
     roboto.addFont(Future.value(ByteData.sublistView(File('$dir/$f').readAsBytesSync())));
   }
   await roboto.load();
-  final chivo = FontLoader(ConvoyTheme.fontFamily);
-  for (final f in ['Regular', 'Medium', 'ExtraBold']) {
-    chivo.addFont(Future.value(ByteData.sublistView(File('assets/fonts/ChivoMono-$f.ttf').readAsBytesSync())));
-  }
-  await chivo.load();
   final icons = FontLoader('MaterialIcons')
     ..addFont(Future.value(ByteData.sublistView(File('$dir/MaterialIcons-Regular.otf').readAsBytesSync())));
   await icons.load();
 }
 
-ThemeData theme({bool dark = false}) => dark ? ConvoyTheme.dark() : ConvoyTheme.light();
+ThemeData theme({bool dark = false}) =>
+    dark ? ConvoyTheme.dark(fontFamily: 'Roboto') : ConvoyTheme.light(fontFamily: 'Roboto');
 
 /// Android-style status bar painted over the top inset.
 class StatusBar extends StatelessWidget {
@@ -518,20 +515,19 @@ Widget tripShell(TripSession s, int tab, Widget body, {Widget? backdrop}) => Sta
       if (backdrop != null) Positioned.fill(child: backdrop),
       Scaffold(
         backgroundColor: backdrop != null ? Colors.transparent : null,
-        appBar: AppBar(title: Text(s.trip!.title)),
+        extendBody: true,
         body: body,
-        bottomNavigationBar: Builder(builder: (context) => DecoratedBox(
-          decoration: BoxDecoration(border: Border(top: BorderSide(color: context.wf.ink, width: Rules.bar))),
-          child: NavigationBar(
-          selectedIndex: tab,
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
-            NavigationDestination(icon: Icon(Icons.route_outlined), selectedIcon: Icon(Icons.route), label: 'Plan'),
-            NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum), label: 'Chat'),
-            NavigationDestination(icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Convoy'),
-            NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Stops'),
+        bottomNavigationBar: FloatingNavBar(
+          index: tab,
+          onTap: (_) {},
+          items: [
+            const FloatingNavItem(Icons.map_outlined, Icons.map_rounded, 'Map'),
+            const FloatingNavItem(Icons.route_outlined, Icons.route_rounded, 'Plan'),
+            FloatingNavItem(Icons.forum_outlined, Icons.forum_rounded, 'Chat', badge: tab == 2 ? 0 : 3),
+            const FloatingNavItem(Icons.groups_outlined, Icons.groups_rounded, 'Convoy'),
+            const FloatingNavItem(Icons.storefront_outlined, Icons.storefront_rounded, 'Stops'),
           ],
-        ))),
+        ),
       ),
     ]);
 

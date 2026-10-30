@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/brand/logo.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../state/providers.dart';
@@ -22,55 +21,69 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trips = ref.watch(myTripsProvider);
     final ent = ref.watch(entitlementProvider).value;
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 20,
-        title: const DriveSyncLogo(size: 30),
-        actions: [
-          IconButton(
-            tooltip: 'Discover public trips',
-            icon: const Icon(Icons.travel_explore),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DiscoverScreen())),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              switch (v) {
-                case 'offline':
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const OfflineMapsScreen()));
-                case 'radio':
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const RadioScreen()));
-                case 'settings':
-                  await showSettingsSheet(context, ref);
-                case 'premium':
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
-                case 'signout':
-                  await ref.read(supabaseProvider).auth.signOut();
-              }
-            },
-            itemBuilder: (_) => [
-              _menuItem('settings', Icons.tune, 'Settings'),
-              _menuItem('offline', Icons.download_for_offline_outlined, 'Offline maps'),
-              _menuItem('radio', Icons.settings_input_antenna, 'Long-range radio'),
-              _menuItem(
-                'premium',
-                Icons.workspace_premium_outlined,
-                ent?.isPremium == true ? 'Premium (active)' : 'Upgrade to Premium',
-              ),
-              const PopupMenuDivider(),
-              _menuItem('signout', Icons.logout, 'Sign out'),
-            ],
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(myTripsProvider.future),
-        child: trips.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ListView(padding: const EdgeInsets.all(16), children: [Note(friendlyError(e))]),
-          data: (list) => list.isEmpty ? const _Empty() : _TripList(list),
+    final cutoff = DateTime.now().subtract(const Duration(days: 2));
+    final list = trips.value ?? const <Trip>[];
+    final upcoming = list.where((t) => t.startsAt == null || t.startsAt!.isAfter(cutoff)).toList();
+    final past = list.where((t) => !upcoming.contains(t)).toList();
+    return LargeTitleScaffold(
+      title: 'DriveSync',
+      subtitle: trips.hasValue
+          ? upcoming.isEmpty
+              ? 'No upcoming trips'
+              : '${upcoming.length} upcoming ${upcoming.length == 1 ? 'trip' : 'trips'}'
+          : null,
+      onRefresh: () => ref.refresh(myTripsProvider.future),
+      actions: [
+        IconButton(
+          tooltip: 'Discover public trips',
+          icon: const Icon(Icons.explore_outlined),
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DiscoverScreen())),
         ),
-      ),
-      bottomNavigationBar: _Actions(onJoin: () => _join(context, ref), onCreate: () => _create(context, ref)),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded),
+          onSelected: (v) async {
+            switch (v) {
+              case 'offline':
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const OfflineMapsScreen()));
+              case 'radio':
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const RadioScreen()));
+              case 'settings':
+                await showSettingsSheet(context, ref);
+              case 'premium':
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const PaywallScreen()));
+              case 'signout':
+                await ref.read(supabaseProvider).auth.signOut();
+            }
+          },
+          itemBuilder: (_) => [
+            _menuItem('settings', Icons.settings_outlined, 'Settings'),
+            _menuItem('offline', Icons.download_for_offline_outlined, 'Offline maps'),
+            _menuItem('radio', Icons.settings_input_antenna, 'Long-range radio'),
+            _menuItem('premium', Icons.workspace_premium_outlined,
+                ent?.isPremium == true ? 'Premium (active)' : 'Upgrade to Premium'),
+            const PopupMenuDivider(),
+            _menuItem('signout', Icons.logout_rounded, 'Sign out'),
+          ],
+        ),
+      ],
+      bottomBar: _Actions(onJoin: () => _join(context, ref), onCreate: () => _create(context, ref)),
+      children: [
+        ...trips.when(
+          loading: () => const [Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))],
+          error: (e, _) => [InfoBanner(friendlyError(e), tone: Tone.bad, icon: Icons.error_rounded)],
+          data: (_) => [
+            if (list.isEmpty)
+              const EmptyState(
+                icon: Icons.directions_car_rounded,
+                title: 'No convoys yet',
+                text: 'Start one and share the invite code, join with a code from a friend, or find a public trip in Discover.',
+              ),
+            if (upcoming.isNotEmpty)
+              Section(title: 'Upcoming', top: 0, children: [for (final t in upcoming) _TripTile(t)]),
+            if (past.isNotEmpty) Section(title: 'Past trips', children: [for (final t in past) _TripTile(t, past: true)]),
+          ],
+        ),
+      ],
     );
   }
 
@@ -202,179 +215,80 @@ PopupMenuItem<String> _menuItem(String value, IconData icon, String label) => Po
   child: Row(children: [Icon(icon, size: 20), const SizedBox(width: 14), Text(label)]),
 );
 
-/// The two ways onto a convoy, set as a fixed strip under the board rather
-/// than floating over it.
+/// The two ways onto a convoy, as pills at the bottom where a thumb reaches.
 class _Actions extends StatelessWidget {
   const _Actions({required this.onJoin, required this.onCreate});
   final VoidCallback onJoin, onCreate;
 
   @override
-  Widget build(BuildContext context) {
-    final w = context.wf;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: w.paper,
-        border: Border(
-          top: BorderSide(color: w.ink, width: Rules.bar),
-        ),
-      ),
-      child: SafeArea(
+  Widget build(BuildContext context) => SafeArea(
         top: false,
+        minimum: const EdgeInsets.only(bottom: 10),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onJoin,
-                  icon: const Icon(Icons.vpn_key_outlined, size: 20),
-                  label: const Text('Join with code'),
-                ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 54)),
+                onPressed: onJoin,
+                icon: const Icon(Icons.key_rounded, size: 20),
+                label: const Text('Join'),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onCreate,
-                  icon: const Icon(Icons.add, size: 20),
-                  label: const Text('New convoy'),
-                ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 54)),
+                onPressed: onCreate,
+                icon: const Icon(Icons.add_rounded, size: 22),
+                label: const Text('New convoy'),
               ),
-            ],
-          ),
+            ),
+          ]),
         ),
-      ),
-    );
-  }
+      );
 }
 
-class _Empty extends StatelessWidget {
-  const _Empty();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        const BoardHead('Your convoys', padding: EdgeInsets.fromLTRB(0, 24, 0, 0)),
-        const SizedBox(height: 28),
-        Text('No convoys yet', style: t.headlineSmall),
-        const SizedBox(height: 10),
-        Text(
-          'Start one and share the invite code, join with a code from a friend, or find a public trip in Discover.',
-          style: t.bodyLarge?.copyWith(color: context.wf.muted),
-        ),
-      ],
-    );
-  }
-}
-
-/// The home board: upcoming trips first, then past ones, one row each,
-/// read like departures: when, where, and the code to board with.
-class _TripList extends StatelessWidget {
-  const _TripList(this.trips);
-  final List<Trip> trips;
-
-  @override
-  Widget build(BuildContext context) {
-    final cutoff = DateTime.now().subtract(const Duration(days: 2));
-    final upcoming = trips.where((t) => t.startsAt == null || t.startsAt!.isAfter(cutoff)).toList();
-    final past = trips.where((t) => !upcoming.contains(t)).toList();
-    final count = Theme.of(context).textTheme.titleSmall?.copyWith(color: context.wf.muted);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        if (upcoming.isNotEmpty) ...[
-          BoardHead(
-            'Upcoming',
-            padding: const EdgeInsets.fromLTRB(0, 24, 0, 0),
-            trailing: Text('${upcoming.length}', style: count),
-          ),
-          for (final t in upcoming) _TripRow(t),
-        ],
-        if (past.isNotEmpty) ...[
-          BoardHead(
-            'Past trips',
-            padding: const EdgeInsets.fromLTRB(0, 32, 0, 0),
-            trailing: Text('${past.length}', style: count),
-          ),
-          for (final t in past) _TripRow(t, past: true),
-        ],
-      ],
-    );
-  }
-}
-
-class _TripRow extends StatelessWidget {
-  const _TripRow(this.trip, {this.past = false});
+class _TripTile extends StatelessWidget {
+  const _TripTile(this.trip, {this.past = false});
 
   final Trip trip;
   final bool past;
 
   @override
   Widget build(BuildContext context) {
-    final w = context.wf;
+    final c = context.tones;
     final t = Theme.of(context).textTheme;
     final public = trip.visibility == TripVisibility.public;
     final start = trip.startsAt;
-    final fg = past ? w.muted : w.ink;
-    return InkWell(
+    return Tile(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TripScreen(tripId: trip.id))),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      leading: Container(
+        width: 52,
+        height: 56,
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: w.rule, width: Rules.hair),
-          ),
+          color: past ? c.cardHigh : c.accentSoft,
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // The "time" column of a departure board: the day, large, and the month under it.
-            SizedBox(
-              width: 56,
-              child: start == null
-                  ? Text('Date\nnot set', style: t.labelSmall)
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(DateFormat('d').format(start), style: t.headlineSmall?.copyWith(color: fg, height: 1)),
-                        const SizedBox(height: 2),
-                        Text(DateFormat('MMM').format(start), style: t.labelMedium),
-                      ],
-                    ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trip.title,
-                    style: t.titleMedium?.copyWith(color: fg),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(public ? 'Public trip' : 'Invite only', style: t.bodySmall),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('Code', style: t.labelSmall),
-                const SizedBox(height: 2),
-                Text(
-                  trip.inviteCode,
-                  style: t.titleSmall?.copyWith(color: fg, fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-          ],
-        ),
+        child: start == null
+            ? Icon(Icons.event_rounded, color: past ? c.sub : c.accent)
+            : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(DateFormat('d').format(start),
+                    style: t.titleLarge?.copyWith(color: past ? c.sub : c.accent, height: 1.05)),
+                Text(DateFormat('MMM').format(start),
+                    style: t.labelSmall?.copyWith(color: past ? c.sub : c.accent, fontWeight: FontWeight.w600)),
+              ]),
       ),
+      title: trip.title,
+      subtitle: [
+        if (start != null) DateFormat('EEEE').format(start),
+        'Code ${trip.inviteCode}',
+      ].join('  ·  '),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (public) const Pill('Public'),
+        Icon(Icons.chevron_right_rounded, color: c.faint),
+      ]),
     );
   }
 }

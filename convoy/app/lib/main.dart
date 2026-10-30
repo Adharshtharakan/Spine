@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/widgets/one_ui.dart';
 import 'features/stops/stops_tab.dart';
 import 'features/trips/trip_screen.dart';
 import 'services/mesh/mesh_bridge.dart';
@@ -21,7 +22,7 @@ Future<void> main() async {
     ..add(attachAnnouncer);
   // Affiliate stops along the route (hotels, campsites, fuel, rest areas).
   registerTripTab(
-    const NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Stops'),
+    const FloatingNavItem(Icons.storefront_outlined, Icons.storefront_rounded, 'Stops'),
     (s) => StopsTab(session: s),
   );
 

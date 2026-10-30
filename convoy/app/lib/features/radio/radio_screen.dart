@@ -5,7 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/theme/tokens.dart';
-import '../../core/widgets/wayfind.dart';
+import '../../core/widgets/one_ui.dart';
 import '../../services/mesh/meshtastic_transport.dart';
 
 /// Pair the car's LoRa radio. One-time setup: the app reconnects to it
@@ -62,105 +62,67 @@ class _RadioScreenState extends State<RadioScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final w = context.wf;
+    final c = context.tones;
     final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Long-range radio')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-        children: [
-          Text('Stay linked with no cell signal', style: t.headlineSmall),
-          const SizedBox(height: 12),
-          Text(
-            'Phones alone only reach cars a few hundred metres away. A small LoRa radio running Meshtastic '
-            '(Heltec V3, RAK WisBlock or LilyGO T-Echo, about \$25 to \$40) reaches 2 to 10 km between cars on the road, '
-            'and every radio relays for the others, so the link stretches with the convoy.',
-            style: t.bodyLarge,
+    return LargeTitleScaffold(
+      title: 'Long-range radio',
+      subtitle: 'Stay linked with no cell signal',
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                'Phones alone only reach cars a few hundred metres away. A small LoRa radio running Meshtastic '
+                '(Heltec V3, RAK WisBlock or LilyGO T-Echo, about \$25 to \$40) reaches 2 to 10 km between cars, '
+                'and every radio relays for the others, so the link stretches with the convoy.',
+                style: t.bodyMedium,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Set each radio to the same region and the default channel in the Meshtastic app once. DriveSync '
+                'encrypts everything it sends with your trip\'s key, so other radio users cannot read or fake it.',
+                style: t.bodySmall,
+              ),
+            ]),
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Set each radio to the same region and the default channel in the Meshtastic app once. DriveSync '
-            'encrypts everything it sends with your trip\'s key, so other radio users cannot read or fake it.',
-            style: t.bodyMedium?.copyWith(color: w.muted),
+        ),
+        if (_paired != null)
+          Section(title: 'Paired', children: [
+            Tile(
+              leading: TileIcon(Icons.settings_input_antenna, color: c.good),
+              title: 'Paired radio',
+              subtitle: _paired!,
+              trailing: TextButton(onPressed: () => _pair(null), child: const Text('Remove')),
+            ),
+          ]),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: _scanning ? null : _scan,
+          icon: _scanning
+              ? SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: c.faint))
+              : const Icon(Icons.bluetooth_searching_rounded),
+          label: Text(_scanning ? 'Searching' : 'Find radios nearby'),
+        ),
+        if (_found.isNotEmpty)
+          Section(title: 'Found nearby', children: [
+            for (final r in _found)
+              Tile(
+                leading: TileIcon(Icons.router_rounded, color: c.accent),
+                title: r.advertisementData.advName.isNotEmpty ? r.advertisementData.advName : r.device.remoteId.str,
+                subtitle: 'Signal ${r.rssi} dBm',
+                trailing: r.device.remoteId.str == _paired
+                    ? Icon(Icons.check_circle_rounded, color: c.good)
+                    : OutlinedButton(onPressed: () => _pair(r.device.remoteId.str), child: const Text('Pair')),
+              ),
+          ]),
+        if (!_scanning && _found.isEmpty && _sub != null)
+          const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: InfoBanner('No radios found. Check the radio is on and Bluetooth is enabled, then search again.',
+                icon: Icons.bluetooth_disabled_rounded),
           ),
-          const SizedBox(height: 24),
-          if (_paired != null)
-            Plate(
-              child: Row(
-                children: [
-                  const Icon(Icons.settings_input_antenna),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Paired radio', style: t.labelSmall?.copyWith(color: w.plateMuted)),
-                        Text(
-                          _paired!,
-                          style: t.titleSmall?.copyWith(color: w.figure, fontWeight: FontWeight.w800),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    style: TextButton.styleFrom(foregroundColor: w.onPlate),
-                    onPressed: () => _pair(null),
-                    child: const Text('Remove'),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _scanning ? null : _scan,
-            icon: const Icon(Icons.bluetooth_searching),
-            label: Text(_scanning ? 'Searching for 15 s' : 'Find radios nearby'),
-          ),
-          if (_found.isNotEmpty)
-            BoardHead(
-              'Found',
-              padding: const EdgeInsets.only(top: 28),
-              trailing: Text('${_found.length}', style: t.titleSmall),
-            ),
-          if (!_scanning && _found.isEmpty && _sub != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                'No radios found. Check the radio is on and Bluetooth is enabled, then search again.',
-                style: t.bodyMedium?.copyWith(color: w.muted),
-              ),
-            ),
-          for (final r in _found)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: w.rule, width: Rules.hair),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.advertisementData.advName.isNotEmpty ? r.advertisementData.advName : r.device.remoteId.str,
-                          style: t.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        Text('Signal ${r.rssi} dBm', style: t.bodySmall),
-                      ],
-                    ),
-                  ),
-                  if (r.device.remoteId.str == _paired)
-                    Text('Paired', style: t.labelLarge?.copyWith(color: w.live))
-                  else
-                    OutlinedButton(onPressed: () => _pair(r.device.remoteId.str), child: const Text('Pair')),
-                ],
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 }
