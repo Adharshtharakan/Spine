@@ -912,9 +912,22 @@ class TripSession extends ChangeNotifier {
     }
   }
 
+  /// When the light HTTP sync last succeeded (weak-signal mode).
+  DateTime? get lastSyncOk => _lastPollOk;
+
   void _tick() {
     final live = channel?.isLive ?? false;
     final now = DateTime.now();
+    final ch = channel;
+    // A live connection that never answers reports nothing by itself; say so.
+    if (ch != null && !live && ch.lastError == null && now.difference(ch.connectingSince) > const Duration(seconds: 20)) {
+      ch.lastError = 'Live connection: no answer from Supabase Realtime after 20 s (socket ${ch.socketState})';
+    }
+    // No GPS fix after 30 s: try the plain GPS provider and a one-off fix.
+    final g = gps;
+    if (g != null && g.fixes == 0 && g.startedAt != null && now.difference(g.startedAt!) > const Duration(seconds: 30)) {
+      unawaited(g.kick());
+    }
     _evaluateWatch();
     if (live || _cloudReachable) {
       unawaited(_refreshRoad());

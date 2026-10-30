@@ -30,11 +30,27 @@ class GpsService {
 
   static const parkAfter = Duration(minutes: 3);
 
+  /// For the connection details sheet.
+  int fixes = 0;
+  String? lastError;
+  DateTime? startedAt;
+  GpsPermission? permission;
+
+  /// Use the plain Android GPS provider instead of Google's fused provider
+  /// (set when the fused provider delivers nothing).
+  bool _forceLocationManager = false;
+
   Stream<VehiclePosition> get positions => _controller.stream;
 
   /// Requests permission (always-on where the OS allows it, so the convoy can
   /// see you while the phone is locked in a mount) and starts streaming.
   Future<GpsPermission> start() async {
+    startedAt = DateTime.now();
+    permission = await _start();
+    return permission!;
+  }
+
+  Future<GpsPermission> _start() async {
     if (!await Geolocator.isLocationServiceEnabled()) return GpsPermission.serviceDisabled;
     var perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
@@ -42,30 +58,57 @@ class GpsService {
     if (perm == LocationPermission.deniedForever) return GpsPermission.deniedForever;
 
     await _listen();
+    // Show something straight away: the phone's last known position (with
+    // its real time, so others see how old it is) until a fresh fix arrives.
+    try {
+      final known = await Geolocator.getLastKnownPosition();
+      if (known != null && fixes == 0) _emit(known);
+    } catch (_) {}
     return perm == LocationPermission.always ? GpsPermission.always : GpsPermission.whileInUse;
+  }
+
+  /// Called by the trip when no fix has arrived for a while: switch to the
+  /// plain GPS provider and ask once for a single fix.
+  Future<void> kick() async {
+    if (fixes > 0 || permission == null || permission == GpsPermission.denied) return;
+    if (!_forceLocationManager) {
+      _forceLocationManager = true;
+      await _listen();
+    }
+    try {
+      final p = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 20)));
+      _emit(p);
+    } catch (e) {
+      lastError = '$e';
+    }
   }
 
   Future<void> _listen() async {
     await _sub?.cancel();
     _sub = Geolocator.getPositionStream(locationSettings: _settings()).listen(
-      (p) {
-        final id = memberId;
-        if (id == null) return;
-        final v = VehiclePosition(
-          memberId: id,
-          point: GeoPoint(p.latitude, p.longitude),
-          timestamp: p.timestamp.toUtc(),
-          speedMps: p.speed < 0 ? 0 : p.speed,
-          headingDeg: p.heading < 0 ? (last?.headingDeg ?? 0) : p.heading,
-          accuracyM: p.accuracy,
-          source: PositionSource.local,
-        );
-        last = v;
-        _controller.add(v);
-        _adapt(v);
-      },
-      onError: (Object e) => _controller.addError(e),
+      _emit,
+      onError: (Object e) => lastError = '$e',
     );
+  }
+
+  void _emit(Position p) {
+    final id = memberId;
+    if (id == null || _controller.isClosed) return;
+    final v = VehiclePosition(
+      memberId: id,
+      point: GeoPoint(p.latitude, p.longitude),
+      timestamp: p.timestamp.toUtc(),
+      speedMps: p.speed < 0 ? 0 : p.speed,
+      headingDeg: p.heading < 0 ? (last?.headingDeg ?? 0) : p.heading,
+      accuracyM: p.accuracy,
+      source: PositionSource.local,
+    );
+    fixes++;
+    lastError = null;
+    last = v;
+    _controller.add(v);
+    _adapt(v);
   }
 
   /// Switches between full rate and parked rate. Public for tests.
@@ -92,6 +135,7 @@ class GpsService {
   LocationSettings _settings() {
     if (Platform.isAndroid) {
       return AndroidSettings(
+        forceLocationManager: _forceLocationManager,
         accuracy: _parked ? LocationAccuracy.medium : LocationAccuracy.bestForNavigation,
         distanceFilter: _parked ? 25 : 5,
         intervalDuration: Duration(seconds: _parked ? 20 : 1),

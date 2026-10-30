@@ -12,6 +12,7 @@ import '../../services/voice/voice_assistant.dart';
 import '../../state/trip_session.dart';
 import '../itinerary/itinerary_tab.dart';
 import 'convoy_map.dart';
+import 'connection_details.dart';
 import 'map_overlays.dart';
 
 class MapTab extends StatefulWidget {
@@ -50,65 +51,83 @@ class _MapTabState extends State<MapTab> {
           hazards: events.hazards,
           sosMemberIds: events.sos.keys.toSet(),
           regroup: events.regroup?.location,
-          onWaypointLongPress: (p) => showMapPointMenu(context, s, p, onAddStop: () => editStopDialog(context, s, at: p)),
+          onWaypointLongPress: (p) =>
+              showMapPointMenu(context, s, p, onAddStop: () => editStopDialog(context, s, at: p)),
         ),
         // Top: back, trip name with link state, then alerts.
         Positioned(
           top: mq.padding.top + 8,
           left: 12,
           right: 12,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              _RoundGlassButton(
-                icon: Icons.arrow_back_rounded,
-                tooltip: 'Back',
-                onPressed: () => Navigator.maybePop(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  _RoundGlassButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: 'Back',
+                    onPressed: () => Navigator.maybePop(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: _TitlePill(session: s)),
+                  const SizedBox(width: 10),
+                  SosButton(active: events.sos.containsKey(s.me?.id), onTriggered: () => _raiseSos(context)),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(child: _TitlePill(session: s)),
-              const SizedBox(width: 10),
-              SosButton(active: events.sos.containsKey(s.me?.id), onTriggered: () => _raiseSos(context)),
-            ]),
-            _LinkBanner(session: s),
-            SosBanner(session: s),
-            if (assistant != null) VoiceTranscript(assistant: assistant),
-            for (final a in s.alerts) _AlertCard(alert: a, onDismiss: () => s.dismissAlert(a)),
-          ]),
+              _LinkBanner(session: s),
+              SosBanner(session: s),
+              if (assistant != null) VoiceTranscript(assistant: assistant),
+              for (final a in s.alerts) _AlertCard(alert: a, onDismiss: () => s.dismissAlert(a)),
+            ],
+          ),
         ),
         // Bottom, above the floating tab bar: who is on air, the lead card, the keys.
         Positioned(
           left: 12,
           right: 12,
           bottom: mq.padding.bottom + 10,
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (assistant != null) ...[VoiceButton(assistant: assistant), const SizedBox(height: 10)],
-                _RoundGlassButton(
-                  icon: Icons.report_rounded,
-                  tooltip: 'Report a hazard',
-                  onPressed: () => showHazardSheet(context, s),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (assistant != null) ...[VoiceButton(assistant: assistant), const SizedBox(height: 10)],
+                    _RoundGlassButton(
+                      icon: Icons.report_rounded,
+                      tooltip: 'Report a hazard',
+                      onPressed: () => showHazardSheet(context, s),
+                    ),
+                    const SizedBox(height: 10),
+                    _RoundGlassButton(
+                      icon: _follow ? Icons.my_location_rounded : Icons.location_searching_rounded,
+                      tooltip: _follow ? 'Stop following me' : 'Follow me',
+                      active: _follow,
+                      onPressed: () => setState(() => _follow = !_follow),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _RoundGlassButton(
-                  icon: _follow ? Icons.my_location_rounded : Icons.location_searching_rounded,
-                  tooltip: _follow ? 'Stop following me' : 'Follow me',
-                  active: _follow,
-                  onPressed: () => setState(() => _follow = !_follow),
-                ),
-              ]),
-            ),
-            const SizedBox(height: 10),
-            RegroupCard(session: s),
-            HeadcountBar(session: s),
-            _TalkerPill(session: s),
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Expanded(child: _LeadCard(session: s, lead: lead)),
-              const SizedBox(width: 10),
-              PttButton(session: s, showTalker: false),
-            ]),
-          ]),
+              ),
+              const SizedBox(height: 10),
+              RegroupCard(session: s),
+              HeadcountBar(session: s),
+              _TalkerPill(session: s),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: _LeadCard(session: s, lead: lead),
+                  ),
+                  const SizedBox(width: 10),
+                  PttButton(session: s, showTalker: false),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -117,10 +136,12 @@ class _MapTabState extends State<MapTab> {
   Future<void> _raiseSos(BuildContext context) async {
     await s.raiseSos();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('SOS sent. Everyone in the convoy can see where you are.'),
-        duration: Duration(seconds: 6),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SOS sent. Everyone in the convoy can see where you are.'),
+          duration: Duration(seconds: 6),
+        ),
+      );
     }
   }
 }
@@ -168,17 +189,32 @@ class _TitlePill extends StatelessWidget {
       LinkMode.nearby => (c.warn, 'Nearby cars only'),
       LinkMode.isolated => (c.bad, 'No signal'),
     };
-    return Glass(
-      radius: 26,
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text(session.trip?.title ?? 'Trip', style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-        Row(children: [
-          Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
-          Text(state, style: t.labelMedium),
-        ]),
-      ]),
+    return GestureDetector(
+      onTap: () => showConnectionDetails(context, session),
+      child: Glass(
+        radius: 26,
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(session.trip?.title ?? 'Trip', style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Row(
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Text(state, style: t.labelMedium),
+                const SizedBox(width: 4),
+                Icon(Icons.info_outline_rounded, size: 14, color: c.faint),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -205,12 +241,17 @@ class _TalkerPill extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
               decoration: BoxDecoration(color: c.warn, borderRadius: BorderRadius.circular(99)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text('${m?.vehicleLabel ?? m?.displayName ?? 'Someone'} is talking',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white)),
-              ]),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${m?.vehicleLabel ?? m?.displayName ?? 'Someone'} is talking',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -251,17 +292,19 @@ class _AlertCard extends StatelessWidget {
       child: Glass(
         radius: Radii.tile,
         padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-        child: Row(children: [
-          TileIcon(icon, color: color, size: 34),
-          const SizedBox(width: 12),
-          Expanded(child: Text(alert.message, style: Theme.of(context).textTheme.titleSmall)),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: 'Dismiss',
-            icon: Icon(Icons.close_rounded, size: 20, color: c.sub),
-            onPressed: onDismiss,
-          ),
-        ]),
+        child: Row(
+          children: [
+            TileIcon(icon, color: color, size: 34),
+            const SizedBox(width: 12),
+            Expanded(child: Text(alert.message, style: Theme.of(context).textTheme.titleSmall)),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Dismiss',
+              icon: Icon(Icons.close_rounded, size: 20, color: c.sub),
+              onPressed: onDismiss,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -280,43 +323,56 @@ class _LinkBanner extends StatelessWidget {
       LinkMode.cloud => (Icons.cloud_done_rounded, ''),
       LinkMode.weak => (Icons.network_cell_rounded, 'Weak signal. Convoy updates every 15 s.'),
       LinkMode.radio => (
-          Icons.settings_input_antenna,
-          'No signal. Linked by convoy radio, ${session.meshPeersOn?.call('lora') ?? 0} heard.'
-        ),
+        Icons.settings_input_antenna,
+        'No signal. Linked by convoy radio, ${session.meshPeersOn?.call('lora') ?? 0} heard.',
+      ),
       LinkMode.nearby => (Icons.bluetooth_connected_rounded, 'No signal. Only cars close by are linked.'),
       LinkMode.isolated => (
-          Icons.cloud_off_rounded,
-          'No signal. Your GPS and offline maps still work; the others are predicted from their last report.'
-        ),
+        Icons.cloud_off_rounded,
+        'No signal. Your GPS and offline maps still work; the others are predicted from their last report.',
+      ),
     };
     final gpsProblem = switch (session.gpsPermission) {
       GpsPermission.denied || GpsPermission.deniedForever => 'Location permission is off. Your convoy cannot see you.',
       GpsPermission.serviceDisabled => 'Turn on location services so your convoy can see you.',
       _ => null,
     };
-    final message = gpsProblem ?? (text.isEmpty && session.pendingWrites > 0 ? 'Syncing ${session.pendingWrites} change(s)' : text);
+    final message =
+        gpsProblem ?? (text.isEmpty && session.pendingWrites > 0 ? 'Syncing ${session.pendingWrites} change(s)' : text);
     if (message.isEmpty) return const SizedBox.shrink();
-    final color = gpsProblem != null || session.link == LinkMode.isolated ? c.bad : session.pendingWrites > 0 && text.isEmpty ? c.accent : c.warn;
+    final color = gpsProblem != null || session.link == LinkMode.isolated
+        ? c.bad
+        : session.pendingWrites > 0 && text.isEmpty
+        ? c.accent
+        : c.warn;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Glass(
         radius: Radii.tile,
         padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
-        child: Row(children: [
-          TileIcon(gpsProblem != null ? Icons.location_disabled_rounded : icon, color: color, size: 34),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
-              // While not connected, say why, so a server problem doesn't
-              // masquerade as having no signal.
-              if (session.link != LinkMode.cloud && session.connectionProblem != null) ...[
-                const SizedBox(height: 4),
-                SelectableText('Details: ${session.connectionProblem}', style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ]),
-          ),
-        ]),
+        child: Row(
+          children: [
+            TileIcon(gpsProblem != null ? Icons.location_disabled_rounded : icon, color: color, size: 34),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                  // While not connected, say why, so a server problem doesn't
+                  // masquerade as having no signal.
+                  if (session.link != LinkMode.cloud && session.connectionProblem != null) ...[
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      'Details: ${session.connectionProblem}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -344,7 +400,9 @@ class _LeadCard extends StatelessWidget {
     }
     String? note;
     if (lead?.reason == LeadReason.designatedSilent) {
-      final mins = DateTime.now().difference(session.lastReported(lead!.memberId)?.timestamp ?? DateTime.now()).inMinutes;
+      final mins = DateTime.now()
+          .difference(session.lastReported(lead!.memberId)?.timestamp ?? DateTime.now())
+          .inMinutes;
       note = 'Not heard for $mins min. Position estimated.';
     } else if (lead?.reason == LeadReason.furthestAlongRoute) {
       note = 'Designated lead is silent. Showing the front car.';
@@ -352,44 +410,62 @@ class _LeadCard extends StatelessWidget {
     final name = leadMember == null
         ? 'Lead not reporting'
         : lead!.memberId == session.me?.id
-            ? 'You are leading'
-            : leadMember.vehicleLabel ?? leadMember.displayName;
+        ? 'You are leading'
+        : leadMember.vehicleLabel ?? leadMember.displayName;
     return Glass(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Row(children: [
-          VehicleAvatar(Color(leadMember?.vehicleColor ?? Tones.vehicleColours.first), lead: true, size: 36),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Leading', style: t.labelMedium),
-              Text(name, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ]),
-          ),
-        ]),
-        if (note != null) ...[
-          const SizedBox(height: 8),
-          Text(note, style: t.bodySmall?.copyWith(color: c.warn, fontWeight: FontWeight.w500)),
-        ],
-        if (distance != null || next != null) ...[
-          const SizedBox(height: 14),
-          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Expanded(
-              child: Stats([
-                ('Ahead of you', distance),
-                if (next != null)
-                  (next.name, next.plannedArrival == null ? 'Next stop' : DateFormat.Hm().format(next.plannedArrival!)),
-              ]),
-            ),
-            if (next != null)
-              IconButton.filledTonal(
-                tooltip: 'Directions to ${next.name}',
-                icon: const Icon(Icons.directions_rounded),
-                onPressed: () => navigateTo(context, next.location, name: next.name),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              VehicleAvatar(Color(leadMember?.vehicleColor ?? Tones.vehicleColours.first), lead: true, size: 36),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Leading', style: t.labelMedium),
+                    Text(name, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
-          ]),
+            ],
+          ),
+          if (note != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              note,
+              style: t.bodySmall?.copyWith(color: c.warn, fontWeight: FontWeight.w500),
+            ),
+          ],
+          if (distance != null || next != null) ...[
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Stats([
+                    ('Ahead of you', distance),
+                    if (next != null)
+                      (
+                        next.name,
+                        next.plannedArrival == null ? 'Next stop' : DateFormat.Hm().format(next.plannedArrival!),
+                      ),
+                  ]),
+                ),
+                if (next != null)
+                  IconButton.filledTonal(
+                    tooltip: 'Directions to ${next.name}',
+                    icon: const Icon(Icons.directions_rounded),
+                    onPressed: () => navigateTo(context, next.location, name: next.name),
+                  ),
+              ],
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
@@ -431,50 +507,66 @@ class _PttButtonState extends State<PttButton> {
         final color = _held
             ? c.bad
             : someoneElse
-                ? c.warn
-                : c.accent;
-        return Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-          if (name != null && widget.showTalker)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('$name is talking', style: t.labelMedium?.copyWith(color: c.warn, fontWeight: FontWeight.w600)),
-            ),
-          Semantics(
-            button: true,
-            label: _held ? 'Talking. Release to stop.' : 'Hold to talk',
-            child: GestureDetector(
-              onTapDown: (_) async {
-                final ok = await ptt.pressToTalk();
-                HapticFeedback.heavyImpact();
-                if (mounted) setState(() => _held = ok);
-              },
-              onTapUp: (_) => _release(),
-              onTapCancel: _release,
-              child: AnimatedScale(
-                scale: _held && !still ? 1.1 : 1,
-                duration: still ? Duration.zero : const Duration(milliseconds: 140),
-                curve: Curves.easeOutBack,
-                child: Container(
-                  width: size,
-                  height: size,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: _held ? 28 : 18, offset: const Offset(0, 8)),
-                    ],
+            ? c.warn
+            : c.accent;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (name != null && widget.showTalker)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '$name is talking',
+                  style: t.labelMedium?.copyWith(color: c.warn, fontWeight: FontWeight.w600),
+                ),
+              ),
+            Semantics(
+              button: true,
+              label: _held ? 'Talking. Release to stop.' : 'Hold to talk',
+              child: GestureDetector(
+                onTapDown: (_) async {
+                  final ok = await ptt.pressToTalk();
+                  HapticFeedback.heavyImpact();
+                  if (mounted) setState(() => _held = ok);
+                },
+                onTapUp: (_) => _release(),
+                onTapCancel: _release,
+                child: AnimatedScale(
+                  scale: _held && !still ? 1.1 : 1,
+                  duration: still ? Duration.zero : const Duration(milliseconds: 140),
+                  curve: Curves.easeOutBack,
+                  child: Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.45),
+                          blurRadius: _held ? 28 : 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(_held ? Icons.mic_rounded : Icons.mic_none_rounded, color: Colors.white, size: size * 0.4),
+                        if (size >= 64)
+                          Text(
+                            _held ? 'Talking' : 'Hold',
+                            style: t.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                          ),
+                      ],
+                    ),
                   ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(_held ? Icons.mic_rounded : Icons.mic_none_rounded, color: Colors.white, size: size * 0.4),
-                    if (size >= 64)
-                      Text(_held ? 'Talking' : 'Hold',
-                          style: t.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ]),
                 ),
               ),
             ),
-          ),
-        ]);
+          ],
+        );
       },
     );
   }

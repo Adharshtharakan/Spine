@@ -56,12 +56,35 @@ class ConvoyChannel implements PttSignaller {
 
   /// Why the live channel last dropped, for the connection details banner.
   String? lastError;
+
+  /// When we started trying to connect, and recent status changes, for the
+  /// connection details sheet.
+  DateTime connectingSince = DateTime.now();
+  final List<String> history = [];
+
+  /// The shared Realtime websocket's state (open, connecting, closed…).
+  String get socketState => _db.realtime.connState?.name ?? 'not started';
+
+  void _note(String line) {
+    final t = DateTime.now();
+    history.add('${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:'
+        '${t.second.toString().padLeft(2, '0')} $line');
+    if (history.length > 12) history.removeAt(0);
+    debugPrint('ConvoyChannel trip:$tripId $line');
+  }
   ChannelStatus get currentStatus => _current;
 
   static Map<String, dynamic> _body(Map<String, dynamic> msg) =>
       msg['payload'] is Map ? Map<String, dynamic>.from(msg['payload'] as Map) : msg;
 
   void connect() {
+    connectingSince = DateTime.now();
+    _note('connecting (socket ${_db.realtime.connState?.name ?? 'not started'})');
+    _db.realtime.onError((Object? e) {
+      if (_channel == null) return;
+      lastError = 'Realtime socket error: $e';
+      _note(lastError!);
+    });
     final filter = PostgresChangeFilter(
       type: PostgresChangeFilterType.eq,
       column: 'trip_id',
@@ -134,13 +157,15 @@ class ConvoyChannel implements PttSignaller {
         .subscribe((status, error) async {
           switch (status) {
             case RealtimeSubscribeStatus.subscribed:
+              _note('live');
+              lastError = null;
               _setStatus(ChannelStatus.live);
               await _channel?.track({'member': memberId, 'at': DateTime.now().toUtc().toIso8601String()});
             case RealtimeSubscribeStatus.channelError:
             case RealtimeSubscribeStatus.timedOut:
             case RealtimeSubscribeStatus.closed:
               lastError = error == null ? 'Live connection: ${status.name}' : 'Live connection: $error';
-              debugPrint('ConvoyChannel trip:$tripId ${status.name} $error');
+              _note('${status.name}${error == null ? '' : ': $error'}');
               _setStatus(ChannelStatus.offline);
           }
         });
