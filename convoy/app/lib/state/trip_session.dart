@@ -691,7 +691,14 @@ class TripSession extends ChangeNotifier {
       for (final p in await _repo.lastKnownPositions(tripId)) {
         _reported[p.memberId] = p;
       }
-      await _loadEvents();
+      // Optional: an older database without trip_events must not stop the
+      // trip from opening (the map, chat and plan still work).
+      try {
+        await _loadEvents();
+      } catch (e) {
+        debugPrint('TripSession events unavailable: $e');
+        syncError = 'Safety events: ${friendlyError(e)}';
+      }
       unawaited(_saveSnapshot());
     } catch (e) {
       debugPrint('TripSession.open failed: $e');
@@ -984,7 +991,7 @@ class TripSession extends ChangeNotifier {
         _waypointCursor = r['updated_at'] as String?;
       }
 
-      await _loadEvents().timeout(t);
+      await _loadEvents().timeout(t).catchError((Object e) => debugPrint('TripSession events unavailable: $e'));
       _lastPollOk = DateTime.now();
       syncError = null;
       await _flushOutbox();
