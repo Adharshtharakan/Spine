@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "app.convoy.convoy"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android 14.1 compiles against API 37 (Flutter's default is 36).
+    compileSdk = maxOf(flutter.compileSdkVersion, 37)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
