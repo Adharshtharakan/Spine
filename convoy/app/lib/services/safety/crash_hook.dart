@@ -17,19 +17,33 @@ void attachCrashDetection(WidgetRef ref, TripSession session) {
   StreamSubscription<UserAccelerometerEvent>? accel;
   StreamSubscription<dynamic>? gps;
   Timer? poll;
+  var stopped = false;
+
+  // The setting is read through the trip screen's ref, which is gone once
+  // the screen closes; never touch it after that.
+  bool enabled() {
+    if (stopped || session.isDisposed) return false;
+    try {
+      return ref.read(crashDetectionProvider);
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<void> start() async {
-    while (session.loading) {
+    while (session.loading && !session.isDisposed && !stopped) {
       await Future<void>.delayed(const Duration(milliseconds: 300));
     }
-    // Only for people in a vehicle.
+    // Closed while loading, or not in a vehicle: nothing to watch.
+    if (stopped || session.isDisposed) return;
     if (!(session.me?.hasVehicle ?? false) || session.gps == null) return;
     gps = session.gps!.positions.listen((p) => detector.onSpeed(p.timestamp, p.speedMps));
     accel = userAccelerometerEventStream(samplingPeriod: SensorInterval.gameInterval).listen((e) {
-      if (!ref.read(crashDetectionProvider)) return;
+      if (!enabled()) return;
       detector.onImpact(DateTime.now().toUtc(), math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z));
     }, onError: (_) {});
     poll = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (stopped || session.isDisposed) return;
       if (session.crashAlarm.value == null && detector.check(DateTime.now().toUtc())) {
         session.crashAlarm.value = DateTime.now();
       }
@@ -38,6 +52,7 @@ void attachCrashDetection(WidgetRef ref, TripSession session) {
 
   unawaited(start().catchError((_) {}));
   session.addDisposer(() async {
+    stopped = true;
     poll?.cancel();
     await accel?.cancel();
     await gps?.cancel();

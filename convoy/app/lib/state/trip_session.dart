@@ -1150,8 +1150,15 @@ class TripSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _disposed = false;
+
+  /// True once the trip screen has closed. Background helpers attached to
+  /// the session check it before touching anything tied to that screen.
+  bool get isDisposed => _disposed;
+
   @override
   void dispose() {
+    _disposed = true;
     unawaited(_alertCtrl.close());
     crashAlarm.dispose();
     unawaited(_saveSnapshot());

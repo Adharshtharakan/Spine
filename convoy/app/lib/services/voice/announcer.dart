@@ -39,7 +39,12 @@ void attachAnnouncer(WidgetRef ref, TripSession session) {
 
   final sub = session.alertStream.listen((ConvoyAlert a) async {
     unawaited(HapticFeedback.mediumImpact());
-    if (!ready || !ref.read(spokenAlertsProvider)) return;
+    if (!ready || session.isDisposed) return;
+    try {
+      if (!ref.read(spokenAlertsProvider)) return;
+    } catch (_) {
+      return; // the trip screen has closed
+    }
     // Someone is talking on push-to-talk: don't speak over them.
     final talker = session.ptt?.talking.value;
     if (talker != null && talker != session.me?.id) return;

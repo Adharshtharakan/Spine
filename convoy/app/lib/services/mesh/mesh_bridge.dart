@@ -20,9 +20,10 @@ void attachMesh(WidgetRef ref, TripSession session) {
   Future<void> boot() async {
     // Wait for the session to know the trip (for the key) and our member id;
     // both come from the on-device snapshot when there is no signal.
-    while (session.loading) {
+    while (session.loading && !session.isDisposed) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
+    if (session.isDisposed) return;
     final trip = session.trip;
     final me = session.me;
     if (trip == null || me == null) return;
@@ -33,6 +34,7 @@ void attachMesh(WidgetRef ref, TripSession session) {
       // Offline at launch: entitlement unknown, fall back to Free behaviour.
     }
     final radio = await MeshtasticTransport.savedDevice();
+    if (session.isDisposed) return;
     final m = MeshService(
       tripId: trip.id,
       memberId: me.id,
@@ -46,6 +48,10 @@ void attachMesh(WidgetRef ref, TripSession session) {
       ],
     );
     if (!await m.start()) return;
+    if (session.isDisposed) {
+      await m.dispose();
+      return;
+    }
     mesh = m;
     subs.addAll([
       m.positions.listen(session.acceptMeshPosition),
