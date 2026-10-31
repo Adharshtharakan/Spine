@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/geo/geo.dart';
 import '../../core/theme/tokens.dart';
@@ -8,6 +9,7 @@ import '../../core/widgets/one_ui.dart';
 import '../../services/location/gps_service.dart';
 import '../../services/tracking/convoy_watch.dart';
 import '../../services/tracking/lead_vehicle.dart';
+import '../../services/voice/ptt_service.dart';
 import '../../services/voice/voice_assistant.dart';
 import '../../state/trip_session.dart';
 import '../itinerary/itinerary_tab.dart';
@@ -487,6 +489,16 @@ class PttButton extends StatefulWidget {
 
 class _PttButtonState extends State<PttButton> {
   bool _held = false;
+  bool _down = false;
+
+  void _explain(PttService ptt) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(ptt.lastFailure!),
+        action: ptt.lastFailureIsPermission ? SnackBarAction(label: 'Settings', onPressed: openAppSettings) : null,
+      ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -524,14 +536,20 @@ class _PttButtonState extends State<PttButton> {
             Semantics(
               button: true,
               label: _held ? 'Talking. Release to stop.' : 'Hold to talk',
-              child: GestureDetector(
-                onTapDown: (_) async {
-                  final ok = await ptt.pressToTalk();
+              // Raw pointer events: a finger that drifts while holding the
+              // button in a moving car must not cut the transmission.
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) async {
+                  _down = true;
                   HapticFeedback.heavyImpact();
-                  if (mounted) setState(() => _held = ok);
+                  final ok = await ptt.pressToTalk();
+                  if (!mounted) return;
+                  setState(() => _held = ok && _down);
+                  if (!ok && ptt.lastFailure != null) _explain(ptt);
                 },
-                onTapUp: (_) => _release(),
-                onTapCancel: _release,
+                onPointerUp: (_) => _release(),
+                onPointerCancel: (_) => _release(),
                 child: AnimatedScale(
                   scale: _held && !still ? 1.1 : 1,
                   duration: still ? Duration.zero : const Duration(milliseconds: 140),
@@ -572,7 +590,8 @@ class _PttButtonState extends State<PttButton> {
   }
 
   Future<void> _release() async {
-    await widget.session.ptt?.release();
+    _down = false;
     if (mounted) setState(() => _held = false);
+    await widget.session.ptt?.release();
   }
 }

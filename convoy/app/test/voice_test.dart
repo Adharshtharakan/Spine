@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:convoy/services/voice/ptt_service.dart';
 import 'package:convoy/services/voice/voice_codec.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:record/record.dart';
 
 class FakeSignaller implements PttSignaller {
   final pttCtrl = StreamController<Map<String, dynamic>>.broadcast();
@@ -22,6 +23,34 @@ class FakeSignaller implements PttSignaller {
     sentAudio.add(body);
     return true;
   }
+}
+
+class FakeRecorder implements AudioRecorder {
+  FakeRecorder({this.allowed = true, this.startDelay = Duration.zero});
+  final bool allowed;
+  final Duration startDelay;
+  final mic = StreamController<Uint8List>();
+  bool recording = false;
+
+  @override
+  Future<bool> hasPermission({bool request = true}) async => allowed;
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async {
+    await Future<void>.delayed(startDelay);
+    recording = true;
+    return mic.stream;
+  }
+
+  @override
+  Future<String?> stop() async {
+    recording = false;
+    return null;
+  }
+
+  @override
+  Future<void> dispose() async {}
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class RecordingPlayer implements VoicePlayer {
@@ -113,7 +142,57 @@ void main() {
     test('will not talk without the live connection', () async {
       sig.isLive = false;
       expect(await ptt.pressToTalk(), isFalse);
-      expect(ptt.micError, contains('live connection'));
+      expect(ptt.lastFailure, contains('live connection'));
+    });
+  });
+
+  group('talking', () {
+    Future<(PttService, FakeSignaller, FakeRecorder)> make({bool allowed = true, Duration startDelay = Duration.zero}) async {
+      final sig = FakeSignaller();
+      final rec = FakeRecorder(allowed: allowed, startDelay: startDelay);
+      final ptt = PttService(selfId: 'me', signaller: sig, recorder: rec, player: RecordingPlayer());
+      await ptt.start();
+      return (ptt, sig, rec);
+    }
+
+    test('sends 200 ms frames while held', () async {
+      final (ptt, sig, rec) = await make();
+      expect(await ptt.pressToTalk(), isTrue);
+      rec.mic.add(Uint8List(VoiceCodec.micFrameBytes * 2 + 100));
+      await Future<void>.delayed(Duration.zero);
+      expect(sig.sentAudio, hasLength(2));
+      await ptt.release();
+      expect(rec.recording, isFalse);
+      expect(ptt.talking.value, isNull);
+    });
+
+    test('says why when the microphone is not allowed', () async {
+      final (ptt, _, _) = await make(allowed: false);
+      expect(await ptt.pressToTalk(), isFalse);
+      expect(ptt.lastFailureIsPermission, isTrue);
+      expect(ptt.floor.holder, isNull, reason: 'a failed press must not keep the floor');
+    });
+
+    test('letting go while the microphone starts leaves it off', () async {
+      final (ptt, _, rec) = await make(startDelay: const Duration(milliseconds: 50));
+      final pressed = ptt.pressToTalk();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await ptt.release();
+      expect(await pressed, isFalse);
+      expect(rec.recording, isFalse);
+      expect(ptt.floor.holder, isNull);
+    });
+
+    test('waits while someone is talking, but takes over a floor left silent', () async {
+      final (ptt, sig, _) = await make();
+      sig.pttCtrl.add({'from': 'ravi', 'action': 'start', 'at': DateTime.now().toUtc().toIso8601String()});
+      await Future<void>.delayed(Duration.zero);
+      expect(await ptt.pressToTalk(), isFalse);
+      expect(ptt.lastFailure, contains('Someone else'));
+      // Ravi's "end" was lost; after a few silent seconds the floor is free.
+      await Future<void>.delayed(PttService.staleFloor + const Duration(milliseconds: 100));
+      expect(await ptt.pressToTalk(), isTrue);
+      await ptt.release();
     });
   });
 }

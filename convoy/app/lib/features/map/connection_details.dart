@@ -65,6 +65,7 @@ Future<void> showConnectionDetails(BuildContext context, TripSession s) => showM
                         ', ${s.ptt!.othersOnline} other(s) online'
                         '\nSent ${s.ptt!.framesSent} / heard ${s.ptt!.framesHeard} voice frames'
                         '${s.ptt!.lastHeardAt == null ? '' : ', last heard ${ago(s.ptt!.lastHeardAt)}'}'
+                        '${s.ptt!.lastFailure == null ? '' : '\nLast press: ${s.ptt!.lastFailure}'}'
                         '${s.ptt!.micError == null ? '' : '\nMicrophone: ${s.ptt!.micError}'}'
                         '${s.ptt!.playerError == null ? '' : '\nSpeaker: ${s.ptt!.playerError}'}',
               ),

@@ -72,6 +72,14 @@ class PttService {
   /// Member currently holding the floor (null when the channel is quiet).
   final talking = ValueNotifier<String?>(null);
 
+  /// Why the last press didn't start talking, in words for the driver
+  /// (shown next to the button); null after a successful press.
+  String? lastFailure;
+
+  /// True when [lastFailure] is a microphone permission problem (the UI
+  /// offers to open Settings).
+  bool lastFailureIsPermission = false;
+
   /// For the connection details sheet.
   String? micError;
   String? playerError;
@@ -90,6 +98,17 @@ class PttService {
 
   // Sending.
   StreamSubscription<Uint8List>? _micSub;
+
+  /// The button is held right now. A release while the microphone is still
+  /// starting cancels the start instead of leaving the mic on.
+  bool _wantTalk = false;
+  bool _startSent = false;
+
+  /// When we last heard anything (start or audio) from whoever holds the
+  /// floor: a floor that has gone quiet for a few seconds was left behind by
+  /// a lost "end" message and can be taken over.
+  final Map<String, DateTime> _lastActivity = {};
+  static const staleFloor = Duration(milliseconds: 2500);
   final BytesBuilder _pending = BytesBuilder(copy: false);
   int _utterance = 0;
   int _seq = 0;
@@ -130,26 +149,46 @@ class PttService {
   // ───────────────────────────── talking ─────────────────────────────
 
   /// Button down. Returns false if someone else is talking, there is no
-  /// live connection, or the microphone isn't allowed.
+  /// live connection, or the microphone isn't allowed; [lastFailure] says
+  /// which.
   Future<bool> pressToTalk() async {
+    _wantTalk = true;
     await start();
-    if (!signaller.isLive) {
-      micError = 'Push-to-talk needs the live connection (internet).';
+    bool fail(String why, {bool permission = false}) {
+      lastFailure = why;
+      lastFailureIsPermission = permission;
       return false;
     }
+
+    if (!signaller.isLive) return fail('No live connection. Push-to-talk needs internet.');
     final now = DateTime.now();
-    if (!floor.tryAcquire(selfId, now)) return false;
+    final holder = floor.holder;
+    if (holder != null && holder != selfId) {
+      final last = _lastActivity[holder];
+      if (last == null || now.difference(last) > staleFloor) {
+        // Their "end" never arrived and they've been silent: take over.
+        floor.remoteEnd(holder);
+      }
+    }
+    if (!floor.tryAcquire(selfId, now)) return fail('Someone else is talking. Wait until they finish.');
+    talking.value = selfId;
     try {
       if (!await _recorder.hasPermission()) {
-        micError = 'Microphone permission is off. Allow it in Settings → Apps → DriveSync → Permissions.';
-        floor.release(selfId);
-        return false;
+        micError = 'permission denied';
+        await _abortPress();
+        return fail('Microphone is off for DriveSync. Allow it in Settings → Apps → DriveSync → Permissions.',
+            permission: true);
       }
-      talking.value = selfId;
+      if (!_wantTalk) {
+        // Released while the permission check ran (e.g. the first-time dialog).
+        await _abortPress();
+        return fail('Hold the button while you talk.');
+      }
       _utterance = now.millisecondsSinceEpoch;
       _seq = 0;
       _pending.clear();
       _sending = true;
+      _startSent = true;
       unawaited(signaller.sendPtt({'action': 'start', 'at': now.toUtc().toIso8601String()}));
       final stream = await _recorder.startStream(const RecordConfig(
         encoder: AudioEncoder.pcm16bits,
@@ -160,18 +199,34 @@ class PttService {
         noiseSuppress: true,
       ));
       _micSub = stream.listen(_onMic);
-      micError = null;
+      if (!_wantTalk) {
+        // Released while the microphone was starting.
+        await release();
+        return fail('Hold the button while you talk.');
+      }
     } catch (e) {
       micError = '$e';
       debugPrint('PttService: microphone failed: $e');
-      _sending = false;
-      floor.release(selfId);
-      talking.value = floor.holder;
-      return false;
+      await _abortPress();
+      return fail('The microphone could not start ($e).');
     }
+    micError = null;
+    lastFailure = null;
+    lastFailureIsPermission = false;
     _talkLimit?.cancel();
     _talkLimit = Timer(maxTalk, release);
     return true;
+  }
+
+  /// Undo a press that never got to talking.
+  Future<void> _abortPress() async {
+    _sending = false;
+    if (floor.holder == selfId) floor.release(selfId);
+    talking.value = floor.holder;
+    if (_startSent) {
+      _startSent = false;
+      await signaller.sendPtt({'action': 'end', 'at': DateTime.now().toUtc().toIso8601String()});
+    }
   }
 
   void _onMic(Uint8List chunk) {
@@ -191,8 +246,11 @@ class PttService {
 
   /// Button up.
   Future<void> release() async {
+    _wantTalk = false;
     _talkLimit?.cancel();
-    if (floor.holder != selfId) return;
+    // Nothing to stop unless we hold the floor, are sending, or the mic is
+    // still open from a press that was released while it started.
+    if (floor.holder != selfId && !_sending && _micSub == null) return;
     _sending = false;
     try {
       await _recorder.stop();
@@ -202,8 +260,9 @@ class PttService {
     // The last partial frame (anything over 40 ms).
     final rest = _pending.takeBytes();
     if (rest.length >= VoiceCodec.micFrameBytes ~/ 5) _sendFrame(Uint8List.fromList(rest.sublist(0, rest.length & ~3)));
-    floor.release(selfId);
+    if (floor.holder == selfId) floor.release(selfId);
     talking.value = floor.holder;
+    _startSent = false;
     await signaller.sendPtt({'action': 'end', 'at': DateTime.now().toUtc().toIso8601String()});
   }
 
@@ -214,6 +273,7 @@ class PttService {
     if (from == null || from == selfId) return;
     final at = DateTime.tryParse(m['at'] as String? ?? '') ?? DateTime.now();
     if (m['action'] == 'start') {
+      _lastActivity[from] = DateTime.now();
       floor.remoteStart(from, at);
       // Two people pressed at once: the earlier claim wins; if that is the
       // other side, stop transmitting immediately.
@@ -226,6 +286,7 @@ class PttService {
 
   Future<void> _abortTalking() async {
     _sending = false;
+    _startSent = false;
     _talkLimit?.cancel();
     try {
       await _recorder.stop();
@@ -245,6 +306,7 @@ class PttService {
     if (holder != null && holder != from) return;
     framesHeard++;
     lastHeardAt = DateTime.now();
+    _lastActivity[from] = lastHeardAt!;
     if (holder == null) {
       // Audio can overtake its "start" message.
       floor.remoteStart(from, DateTime.now());
